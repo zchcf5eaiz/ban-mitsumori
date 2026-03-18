@@ -2092,6 +2092,21 @@ const DEFAULT_SR1_COMMENTS = {
   "空調盤SR-1(コインタイマー)": "※ｺｲﾝﾀｲﾏｰのｺｲﾝは付属しません。\n※ﾄｰﾀﾙｶｳﾝﾀｰとﾀｲﾑｶｳﾝﾀｰの一体型時間計は廃盤になりました。\n※ﾄｰﾀﾙｶｳﾝﾀｰとﾀｲﾑｶｳﾝﾀｰの電源はﾘﾁｳﾑ電池となります。\n※試運転調整は対応致しかねます。\n※「使用等に関する注意事項」「ﾘﾓｺﾝ室内機対応図」は含んでおりません。",
 };
 
+// デフォルト グループ合計（K2太陽光等）
+const DEFAULT_GROUP_TOTALS = {
+  "光商工 全量売電": 700,
+  "空調盤SR-1": 1200,
+  "空調盤SR-1(コインタイマー)": 1842,
+  "三菱 全量売電": 630,
+  "オムロン 全量売電": 1036,
+  "三菱 余剰売電": 805,
+  "オムロン 余剰売電": 1225,
+  "泰和 余剰売電": 0,
+};
+
+// デフォルト オプション価格（P-BOX・ダクト等の掛率）
+const DEFAULT_OPTION_PRICES = {"pbox-rate-1000":25,"pbox-rate-1600":30,"pbox-rate-2000":35,"pbox-rate-2300":40,"pbox-rate-over":45,"pbox-rate-outdoor":1.2,"pbox-rate-sus":3.5,"pbox-rate-door":25,"duct-rate-1000":25,"duct-rate-1600":30,"duct-rate-2000":35,"duct-rate-2300":40,"duct-rate-over":45,"duct-rate-outdoor":1.2,"duct-rate-sus":3.5,"duct-rate-door":25,"frame-rate-l":60,"frame-rate-lp":120,"frame-rate-b50":50,"frame-rate-b100":100,"frame-rate-sus":2,"tray-rate-1000":25,"tray-rate-1600":30,"tray-rate-2000":35,"tray-rate-2300":40,"tray-rate-over":45,"tray-rate-outdoor":1.2,"tray-rate-sus":3.5};
+
 // デフォルト掛率
 const DEFAULT_RATES = {
   listRate: 1.4,

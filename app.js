@@ -16,17 +16,23 @@ const STORAGE_GROUP_TOTALS   = "ban_group_totals_v1";
 const STORAGE_SR1_COMMENTS   = "ban_sr1_comments_v2";
 
 // データバージョン: この値を上げるとlocalStorageのマスタを破棄してデフォルトに戻す
-const DATA_VERSION = 2;
+const DATA_VERSION = 3;
 const STORAGE_DATA_VERSION = "ban_data_version";
 
 if (parseInt(localStorage.getItem(STORAGE_DATA_VERSION) || "0") < DATA_VERSION) {
-  // 古いデータを破棄してデフォルト値（data.js）を使わせる
-  // 見積データ(STORAGE_ESTIMATES)は保持する
-  localStorage.removeItem(STORAGE_MASTER);
-  localStorage.removeItem(STORAGE_PRICES);
-  localStorage.removeItem(STORAGE_CUBICLE_PRICES);
-  localStorage.removeItem("ban_option_prices");
-  localStorage.setItem(STORAGE_DATA_VERSION, String(DATA_VERSION));
+  // マスタにデータがある（このPCで編集済み）なら消さず、バージョンだけ更新
+  const existing = localStorage.getItem(STORAGE_MASTER);
+  if (existing) {
+    // 既にデータ入りのPCではバージョンだけ上げる
+    localStorage.setItem(STORAGE_DATA_VERSION, String(DATA_VERSION));
+  } else {
+    // データがないPC（別PC）→ 古いデータを破棄してデフォルト値を使わせる
+    localStorage.removeItem(STORAGE_PRICES);
+    localStorage.removeItem(STORAGE_CUBICLE_PRICES);
+    localStorage.removeItem("ban_option_prices");
+    localStorage.removeItem(STORAGE_GROUP_TOTALS);
+    localStorage.setItem(STORAGE_DATA_VERSION, String(DATA_VERSION));
+  }
 }
 
 // 割増率チェックボックス: 各マトリクスの基本価格を保持
@@ -229,7 +235,10 @@ function applySavedPrices() {
 /** 保存済みオプション価格をinputに適用 */
 function applySavedOptionPrices() {
   try {
-    const d = localStorage.getItem("ban_option_prices");
+    let d = localStorage.getItem("ban_option_prices");
+    if (!d && typeof DEFAULT_OPTION_PRICES !== "undefined") {
+      d = JSON.stringify(DEFAULT_OPTION_PRICES);
+    }
     if (!d) return;
     const prices = JSON.parse(d);
     for (const id in prices) {
@@ -247,8 +256,11 @@ let groupTotals = {};
 function loadGroupTotals() {
   try {
     const d = localStorage.getItem(STORAGE_GROUP_TOTALS);
-    if (d) groupTotals = JSON.parse(d);
+    if (d) { groupTotals = JSON.parse(d); return; }
   } catch {}
+  if (typeof DEFAULT_GROUP_TOTALS !== "undefined") {
+    groupTotals = JSON.parse(JSON.stringify(DEFAULT_GROUP_TOTALS));
+  }
 }
 function saveGroupTotals() {
   try {

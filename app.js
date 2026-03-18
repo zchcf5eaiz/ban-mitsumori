@@ -16,7 +16,7 @@ const STORAGE_GROUP_TOTALS   = "ban_group_totals_v1";
 const STORAGE_SR1_COMMENTS   = "ban_sr1_comments_v2";
 
 // データバージョン: この値を上げるとlocalStorageのマスタを破棄してデフォルトに戻す
-const DATA_VERSION = 5;
+const DATA_VERSION = 6;
 const STORAGE_DATA_VERSION = "ban_data_version";
 
 if (parseInt(localStorage.getItem(STORAGE_DATA_VERSION) || "0") < DATA_VERSION) {
@@ -1938,6 +1938,9 @@ const SINGLE_ZONE_DEFS = {
     { names: new Set(["WHM 電子式", "WHM アナログ"]), cols: 2 },
     { names: ["MC", "MCなど(単品)", "Ry・SW・PLなど", "TM", "エネルギーモニターユニット", "MC-DT", "制御用Tr", "計器", "フロートスイッチ", "ELR(ZCT付)", "コンセント", "警報", "その他"],
       cols: 4, wideNames: new Set(["MCなど(単品)"]), spanNames: { "フロートスイッチ": 2 } },
+  ],
+  "K10": [
+    { names: ["TR1φ(単相)", "TR3φ(三相)", "TR3φ440V"], cols: 3 },
   ],
 };
 

@@ -16,23 +16,18 @@ const STORAGE_GROUP_TOTALS   = "ban_group_totals_v1";
 const STORAGE_SR1_COMMENTS   = "ban_sr1_comments_v2";
 
 // データバージョン: この値を上げるとlocalStorageのマスタを破棄してデフォルトに戻す
-const DATA_VERSION = 4;
+const DATA_VERSION = 5;
 const STORAGE_DATA_VERSION = "ban_data_version";
 
 if (parseInt(localStorage.getItem(STORAGE_DATA_VERSION) || "0") < DATA_VERSION) {
-  // マスタにデータがある（このPCで編集済み）なら消さず、バージョンだけ更新
-  const existing = localStorage.getItem(STORAGE_MASTER);
-  if (existing) {
-    // 既にデータ入りのPCではバージョンだけ上げる
-    localStorage.setItem(STORAGE_DATA_VERSION, String(DATA_VERSION));
-  } else {
-    // データがないPC（別PC）→ 古いデータを破棄してデフォルト値を使わせる
-    localStorage.removeItem(STORAGE_PRICES);
-    localStorage.removeItem(STORAGE_CUBICLE_PRICES);
-    localStorage.removeItem("ban_option_prices");
-    localStorage.removeItem(STORAGE_GROUP_TOTALS);
-    localStorage.setItem(STORAGE_DATA_VERSION, String(DATA_VERSION));
-  }
+  // 全PCで古いデータを破棄してデフォルト値（data.js）を使わせる
+  localStorage.removeItem(STORAGE_MASTER);
+  localStorage.removeItem(STORAGE_PRICES);
+  localStorage.removeItem(STORAGE_CUBICLE_PRICES);
+  localStorage.removeItem("ban_option_prices");
+  localStorage.removeItem(STORAGE_GROUP_TOTALS);
+  localStorage.removeItem(STORAGE_SR1_COMMENTS);
+  localStorage.setItem(STORAGE_DATA_VERSION, String(DATA_VERSION));
 }
 
 // 割増率チェックボックス: 各マトリクスの基本価格を保持

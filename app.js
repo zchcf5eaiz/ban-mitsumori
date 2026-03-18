@@ -15,6 +15,12 @@ const STORAGE_CUBICLE_PRICES = "ban_cubicle_prices_v1";
 const STORAGE_GROUP_TOTALS   = "ban_group_totals_v1";
 const STORAGE_SR1_COMMENTS   = "ban_sr1_comments_v2";
 
+// URLに ?reset を付けるとブラウザ保存データをクリアしてデフォルトに戻す
+if (location.search.includes("reset")) {
+  localStorage.clear();
+  location.href = location.pathname;
+}
+
 // 割増率チェックボックス: 各マトリクスの基本価格を保持
 const matrixBasePrices = {};
 

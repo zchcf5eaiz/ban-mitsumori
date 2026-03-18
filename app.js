@@ -3114,6 +3114,40 @@ function importJSON() {
 
 function printEstimate() { window.print(); }
 
+function exportAllData() {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    data[key] = localStorage.getItem(key);
+  }
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "ban_all_data.json"; a.click();
+  URL.revokeObjectURL(a.href);
+  showToast("全データをエクスポートしました");
+}
+
+function importAllData() {
+  if (!confirm("現在のデータを上書きします。よろしいですか？")) return;
+  const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".json";
+  inp.onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        for (const key of Object.keys(data)) {
+          localStorage.setItem(key, data[key]);
+        }
+        showToast("全データを読み込みました。リロードします...");
+        setTimeout(() => location.reload(), 1000);
+      } catch { alert("データ読み込みに失敗しました"); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+
 // ============================================================
 // ユーティリティ
 // ============================================================

@@ -42,42 +42,42 @@ const DEFAULT_CUBICLE_ITEMS = [
   // DS 200A
   { id: "K1001", category: "K1", name: "受電パターン", spec: "DS200A/手動 VCB400A/8.0kA", unit: "式", basePrice: 1363, note: "" },
   { id: "K1002", category: "K1", name: "受電パターン", spec: "DS200A/手動 VCB600A/12.5kA", unit: "式", basePrice: 1598, note: "" },
-  { id: "K1013", category: "K1", name: "受電パターン", spec: "DS200A/手動 DS3P", unit: "式", basePrice: 0, note: "" },
-  { id: "K1014", category: "K1", name: "受電パターン", spec: "DS200A/手動 遠方操作器", unit: "式", basePrice: 0, note: "" },
+  { id: "K1013", category: "K1", name: "受電パターン", spec: "DS200A/手動 DS3P", unit: "式", basePrice: 133, note: "" },
+  { id: "K1014", category: "K1", name: "受電パターン", spec: "DS200A/手動 遠方操作器", unit: "式", basePrice: 270, note: "" },
   { id: "K1003", category: "K1", name: "受電パターン", spec: "DS200A/電動パネル取付 VCB400A/8.0kA", unit: "式", basePrice: 1722, note: "" },
   { id: "K1004", category: "K1", name: "受電パターン", spec: "DS200A/電動パネル取付 VCB600A/12.5kA", unit: "式", basePrice: 1922, note: "" },
-  { id: "K1015", category: "K1", name: "受電パターン", spec: "DS200A/電動パネル取付 DS3P", unit: "式", basePrice: 0, note: "" },
-  { id: "K1016", category: "K1", name: "受電パターン", spec: "DS200A/電動パネル取付 遠方操作器", unit: "式", basePrice: 0, note: "" },
+  { id: "K1015", category: "K1", name: "受電パターン", spec: "DS200A/電動パネル取付 DS3P", unit: "式", basePrice: 133, note: "" },
+  { id: "K1016", category: "K1", name: "受電パターン", spec: "DS200A/電動パネル取付 遠方操作器", unit: "式", basePrice: 270, note: "" },
   { id: "K1005", category: "K1", name: "受電パターン", spec: "DS200A/電動引出型 VCB400A/8.0kA", unit: "式", basePrice: 2665, note: "" },
   { id: "K1006", category: "K1", name: "受電パターン", spec: "DS200A/電動引出型 VCB600A/12.5kA", unit: "式", basePrice: 2987, note: "" },
-  { id: "K1017", category: "K1", name: "受電パターン", spec: "DS200A/電動引出型 DS3P", unit: "式", basePrice: 0, note: "" },
-  { id: "K1018", category: "K1", name: "受電パターン", spec: "DS200A/電動引出型 遠方操作器", unit: "式", basePrice: 0, note: "" },
+  { id: "K1017", category: "K1", name: "受電パターン", spec: "DS200A/電動引出型 DS3P", unit: "式", basePrice: 133, note: "" },
+  { id: "K1018", category: "K1", name: "受電パターン", spec: "DS200A/電動引出型 遠方操作器", unit: "式", basePrice: 270, note: "" },
   // DS 400A
   { id: "K1007", category: "K1", name: "受電パターン", spec: "DS400A/手動 VCB400A/8.0kA", unit: "式", basePrice: 1393, note: "" },
   { id: "K1008", category: "K1", name: "受電パターン", spec: "DS400A/手動 VCB600A/12.5kA", unit: "式", basePrice: 1628, note: "" },
-  { id: "K1019", category: "K1", name: "受電パターン", spec: "DS400A/手動 DS3P", unit: "式", basePrice: 0, note: "" },
-  { id: "K101A", category: "K1", name: "受電パターン", spec: "DS400A/手動 遠方操作器", unit: "式", basePrice: 0, note: "" },
+  { id: "K1019", category: "K1", name: "受電パターン", spec: "DS400A/手動 DS3P", unit: "式", basePrice: 126, note: "" },
+  { id: "K101A", category: "K1", name: "受電パターン", spec: "DS400A/手動 遠方操作器", unit: "式", basePrice: 270, note: "" },
   { id: "K1009", category: "K1", name: "受電パターン", spec: "DS400A/電動パネル取付 VCB400A/8.0kA", unit: "式", basePrice: 1752, note: "" },
   { id: "K100A", category: "K1", name: "受電パターン", spec: "DS400A/電動パネル取付 VCB600A/12.5kA", unit: "式", basePrice: 1952, note: "" },
-  { id: "K101B", category: "K1", name: "受電パターン", spec: "DS400A/電動パネル取付 DS3P", unit: "式", basePrice: 0, note: "" },
-  { id: "K101C", category: "K1", name: "受電パターン", spec: "DS400A/電動パネル取付 遠方操作器", unit: "式", basePrice: 0, note: "" },
+  { id: "K101B", category: "K1", name: "受電パターン", spec: "DS400A/電動パネル取付 DS3P", unit: "式", basePrice: 126, note: "" },
+  { id: "K101C", category: "K1", name: "受電パターン", spec: "DS400A/電動パネル取付 遠方操作器", unit: "式", basePrice: 270, note: "" },
   { id: "K100B", category: "K1", name: "受電パターン", spec: "DS400A/電動引出型 VCB400A/8.0kA", unit: "式", basePrice: 2695, note: "" },
   { id: "K100C", category: "K1", name: "受電パターン", spec: "DS400A/電動引出型 VCB600A/12.5kA", unit: "式", basePrice: 3017, note: "" },
-  { id: "K101D", category: "K1", name: "受電パターン", spec: "DS400A/電動引出型 DS3P", unit: "式", basePrice: 0, note: "" },
-  { id: "K101E", category: "K1", name: "受電パターン", spec: "DS400A/電動引出型 遠方操作器", unit: "式", basePrice: 0, note: "" },
+  { id: "K101D", category: "K1", name: "受電パターン", spec: "DS400A/電動引出型 DS3P", unit: "式", basePrice: 126, note: "" },
+  { id: "K101E", category: "K1", name: "受電パターン", spec: "DS400A/電動引出型 遠方操作器", unit: "式", basePrice: 270, note: "" },
   // DS 600A
   { id: "K100D", category: "K1", name: "受電パターン", spec: "DS600A/手動 VCB400A/8.0kA", unit: "式", basePrice: 1447, note: "" },
   { id: "K100E", category: "K1", name: "受電パターン", spec: "DS600A/手動 VCB600A/12.5kA", unit: "式", basePrice: 1682, note: "" },
-  { id: "K101F", category: "K1", name: "受電パターン", spec: "DS600A/手動 DS3P", unit: "式", basePrice: 0, note: "" },
-  { id: "K1070", category: "K1", name: "受電パターン", spec: "DS600A/手動 遠方操作器", unit: "式", basePrice: 0, note: "" },
+  { id: "K101F", category: "K1", name: "受電パターン", spec: "DS600A/手動 DS3P", unit: "式", basePrice: 119, note: "" },
+  { id: "K1070", category: "K1", name: "受電パターン", spec: "DS600A/手動 遠方操作器", unit: "式", basePrice: 270, note: "" },
   { id: "K100F", category: "K1", name: "受電パターン", spec: "DS600A/電動パネル取付 VCB400A/8.0kA", unit: "式", basePrice: 1806, note: "" },
   { id: "K1010", category: "K1", name: "受電パターン", spec: "DS600A/電動パネル取付 VCB600A/12.5kA", unit: "式", basePrice: 2006, note: "" },
-  { id: "K1071", category: "K1", name: "受電パターン", spec: "DS600A/電動パネル取付 DS3P", unit: "式", basePrice: 0, note: "" },
-  { id: "K1072", category: "K1", name: "受電パターン", spec: "DS600A/電動パネル取付 遠方操作器", unit: "式", basePrice: 0, note: "" },
+  { id: "K1071", category: "K1", name: "受電パターン", spec: "DS600A/電動パネル取付 DS3P", unit: "式", basePrice: 119, note: "" },
+  { id: "K1072", category: "K1", name: "受電パターン", spec: "DS600A/電動パネル取付 遠方操作器", unit: "式", basePrice: 270, note: "" },
   { id: "K1011", category: "K1", name: "受電パターン", spec: "DS600A/電動引出型 VCB400A/8.0kA", unit: "式", basePrice: 2749, note: "" },
   { id: "K1012", category: "K1", name: "受電パターン", spec: "DS600A/電動引出型 VCB600A/12.5kA", unit: "式", basePrice: 3071, note: "" },
-  { id: "K1073", category: "K1", name: "受電パターン", spec: "DS600A/電動引出型 DS3P", unit: "式", basePrice: 0, note: "" },
-  { id: "K1074", category: "K1", name: "受電パターン", spec: "DS600A/電動引出型 遠方操作器", unit: "式", basePrice: 0, note: "" },
+  { id: "K1073", category: "K1", name: "受電パターン", spec: "DS600A/電動引出型 DS3P", unit: "式", basePrice: 119, note: "" },
+  { id: "K1074", category: "K1", name: "受電パターン", spec: "DS600A/電動引出型 遠方操作器", unit: "式", basePrice: 270, note: "" },
   // DSバリア
   { id: "K1076", category: "K1", name: "受電パターン", spec: "DS200A/電動パネル取付 DSバリア", unit: "式", basePrice: 60, note: "" },
   { id: "K1077", category: "K1", name: "受電パターン", spec: "DS200A/電動引出型 DSバリア", unit: "式", basePrice: 60, note: "" },
@@ -109,8 +109,8 @@ const DEFAULT_CUBICLE_ITEMS = [
   { id: "K1086", category: "K1", name: "DS-3P 三極単投", spec: "3極一体型 600A リンク式 保護カバー付", unit: "台", basePrice: 285, note: "" },
 
   // --- LA(避雷器) ---
-  { id: "K1087", category: "K1", name: "LA(避雷器)", spec: "固定形 1極×3台", unit: "式", basePrice: 87, note: "" },
-  { id: "K1088", category: "K1", name: "LA(避雷器)", spec: "断路形 3極一体型", unit: "台", basePrice: 153, note: "" },
+  { id: "K1087", category: "K1", name: "LA(避雷器)", spec: "固定形 1極×3台", unit: "式", basePrice: 131, note: "" },
+  { id: "K1088", category: "K1", name: "LA(避雷器)", spec: "断路形 3極一体型", unit: "台", basePrice: 340, note: "" },
 
   // --- VCB(真空遮断器) ---
   { id: "K108B", category: "K1", name: "VCB(真空遮断器)", spec: "手動固定型 400A 8.0kA", unit: "台", basePrice: 529, note: "GL,RL付" },
@@ -139,7 +139,7 @@ const DEFAULT_CUBICLE_ITEMS = [
   { id: "K3074", category: "K1", name: "高圧DT(7.2kV)", spec: "操作回路部品 加算", unit: "式", basePrice: 1704, note: "" },
 
   // --- メーター (マトリクス: 種類 × 角型/広角) ---
-  { id: "K103J", category: "K1", name: "メーターオプション", spec: "VM/AM 広角差額", unit: "個", basePrice: 0, note: "" },
+  { id: "K103J", category: "K1", name: "メーターオプション", spec: "VM/AM 広角差額", unit: "個", basePrice: 19, note: "" },
   { id: "K1030", category: "K1", name: "メーター", spec: "VM・AM(VS・AS付) 角型(民間)", unit: "個", basePrice: 20, note: "" },
   { id: "K1031", category: "K1", name: "メーター", spec: "VM・AM(VS・AS付) 広角(役所)", unit: "個", basePrice: 39, note: "" },
   { id: "K1032", category: "K1", name: "メーター", spec: "W(kW電力計) 角型(民間)", unit: "個", basePrice: 100, note: "角形時T-150付" },
@@ -157,18 +157,18 @@ const DEFAULT_CUBICLE_ITEMS = [
   { id: "K1075", category: "K1", name: "メーター", spec: "VAR(無効電力計) T/D", unit: "個", basePrice: 252, note: "" },
 
   // --- Wh(電力量計) ---
-  { id: "K103A", category: "K1", name: "Wh(電力量計)", spec: "アナログ式 □/3W/5A 未検", unit: "個", basePrice: 216, note: "" },
-  { id: "K103G", category: "K1", name: "Wh(電力量計)", spec: "アナログ式 □/3W/5A 検付", unit: "個", basePrice: 0, note: "" },
-  { id: "K103H", category: "K1", name: "Wh(電力量計)", spec: "電子式 □/3W/5A 未検", unit: "個", basePrice: 0, note: "" },
+  { id: "K103A", category: "K1", name: "Wh(電力量計)", spec: "アナログ式 □/3W/5A 未検", unit: "個", basePrice: 46, note: "" },
+  { id: "K103G", category: "K1", name: "Wh(電力量計)", spec: "アナログ式 □/3W/5A 検付", unit: "個", basePrice: 100, note: "" },
+  { id: "K103H", category: "K1", name: "Wh(電力量計)", spec: "電子式 □/3W/5A 未検", unit: "個", basePrice: 216, note: "" },
   { id: "K103B", category: "K1", name: "Wh(電力量計)", spec: "電子式 □/3W/5A 検付", unit: "個", basePrice: 333, note: "" },
   { id: "K103C", category: "K1", name: "WhOP", spec: "高調波メーターリレー", unit: "個", basePrice: 380, note: "" },
   { id: "K1060", category: "K1", name: "WhOP", spec: "パルス検出器 PC-11B", unit: "個", basePrice: 570, note: "三菱製:パルスピック" },
 
   // --- デマンド ---
-  { id: "K10D0", category: "K1", name: "デマンド", spec: "DMA", unit: "台", basePrice: 0, note: "" },
-  { id: "K10D1", category: "K1", name: "デマンド", spec: "DMA(AL付)", unit: "台", basePrice: 0, note: "" },
-  { id: "K10D2", category: "K1", name: "デマンド", spec: "DMW", unit: "台", basePrice: 0, note: "" },
-  { id: "K10D3", category: "K1", name: "デマンド", spec: "DMW(AL付)", unit: "台", basePrice: 0, note: "" },
+  { id: "K10D0", category: "K1", name: "デマンド", spec: "DMA", unit: "台", basePrice: 166, note: "" },
+  { id: "K10D1", category: "K1", name: "デマンド", spec: "DMA(AL付)", unit: "台", basePrice: 286, note: "" },
+  { id: "K10D2", category: "K1", name: "デマンド", spec: "DMW", unit: "台", basePrice: 170, note: "" },
+  { id: "K10D3", category: "K1", name: "デマンド", spec: "DMW(AL付)", unit: "台", basePrice: 566, note: "" },
 
   // --- マルチメーター(広角) ---
   { id: "K1050", category: "K1", name: "マルチメーター(広角)", spec: "受電・饋電用(ME110GRシリーズ)", unit: "個", basePrice: 306, note: "" },
@@ -313,11 +313,11 @@ const DEFAULT_CUBICLE_ITEMS = [
   { id: "K3054", category: "K3", name: "SCパターン(6%)", spec: "300kvar 窒素ガス", unit: "式", basePrice: 4088, note: "" },
 
   // --- SCスペース・SRスペース ---
-  { id: "K3070", category: "K3", name: "SCパターン(6%)", spec: "12kvar SCスペース", unit: "式", basePrice: 37, note: "" },
-  { id: "K3071", category: "K3", name: "SCパターン(6%)", spec: "12kvar SRスペース", unit: "式", basePrice: 88, note: "" },
-  { id: "K3072", category: "K3", name: "SCパターン(6%)", spec: "18kvar SCスペース", unit: "式", basePrice: 37, note: "" },
-  { id: "K3073", category: "K3", name: "SCパターン(6%)", spec: "18kvar SRスペース", unit: "式", basePrice: 88, note: "" },
-  { id: "K3074", category: "K3", name: "SCパターン(6%)", spec: "24kvar SCスペース", unit: "式", basePrice: 37, note: "" },
+  { id: "K3070", category: "K3", name: "SCパターン(6%)", spec: "12kvar SCスペース", unit: "式", basePrice: 4500, note: "" },
+  { id: "K3071", category: "K3", name: "SCパターン(6%)", spec: "12kvar SRスペース", unit: "式", basePrice: 4626, note: "" },
+  { id: "K3072", category: "K3", name: "SCパターン(6%)", spec: "18kvar SCスペース", unit: "式", basePrice: 5802, note: "" },
+  { id: "K3073", category: "K3", name: "SCパターン(6%)", spec: "18kvar SRスペース", unit: "式", basePrice: 5826, note: "" },
+  { id: "K3074", category: "K3", name: "SCパターン(6%)", spec: "24kvar SCスペース", unit: "式", basePrice: 1704, note: "" },
   { id: "K3075", category: "K3", name: "SCパターン(6%)", spec: "24kvar SRスペース", unit: "式", basePrice: 88, note: "" },
   { id: "K3076", category: "K3", name: "SCパターン(6%)", spec: "30kvar SCスペース", unit: "式", basePrice: 37, note: "" },
   { id: "K3077", category: "K3", name: "SCパターン(6%)", spec: "30kvar SRスペース", unit: "式", basePrice: 88, note: "" },
@@ -524,10 +524,10 @@ const DEFAULT_CUBICLE_ITEMS = [
   { id: "K208D", category: "K4", name: "3φTR(三相)", spec: "100kVA 防振ゴム", unit: "式", basePrice: 184, note: "屋内用" },
   { id: "K208E", category: "K4", name: "3φTR(三相)", spec: "150kVA ダイヤル温度計", unit: "個", basePrice: 398, note: "盤面取付" },
   { id: "K208F", category: "K4", name: "3φTR(三相)", spec: "150kVA 防振ゴム", unit: "式", basePrice: 184, note: "屋内用" },
-  { id: "K20A0", category: "K4", name: "3φTR(三相)", spec: "200kVA ダイヤル温度計", unit: "個", basePrice: 398, note: "盤面取付" },
-  { id: "K20A1", category: "K4", name: "3φTR(三相)", spec: "200kVA 防振ゴム", unit: "式", basePrice: 184, note: "屋内用" },
-  { id: "K20A2", category: "K4", name: "3φTR(三相)", spec: "300kVA ダイヤル温度計", unit: "個", basePrice: 398, note: "盤面取付" },
-  { id: "K20A3", category: "K4", name: "3φTR(三相)", spec: "300kVA 防振ゴム", unit: "式", basePrice: 219, note: "屋内用" },
+  { id: "K20A0", category: "K4", name: "3φTR(三相)", spec: "200kVA ダイヤル温度計", unit: "個", basePrice: 3660, note: "盤面取付" },
+  { id: "K20A1", category: "K4", name: "3φTR(三相)", spec: "200kVA 防振ゴム", unit: "式", basePrice: 3502, note: "屋内用" },
+  { id: "K20A2", category: "K4", name: "3φTR(三相)", spec: "300kVA ダイヤル温度計", unit: "個", basePrice: 75, note: "盤面取付" },
+  { id: "K20A3", category: "K4", name: "3φTR(三相)", spec: "300kVA 防振ゴム", unit: "式", basePrice: 35, note: "屋内用" },
   { id: "K20A4", category: "K4", name: "3φTR(三相)", spec: "500kVA ダイヤル温度計", unit: "個", basePrice: 398, note: "盤面取付" },
   { id: "K20A5", category: "K4", name: "3φTR(三相)", spec: "500kVA 防振ゴム", unit: "式", basePrice: 219, note: "屋内用" },
   { id: "K20A6", category: "K4", name: "3φTR(三相)", spec: "750kVA ダイヤル温度計", unit: "個", basePrice: 398, note: "盤面取付" },
@@ -549,33 +549,33 @@ const DEFAULT_CUBICLE_ITEMS = [
   { id: "K20V0", category: "K4", name: "VT 計器用変圧器", spec: "440/110V 15VA(1次PF付)×2台", unit: "式", basePrice: 110, note: "" },
 
   // --- メーター ---
-  { id: "K20M0", category: "K4", name: "メーター(Tr)", spec: "VM/AM 広角差額", unit: "式", basePrice: 0, note: "" },
+  { id: "K20M0", category: "K4", name: "メーター(Tr)", spec: "VM/AM 広角差額", unit: "式", basePrice: 19, note: "" },
 
   // --- マルチメーター ---
-  { id: "K20M1", category: "K4", name: "マルチメーター", spec: "低圧用マルチメーター(ME110GFシリーズ)", unit: "個", basePrice: 0, note: "" },
-  { id: "K20M2", category: "K4", name: "マルチメーター", spec: "低圧用マルチメーター LOR付(ハカルプラス・三菱廃盤)", unit: "個", basePrice: 0, note: "" },
+  { id: "K20M1", category: "K4", name: "マルチメーター", spec: "低圧用マルチメーター(ME110GFシリーズ)", unit: "個", basePrice: 286, note: "" },
+  { id: "K20M2", category: "K4", name: "マルチメーター", spec: "低圧用マルチメーター LOR付(ハカルプラス・三菱廃盤)", unit: "個", basePrice: 417, note: "" },
 
   // --- Wh(電力量計) ---
-  { id: "K20W0", category: "K4", name: "Wh(Tr)", spec: "アナログ式 □/3W/5A 未検", unit: "個", basePrice: 216, note: "" },
-  { id: "K20W1", category: "K4", name: "Wh(Tr)", spec: "アナログ式 □/3W/5A 検付", unit: "個", basePrice: 0, note: "" },
-  { id: "K20W2", category: "K4", name: "Wh(Tr)", spec: "電子式 □/3W/5A 未検", unit: "個", basePrice: 0, note: "" },
+  { id: "K20W0", category: "K4", name: "Wh(Tr)", spec: "アナログ式 □/3W/5A 未検", unit: "個", basePrice: 46, note: "" },
+  { id: "K20W1", category: "K4", name: "Wh(Tr)", spec: "アナログ式 □/3W/5A 検付", unit: "個", basePrice: 100, note: "" },
+  { id: "K20W2", category: "K4", name: "Wh(Tr)", spec: "電子式 □/3W/5A 未検", unit: "個", basePrice: 216, note: "" },
   { id: "K20W3", category: "K4", name: "Wh(Tr)", spec: "電子式 □/3W/5A 検付", unit: "個", basePrice: 333, note: "" },
 
   // --- デマンド ---
-  { id: "K20D0", category: "K4", name: "デマンド", spec: "DMA", unit: "台", basePrice: 0, note: "" },
-  { id: "K20D1", category: "K4", name: "デマンド", spec: "DMA(AL付)", unit: "台", basePrice: 0, note: "" },
-  { id: "K20D2", category: "K4", name: "デマンド", spec: "DMW", unit: "台", basePrice: 0, note: "" },
-  { id: "K20D3", category: "K4", name: "デマンド", spec: "DMW(AL付)", unit: "台", basePrice: 0, note: "" },
+  { id: "K20D0", category: "K4", name: "デマンド", spec: "DMA", unit: "台", basePrice: 166, note: "" },
+  { id: "K20D1", category: "K4", name: "デマンド", spec: "DMA(AL付)", unit: "台", basePrice: 286, note: "" },
+  { id: "K20D2", category: "K4", name: "デマンド", spec: "DMW", unit: "台", basePrice: 170, note: "" },
+  { id: "K20D3", category: "K4", name: "デマンド", spec: "DMW(AL付)", unit: "台", basePrice: 560, note: "" },
 
   // --- エネセーバ回路 ---
-  { id: "K20E0", category: "K4", name: "エネセーバ回路", spec: "エネセーバセット", unit: "式", basePrice: 3502, note: "" },
+  { id: "K20E0", category: "K4", name: "エネセーバ回路", spec: "エネセーバセット", unit: "式", basePrice: 3506, note: "" },
   { id: "K20E3", category: "K4", name: "エネセーバ回路", spec: "複数台使用時 TMの加算(1回路1台)", unit: "台", basePrice: 35, note: "" },
   { id: "K20E2", category: "K4", name: "エネセーバ回路", spec: "別途電源 VT", unit: "台", basePrice: 75, note: "" },
   { id: "K20E4", category: "K4", name: "エネセーバ回路", spec: "別途電源 OPTr", unit: "台", basePrice: 350, note: "" },
 
   // --- 漏電リレー ---
   { id: "K20B0", category: "K4", name: "漏電リレー", spec: "ELR 1回路用(ZCT付)", unit: "個", basePrice: 77, note: "" },
-  { id: "K20B1", category: "K4", name: "漏電リレー", spec: "ZCTのみ", unit: "個", basePrice: 0, note: "" },
+  { id: "K20B1", category: "K4", name: "漏電リレー", spec: "ZCTのみ", unit: "個", basePrice: 31, note: "" },
 
   // --- 警報 ---
   { id: "K2103", category: "K4", name: "警報", spec: "OL", unit: "個", basePrice: 23, note: "" },
@@ -1015,12 +1015,12 @@ const DEFAULT_CUBICLE_ITEMS = [
   { id: "K9305", category: "K7", name: "ELR", spec: "800A(100φ) 1φ3W・3φ3W(ZCT付)", unit: "台", basePrice: 301, note: "" },
 
   // --- ELR(集合型) ---
-  { id: "K9310", category: "K7", name: "ELR(集合型)", spec: "集合型本体(5回路)", unit: "台", basePrice: 0, note: "" },
-  { id: "K9311", category: "K7", name: "ELR(集合型)", spec: "集合型本体(10回路)", unit: "台", basePrice: 0, note: "" },
-  { id: "K9312", category: "K7", name: "ELR(集合型)", spec: "集合型ZCT 100A", unit: "個", basePrice: 0, note: "" },
-  { id: "K9313", category: "K7", name: "ELR(集合型)", spec: "集合型ZCT 200A", unit: "個", basePrice: 0, note: "" },
-  { id: "K9314", category: "K7", name: "ELR(集合型)", spec: "集合型ZCT 400A", unit: "個", basePrice: 0, note: "" },
-  { id: "K9315", category: "K7", name: "ELR(集合型)", spec: "集合型ZCT 800A", unit: "個", basePrice: 0, note: "" },
+  { id: "K9310", category: "K7", name: "ELR(集合型)", spec: "集合型本体(5回路)", unit: "台", basePrice: 154, note: "" },
+  { id: "K9311", category: "K7", name: "ELR(集合型)", spec: "集合型本体(10回路)", unit: "台", basePrice: 277, note: "" },
+  { id: "K9312", category: "K7", name: "ELR(集合型)", spec: "集合型ZCT 100A", unit: "個", basePrice: 31, note: "" },
+  { id: "K9313", category: "K7", name: "ELR(集合型)", spec: "集合型ZCT 200A", unit: "個", basePrice: 37, note: "" },
+  { id: "K9314", category: "K7", name: "ELR(集合型)", spec: "集合型ZCT 400A", unit: "個", basePrice: 54, note: "" },
+  { id: "K9315", category: "K7", name: "ELR(集合型)", spec: "集合型ZCT 800A", unit: "個", basePrice: 79, note: "" },
 
   // ============================================================
   // K8. 筐体・FAN
@@ -1032,15 +1032,15 @@ const DEFAULT_CUBICLE_ITEMS = [
   { id: "KB005", category: "K8", name: "函体OP(屋内)", spec: "FAN:屋内用(MCB・Th,COS付)", unit: "台", basePrice: 193, note: "" },
   { id: "KB006", category: "K8", name: "函体OP(屋内)", spec: "フィルター吸気口(既製品) 1面に付き", unit: "面", basePrice: 200, note: "" },
   // --- 屋外型OP2 / 屋内型OP2 ---
-  { id: "KB010", category: "K8", name: "屋外型OP2", spec: "DrSW", unit: "個", basePrice: 0, note: "" },
-  { id: "KB011", category: "K8", name: "屋外型OP2", spec: "LED", unit: "個", basePrice: 0, note: "" },
-  { id: "KB012", category: "K8", name: "屋内型OP2", spec: "DrSW", unit: "個", basePrice: 0, note: "" },
-  { id: "KB013", category: "K8", name: "屋内型OP2", spec: "LED", unit: "個", basePrice: 0, note: "" },
+  { id: "KB010", category: "K8", name: "屋外型OP2", spec: "DrSW", unit: "個", basePrice: 15, note: "" },
+  { id: "KB011", category: "K8", name: "屋外型OP2", spec: "LED", unit: "個", basePrice: 28, note: "" },
+  { id: "KB012", category: "K8", name: "屋内型OP2", spec: "DrSW", unit: "個", basePrice: 15, note: "" },
+  { id: "KB013", category: "K8", name: "屋内型OP2", spec: "LED", unit: "個", basePrice: 28, note: "" },
   // --- 屋外型OP3 / 屋内型OP3 ---
-  { id: "KB014", category: "K8", name: "屋外型OP3", spec: "サーモSW", unit: "個", basePrice: 0, note: "" },
-  { id: "KB015", category: "K8", name: "屋外型OP3", spec: "SH", unit: "個", basePrice: 0, note: "" },
-  { id: "KB016", category: "K8", name: "屋内型OP3", spec: "サーモSW", unit: "個", basePrice: 0, note: "" },
-  { id: "KB017", category: "K8", name: "屋内型OP3", spec: "SH", unit: "個", basePrice: 0, note: "" },
+  { id: "KB014", category: "K8", name: "屋外型OP3", spec: "サーモSW", unit: "個", basePrice: 28, note: "" },
+  { id: "KB015", category: "K8", name: "屋外型OP3", spec: "SH", unit: "個", basePrice: 41, note: "" },
+  { id: "KB016", category: "K8", name: "屋内型OP3", spec: "サーモSW", unit: "個", basePrice: 28, note: "" },
+  { id: "KB017", category: "K8", name: "屋内型OP3", spec: "SH", unit: "個", basePrice: 41, note: "" },
   // --- 函体(屋外型) H:2300×2.3t 焼付塗装含む ---
   { id: "KB100", category: "K8", name: "函体(屋外型)", spec: "W600 D700", unit: "面", basePrice: 1213, note: "" },
   { id: "KB101", category: "K8", name: "函体(屋外型)", spec: "W600 D800", unit: "面", basePrice: 1238, note: "" },

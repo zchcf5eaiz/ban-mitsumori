@@ -2063,21 +2063,20 @@ function renderTrSpaceGroup(ng, blockNum) {
   h += `<thead><tr>`;
   h += `<th class="mg-name">${numPrefix}${esc(ng.name)}</th>`;
   h += `<th class="mg-trsp-col">当時の定価</th>`;
-  h += `<th class="mg-trsp-col">×0.75</th>`;
+  h += `<th class="mg-trsp-col-label">×0.75</th>`;
   h += `<th class="mg-trsp-col">マイナス積算</th>`;
   h += `</tr></thead><tbody>`;
   for (const item of ng.items) {
     const lp = item._listPrice || 0;
-    const x75 = Math.floor(lp * 0.75);
-    const minus = -x75;
+    const minus = -Math.floor(lp * 0.75);
     const cnt = masterClickCounts[item.id] || 0;
     const bgStyle = cnt > 0 ? `style="background:rgba(202,138,4,${Math.min(cnt * 0.25, 0.85)})"` : "";
     h += `<tr class="mg-row" data-item-id="${item.id}" ${bgStyle} onclick="addFromMaster(event,'${item.id}')">`;
     h += `<td class="mg-row-label">${esc(item.spec || "")}</td>`;
     h += `<td class="mg-price mg-trsp-input"><input type="number" min="0" step="1" value="${lp}"
          oninput="onTrSpaceListPriceChange('${item.id}',this)" onclick="event.stopPropagation()"></td>`;
-    h += `<td class="mg-trsp-calc">${fmtNum(x75)}</td>`;
-    h += `<td class="mg-trsp-minus">${fmtNum(minus)}</td>`;
+    h += `<td class="mg-trsp-label">×0.75</td>`;
+    h += `<td class="mg-trsp-minus">${lp ? fmtNum(minus) : ""}</td>`;
     h += `</tr>`;
   }
   h += `</tbody></table></div>`;
@@ -2091,13 +2090,10 @@ function onTrSpaceListPriceChange(id, input) {
   m._listPrice = lp;
   m.basePrice = -Math.floor(lp * 0.75);
   debouncedSaveCubicle();
-  // ×0.75とマイナス積算セルを更新
   const tr = input.closest("tr");
   if (tr) {
     const cells = tr.querySelectorAll("td");
-    const x75 = Math.floor(lp * 0.75);
-    if (cells[2]) cells[2].textContent = fmtNum(x75);
-    if (cells[3]) cells[3].textContent = fmtNum(-x75);
+    if (cells[3]) cells[3].textContent = lp ? fmtNum(-Math.floor(lp * 0.75)) : "";
   }
 }
 

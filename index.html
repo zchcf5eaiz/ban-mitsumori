@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>盤見積もりアプリ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ヘッダー -->
+<header class="app-header">
+  <h1>盤 見 積 表</h1>
+  <div class="header-actions no-print">
+    <button class="btn btn-outline-light" onclick="newEstimate()">新規</button>
+    <button class="btn btn-success" onclick="saveCurrentEstimate()">保存</button>
+    <button class="btn btn-warning" onclick="exportJSON()">JSON出力</button>
+    <button class="btn btn-secondary" onclick="importJSON()">JSON読込</button>
+    <button class="btn btn-primary" onclick="printEstimate()">印刷</button>
+  </div>
+</header>
+
+<div class="main-container">
+
+  <!-- タブ -->
+  <div class="tabs no-print">
+    <button class="tab-btn active" data-tab="master" onclick="switchTab('master')">管理表（盤）</button>
+    <button class="tab-btn" data-tab="cubicle" onclick="switchTab('cubicle')">管理表（キュービクル）</button>
+    <button class="tab-btn" data-tab="estimate" onclick="switchTab('estimate')">見積作成</button>
+  </div>
+
+  <!-- ============================================================
+       管理表（元表）タブ — PDFレイアウト固定
+       ============================================================ -->
+  <div id="tab-master" class="tab-content active">
+    <div class="master-section">
+      <div class="master-header">
+        <h2>品目マスタ管理（元表）</h2>
+        <div class="master-toolbar">
+          <span class="added-badge" id="added-badge">追加済: <strong id="added-count">0</strong> 件</span>
+          <button class="btn btn-primary btn-sm" onclick="savePrices()">価格を保存</button>
+          <button class="btn btn-success btn-sm" onclick="switchTab('estimate')">見積を確認</button>
+          <button class="btn btn-danger btn-sm" onclick="resetMaster()">初期状態に戻す</button>
+        </div>
+      </div>
+      <div class="master-hint">品目の行をクリックすると見積に追加されます（複数回クリックで複数追加）</div>
+      <div id="master-content" class="master-content"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       管理表（キュービクル）タブ
+       ============================================================ -->
+  <div id="tab-cubicle" class="tab-content">
+    <div class="master-section">
+      <div class="master-header">
+        <h2>品目マスタ管理（キュービクル）</h2>
+        <div class="master-toolbar">
+          <span class="added-badge" id="cubicle-added-badge">追加済: <strong id="cubicle-added-count">0</strong> 件</span>
+          <button class="btn btn-primary btn-sm" onclick="savePrices()">価格を保存</button>
+          <button class="btn btn-success btn-sm" onclick="switchTab('estimate')">見積を確認</button>
+          <button class="btn btn-danger btn-sm" onclick="resetCubicle()">初期状態に戻す</button>
+        </div>
+      </div>
+      <div class="master-hint">品目の行をクリックすると見積に追加されます（複数回クリックで複数追加）</div>
+      <div id="cubicle-content" class="master-content"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       見積作成タブ
+       ============================================================ -->
+  <div id="tab-estimate" class="tab-content">
+
+    <!-- 保存済み見積もり選択 -->
+    <div class="estimate-manager no-print">
+      <select id="estimate-selector" onchange="onEstimateSelect(this.value)">
+        <option value="">-- 保存済み見積もり --</option>
+      </select>
+      <button class="btn btn-danger btn-sm" onclick="deleteCurrentEstimate()">削除</button>
+    </div>
+
+    <!-- プロジェクト情報 -->
+    <div class="project-info">
+      <div class="project-info-title">見 積 書</div>
+      <div class="project-info-grid" id="project-info-grid"></div>
+    </div>
+
+    <!-- 品目追加（カスケード選択） -->
+    <div class="add-bar no-print">
+      <select id="add-cat" onchange="onAddCatChange(this.value)">
+        <option value="">-- カテゴリ --</option>
+      </select>
+      <select id="add-name" onchange="onAddNameChange(this.value)">
+        <option value="">-- 品名 --</option>
+      </select>
+      <select id="add-spec" onchange="onAddSpecChange(this.value)">
+        <option value="">-- 仕様 --</option>
+      </select>
+      <button class="btn btn-primary btn-add" onclick="addSelectedItem()">追加</button>
+    </div>
+
+    <!-- 見積もり明細テーブル -->
+    <div class="estimate-section" id="est-section">
+      <div id="est-empty" class="empty-msg">
+        明細がありません。上のカテゴリ・品名・仕様を選んで「追加」してください。
+      </div>
+    </div>
+
+    <!-- 合計 -->
+    <div class="totals-section">
+      <table class="totals-table">
+        <tr>
+          <td class="label-cell">積算合計</td>
+          <td class="rate-cell"></td>
+          <td class="value-cell" id="total-grand">0</td>
+        </tr>
+        <tr>
+          <td class="label-cell">定価</td>
+          <td class="rate-cell">
+            掛率: <input type="number" id="rate-list-input" value="1.4" step="0.01" min="0"
+                         onchange="updateListRate(this.value)">
+          </td>
+          <td class="value-cell" id="total-list">0</td>
+        </tr>
+        <tr class="net-row">
+          <td class="label-cell">NET 価格</td>
+          <td class="rate-cell">
+            掛率: <input type="number" id="rate-net-input" value="0.33" step="0.01" min="0"
+                         onchange="updateNetRate(this.value)">
+          </td>
+          <td class="value-cell" id="total-net">0</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- 備考 -->
+    <div class="notes-section">
+      <h3>備考・特記事項</h3>
+      <textarea id="notes-textarea" placeholder="備考を入力..." onchange="updateNotes(this.value)"></textarea>
+    </div>
+  </div>
+
+</div>
+
+<script src="data.js"></script>
+<script src="data-cubicle.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

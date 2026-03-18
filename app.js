@@ -16,7 +16,7 @@ const STORAGE_GROUP_TOTALS   = "ban_group_totals_v1";
 const STORAGE_SR1_COMMENTS   = "ban_sr1_comments_v2";
 
 // データバージョン: この値を上げるとlocalStorageのマスタを破棄してデフォルトに戻す
-const DATA_VERSION = 6;
+const DATA_VERSION = 7;
 const STORAGE_DATA_VERSION = "ban_data_version";
 
 if (parseInt(localStorage.getItem(STORAGE_DATA_VERSION) || "0") < DATA_VERSION) {
@@ -106,6 +106,11 @@ function loadCubicle() {
     if (prices[item.id] != null) {
       item.basePrice = prices[item.id];
     }
+    // TRスペース用: _listPrice復元
+    if (prices[item.id + "_lp"] != null) {
+      item._listPrice = prices[item.id + "_lp"];
+      item.basePrice = -Math.floor(item._listPrice * 0.75);
+    }
   }
   return items;
 }
@@ -114,6 +119,7 @@ function saveCubicle() {
   const prices = {};
   for (const item of cubicleItems) {
     prices[item.id] = item.basePrice;
+    if (item._listPrice != null) prices[item.id + "_lp"] = item._listPrice;
   }
   try {
     localStorage.setItem(STORAGE_CUBICLE_PRICES, JSON.stringify(prices));
@@ -605,7 +611,7 @@ function renderMasterTable() {
             const spanN = sz.spanNames && sz.spanNames[ng.name];
             if (isWide) html += `<div class="cat-single-wide3">`;
             else if (spanN) html += `<div style="grid-column:span ${spanN}">`;
-            html += renderNameGroup(ng, MATRIX_GROUPS, singleBlockNum);
+            html += sz.trSpace ? renderTrSpaceGroup(ng, singleBlockNum) : renderNameGroup(ng, MATRIX_GROUPS, singleBlockNum);
             if (isWide || spanN) html += `</div>`;
           }
           html += `</div>`;
@@ -1941,6 +1947,7 @@ const SINGLE_ZONE_DEFS = {
   ],
   "K10": [
     { names: ["TR1φ(単相)", "TR3φ(三相)", "TR3φ440V"], cols: 3 },
+    { names: ["TRスペース1φ", "TRスペース3φ", "TRスペース3φ440V"], cols: 3, trSpace: true },
   ],
 };
 
@@ -2046,6 +2053,52 @@ function renderNameGroup(ng, matrixDefs, blockNum) {
   }
   h += `</tbody></table></div>`;
   return h;
+}
+
+/** TRスペース専用テーブルレンダリング */
+function renderTrSpaceGroup(ng, blockNum) {
+  const numPrefix = blockNum ? `<span class="mg-block-num">${blockNum}</span> ` : "";
+  let h = `<div class="name-group">`;
+  h += `<table class="mg-table mg-trspace-table">`;
+  h += `<thead><tr>`;
+  h += `<th class="mg-name">${numPrefix}${esc(ng.name)}</th>`;
+  h += `<th class="mg-trsp-col">当時の定価</th>`;
+  h += `<th class="mg-trsp-col">×0.75</th>`;
+  h += `<th class="mg-trsp-col">マイナス積算</th>`;
+  h += `</tr></thead><tbody>`;
+  for (const item of ng.items) {
+    const lp = item._listPrice || 0;
+    const x75 = Math.floor(lp * 0.75);
+    const minus = -x75;
+    const cnt = masterClickCounts[item.id] || 0;
+    const bgStyle = cnt > 0 ? `style="background:rgba(202,138,4,${Math.min(cnt * 0.25, 0.85)})"` : "";
+    h += `<tr class="mg-row" data-item-id="${item.id}" ${bgStyle} onclick="addFromMaster(event,'${item.id}')">`;
+    h += `<td class="mg-row-label">${esc(item.spec || "")}</td>`;
+    h += `<td class="mg-price mg-trsp-input"><input type="number" min="0" step="1" value="${lp}"
+         oninput="onTrSpaceListPriceChange('${item.id}',this)" onclick="event.stopPropagation()"></td>`;
+    h += `<td class="mg-trsp-calc">${fmtNum(x75)}</td>`;
+    h += `<td class="mg-trsp-minus">${fmtNum(minus)}</td>`;
+    h += `</tr>`;
+  }
+  h += `</tbody></table></div>`;
+  return h;
+}
+
+function onTrSpaceListPriceChange(id, input) {
+  const lp = parseFloat(input.value) || 0;
+  const m = getMasterItem(id);
+  if (!m) return;
+  m._listPrice = lp;
+  m.basePrice = -Math.floor(lp * 0.75);
+  debouncedSaveCubicle();
+  // ×0.75とマイナス積算セルを更新
+  const tr = input.closest("tr");
+  if (tr) {
+    const cells = tr.querySelectorAll("td");
+    const x75 = Math.floor(lp * 0.75);
+    if (cells[2]) cells[2].textContent = fmtNum(x75);
+    if (cells[3]) cells[3].textContent = fmtNum(-x75);
+  }
 }
 
 /** マトリクス形式でサブテーブルをレンダリング */

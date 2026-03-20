@@ -14,6 +14,7 @@ const STORAGE_CUBICLE        = "ban_cubicle_v1";
 const STORAGE_CUBICLE_PRICES = "ban_cubicle_prices_v1";
 const STORAGE_GROUP_TOTALS   = "ban_group_totals_v1";
 const STORAGE_SR1_COMMENTS   = "ban_sr1_comments_v2";
+const STORAGE_TRSPACE_LP     = "ban_trspace_lp_v1";
 
 // データバージョン: この値を上げるとlocalStorageのマスタを破棄してデフォルトに戻す
 const DATA_VERSION = 6;
@@ -102,13 +103,15 @@ function loadCubicle() {
   } catch {}
   // 3) デフォルトから構築し、保存済み価格を上書き
   const items = JSON.parse(JSON.stringify(DEFAULT_CUBICLE_ITEMS));
+  // TRスペース専用ストレージ読み込み
+  let lpMap = {};
+  try { const lp = localStorage.getItem(STORAGE_TRSPACE_LP); if (lp) lpMap = JSON.parse(lp); } catch {}
   for (const item of items) {
     if (prices[item.id] != null) {
       item.basePrice = prices[item.id];
     }
-    // TRスペース用: _listPrice復元
-    if (prices[item.id + "_lp"] != null) {
-      item._listPrice = prices[item.id + "_lp"];
+    if (lpMap[item.id] != null) {
+      item._listPrice = lpMap[item.id];
       item.basePrice = -Math.floor(item._listPrice * 0.75);
     }
   }
@@ -117,12 +120,16 @@ function loadCubicle() {
 
 function saveCubicle() {
   const prices = {};
+  const lpMap = {};
   for (const item of cubicleItems) {
     prices[item.id] = item.basePrice;
-    if (item._listPrice != null) prices[item.id + "_lp"] = item._listPrice;
+    if (item._listPrice != null && item._listPrice > 0) {
+      lpMap[item.id] = item._listPrice;
+    }
   }
   try {
     localStorage.setItem(STORAGE_CUBICLE_PRICES, JSON.stringify(prices));
+    localStorage.setItem(STORAGE_TRSPACE_LP, JSON.stringify(lpMap));
   } catch(e) {
     console.error("saveCubicle failed:", e);
   }
@@ -132,8 +139,10 @@ function resetCubicle() {
   if (!confirm("キュービクルマスタを初期状態に戻します。\n保存済み価格は維持されます。よろしいですか？")) return;
   // 現在の価格マップを取得（メモリから）
   const prices = {};
+  const lpMap = {};
   for (const item of cubicleItems) {
     prices[item.id] = item.basePrice;
+    if (item._listPrice != null && item._listPrice > 0) lpMap[item.id] = item._listPrice;
   }
   // DOM上の合計欄も保存
   document.querySelectorAll(".mg-solar-total-input").forEach(inp => {
@@ -146,6 +155,10 @@ function resetCubicle() {
   for (const item of cubicleItems) {
     if (prices[item.id] != null) {
       item.basePrice = prices[item.id];
+    }
+    if (lpMap[item.id] != null) {
+      item._listPrice = lpMap[item.id];
+      item.basePrice = -Math.floor(item._listPrice * 0.75);
     }
   }
   saveCubicle();
@@ -192,11 +205,20 @@ function savePrices() {
   // DOM上のinput値をメモリに反映
   document.querySelectorAll("[data-item-id]").forEach(el => {
     const id = el.dataset.itemId;
+    const m = getMasterItem(id);
+    if (!m) return;
+    // TRスペースは当時の定価(=_listPrice)を保存、basePriceは自動計算
+    const trSpInp = el.querySelector(".mg-trsp-input input");
+    if (trSpInp) {
+      const lp = parseFloat(trSpInp.value) || 0;
+      m._listPrice = lp;
+      m.basePrice = -Math.floor(lp * 0.75);
+      return;
+    }
     const inp = el.querySelector("input[type='number']");
     if (inp && id) {
       const val = parseFloat(inp.value) || 0;
-      const m = getMasterItem(id);
-      if (m) m.basePrice = val;
+      m.basePrice = val;
     }
   });
   // 盤
@@ -281,6 +303,8 @@ let masterItems = loadMaster();
 let cubicleItems = loadCubicle();
 loadGroupTotals();
 let sr1Comments = loadSr1Comments();
+
+
 saveSr1Comments(); // デフォルト補完した値を即保存
 
 // クリック回数トラッキング（選択色の濃さ管理）
@@ -1563,7 +1587,8 @@ function renderCubicleTable() {
         html += `</div>`;
       } else if (inSingleZone) {
         singleBlockNum++;
-        html += renderNameGroup(ng, CUBICLE_MATRIX_GROUPS, singleBlockNum);
+        const isTrSpace = ng.name.startsWith("TRスペース");
+        html += isTrSpace ? renderTrSpaceGroup(ng, singleBlockNum) : renderNameGroup(ng, CUBICLE_MATRIX_GROUPS, singleBlockNum);
       } else {
         html += renderNameGroup(ng, CUBICLE_MATRIX_GROUPS);
       }
@@ -1946,7 +1971,6 @@ const SINGLE_ZONE_DEFS = {
       cols: 4, wideNames: new Set(["MCなど(単品)"]), spanNames: { "フロートスイッチ": 2 } },
   ],
   "K10": [
-    { names: ["TR1φ(単相)", "TR3φ(三相)", "TR3φ440V"], cols: 3 },
     { names: ["TRスペース1φ", "TRスペース3φ", "TRスペース3φ440V"], cols: 3, trSpace: true },
   ],
 };

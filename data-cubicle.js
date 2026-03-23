@@ -554,6 +554,7 @@ const DEFAULT_CUBICLE_ITEMS = [
   // --- マルチメーター ---
   { id: "K20M1", category: "K4", name: "マルチメーター", spec: "低圧用マルチメーター(ME110GFシリーズ)", unit: "個", basePrice: 286, note: "" },
   { id: "K20M2", category: "K4", name: "マルチメーター", spec: "低圧用マルチメーター LOR付(ハカルプラス・三菱廃盤)", unit: "個", basePrice: 417, note: "" },
+  { id: "K20M3", category: "K4", name: "マルチメーター", spec: "低圧用マルチメーター LOR付用ZCT", unit: "個", basePrice: 31, note: "" },
 
   // --- Wh(電力量計) ---
   { id: "K20W0", category: "K4", name: "Wh(Tr)", spec: "アナログ式 □/3W/5A 未検", unit: "個", basePrice: 46, note: "" },

@@ -1305,7 +1305,7 @@ function renderOptionTable() {
         </tr>
         <tr class="mg-row" onclick="addOptionToEstimate(event, '窓')">
           <td class="mg-spec">窓</td>
-          <td class="mg-price"><input type="number" id="opt-price-window" min="0" step="0.1" value="0"
+          <td class="mg-price"><input type="number" id="opt-price-window" min="0" step="0.1" value="25"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
       </tbody>
@@ -1351,17 +1351,17 @@ function renderOption2Table() {
       <tbody>
         <tr class="mg-row" onclick="addOption2ToEstimate(event, 'ポール取付')">
           <td class="mg-spec">ポール取付</td>
-          <td class="mg-price"><input type="number" id="opt2-price-pole" min="0" step="0.1" value="0"
+          <td class="mg-price"><input type="number" id="opt2-price-pole" min="0" step="0.1" value="100"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
         <tr class="mg-row" onclick="addOption2ToEstimate(event, 'コン柱取付')">
           <td class="mg-spec">コン柱取付</td>
-          <td class="mg-price"><input type="number" id="opt2-price-conchu" min="0" step="0.1" value="0"
+          <td class="mg-price"><input type="number" id="opt2-price-conchu" min="0" step="0.1" value="100"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
         <tr class="mg-row" onclick="addOption2ToEstimate(event, 'スタンド')">
           <td class="mg-spec">スタンド</td>
-          <td class="mg-price"><input type="number" id="opt2-price-stand" min="0" step="0.1" value="0"
+          <td class="mg-price"><input type="number" id="opt2-price-stand" min="0" step="0.1" value="150"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
       </tbody>
@@ -1407,17 +1407,17 @@ function renderQuickItemsTable() {
       <tbody>
         <tr class="mg-row" onclick="addQuickItemToEstimate(event, '上部ダクト')">
           <td class="mg-spec">上部ダクト</td>
-          <td class="mg-price"><input type="number" id="quick-price-duct-top" min="0" step="0.1" value="0"
+          <td class="mg-price"><input type="number" id="quick-price-duct-top" min="0" step="0.1" value="88"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
         <tr class="mg-row" onclick="addQuickItemToEstimate(event, '下部ダクト')">
           <td class="mg-spec">下部ダクト</td>
-          <td class="mg-price"><input type="number" id="quick-price-duct-btm" min="0" step="0.1" value="0"
+          <td class="mg-price"><input type="number" id="quick-price-duct-btm" min="0" step="0.1" value="88"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
         <tr class="mg-row" onclick="addQuickItemToEstimate(event, '自立')">
           <td class="mg-spec">自立</td>
-          <td class="mg-price"><input type="number" id="quick-price-standalone" min="0" step="0.1" value="0"
+          <td class="mg-price"><input type="number" id="quick-price-standalone" min="0" step="0.1" value="225"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
       </tbody>

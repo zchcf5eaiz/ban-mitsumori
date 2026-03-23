@@ -2105,7 +2105,7 @@ const DEFAULT_GROUP_TOTALS = {
 };
 
 // デフォルト オプション価格（P-BOX・ダクト等の掛率）
-const DEFAULT_OPTION_PRICES = {"pbox-rate-1000":25,"pbox-rate-1600":30,"pbox-rate-2000":35,"pbox-rate-2300":40,"pbox-rate-over":45,"pbox-rate-outdoor":1.2,"pbox-rate-sus":3.5,"pbox-rate-door":25,"duct-rate-1000":25,"duct-rate-1600":30,"duct-rate-2000":35,"duct-rate-2300":40,"duct-rate-over":45,"duct-rate-outdoor":1.2,"duct-rate-sus":3.5,"duct-rate-door":25,"frame-rate-l":60,"frame-rate-lp":120,"frame-rate-b50":50,"frame-rate-b100":100,"frame-rate-sus":2,"tray-rate-1000":25,"tray-rate-1600":30,"tray-rate-2000":35,"tray-rate-2300":40,"tray-rate-over":45,"tray-rate-outdoor":1.2,"tray-rate-sus":3.5};
+const DEFAULT_OPTION_PRICES = {"pbox-rate-1000":25,"pbox-rate-1600":30,"pbox-rate-2000":35,"pbox-rate-2300":40,"pbox-rate-over":45,"pbox-rate-outdoor":1.2,"pbox-rate-sus":3.5,"pbox-rate-door":25,"duct-rate-1000":25,"duct-rate-1600":30,"duct-rate-2000":35,"duct-rate-2300":40,"duct-rate-over":45,"duct-rate-outdoor":1.2,"duct-rate-sus":3.5,"duct-rate-door":25,"frame-rate-l":60,"frame-rate-lp":120,"frame-rate-b50":50,"frame-rate-b100":100,"frame-rate-sus":2,"tray-rate-1000":25,"tray-rate-1600":30,"tray-rate-2000":35,"tray-rate-2300":40,"tray-rate-over":45,"tray-rate-outdoor":1.2,"tray-rate-sus":3.5,"opt-price-single":25,"opt-price-double":25,"opt-price-window":25,"opt2-price-pole":100,"opt2-price-conchu":100,"opt2-price-stand":150,"quick-price-duct-top":88,"quick-price-duct-btm":88,"quick-price-standalone":225,"sus-diff-small":65,"sus-diff-large":105};
 
 // デフォルト掛率
 const DEFAULT_RATES = {

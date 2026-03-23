@@ -235,7 +235,7 @@ function savePrices() {
 
   // オプション + 掛率input を一括収集
   const optPrices = {};
-  document.querySelectorAll('.pbox-calc input[id^="opt-price-"], .pbox-calc input[id^="opt2-price-"], .pbox-calc input[id^="quick-price-"], .pbox-calc input[id*="-rate-"]').forEach(inp => {
+  document.querySelectorAll('.pbox-calc input[id^="opt-price-"], .pbox-calc input[id^="opt2-price-"], .pbox-calc input[id^="quick-price-"], .pbox-calc input[id^="sus-diff-"], .pbox-calc input[id*="-rate-"]').forEach(inp => {
     optPrices[inp.id] = parseFloat(inp.value) || 0;
   });
   localStorage.setItem("ban_option_prices", JSON.stringify(optPrices));
@@ -571,6 +571,7 @@ function renderMasterTable() {
         html += renderOptionTable();
         html += renderOption2Table();
         html += renderQuickItemsTable();
+        html += renderSusDiffTable();
         html += `</div>`;
       }
       const vStacks = VERTICAL_STACKS[cg.id] || [];
@@ -1454,6 +1455,57 @@ function addQuickItemToEstimate(event, type) {
   updateAddedCount();
   updateCubicleAddedCount();
   showToast("追加: " + type + " × " + qty);
+}
+
+// ============================================================
+// SUS差額
+// ============================================================
+
+function renderSusDiffTable() {
+  return `<div class="name-group pbox-calc">
+    <div class="pbox-title">SUS差額</div>
+    <table class="mg-table option-table">
+      <thead><tr><th>品名</th><th>単価</th></tr></thead>
+      <tbody>
+        <tr class="mg-row" onclick="addSusDiffToEstimate(event, '400×300×120程度')">
+          <td class="mg-spec">400×300×120程度</td>
+          <td class="mg-price"><input type="number" id="sus-diff-small" min="0" step="0.1" value="65"
+               onclick="event.stopPropagation()" onfocus="this.select()"></td>
+        </tr>
+        <tr class="mg-row" onclick="addSusDiffToEstimate(event, '600×400×120程度')">
+          <td class="mg-spec">600×400×120程度</td>
+          <td class="mg-price"><input type="number" id="sus-diff-large" min="0" step="0.1" value="105"
+               onclick="event.stopPropagation()" onfocus="this.select()"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function addSusDiffToEstimate(event, type) {
+  if (event.target.tagName === "INPUT") return;
+  const idMap = { "400×300×120程度": "sus-diff-small", "600×400×120程度": "sus-diff-large" };
+  const price = parseFloat(document.getElementById(idMap[type]).value) || 0;
+  if (price <= 0) return;
+
+  const input = prompt("数量を入力してください\nSUS差額 " + type + " (単価: " + price + ")", "1");
+  if (input === null) return;
+  const qty = parseInt(input, 10);
+  if (isNaN(qty) || qty <= 0) return;
+
+  currentEstimate.lines.push({
+    type: "custom",
+    lineId: genId(),
+    name: "SUS差額",
+    spec: type,
+    qty: qty,
+    unitPrice: price,
+    lineNote: "",
+  });
+
+  updateAddedCount();
+  updateCubicleAddedCount();
+  showToast("追加: SUS差額 " + type + " × " + qty);
 }
 
 // ============================================================
@@ -2715,7 +2767,14 @@ function renderProjectInfo() {
     { key: "location", label: "現場" },
     { key: "staff", label: "担当者" },
   ];
-  document.getElementById("project-info-grid").innerHTML = fields.map(f => {
+  const panelName = currentEstimate.project["panelName"] || "";
+  let html = `<div class="info-panel-name">
+    <label>盤名称</label>
+    <input type="text" value="${escAttr(panelName)}"
+           onchange="currentEstimate.project['panelName']=this.value">
+  </div>`;
+  html += `<div class="info-grid-2col">`;
+  html += fields.map(f => {
     const v = currentEstimate.project[f.key] || "";
     return `<div class="info-row">
       <label>${f.label}</label>
@@ -2723,6 +2782,8 @@ function renderProjectInfo() {
              onchange="currentEstimate.project['${f.key}']=this.value">
     </div>`;
   }).join("");
+  html += `</div>`;
+  document.getElementById("project-info-grid").innerHTML = html;
 }
 
 function renderEstimateLines() {
@@ -2759,7 +2820,7 @@ function _buildLineRows(lines) {
 
     if (line.type === "sep") {
       return `<tr class="sep-row" ${dragAttrs}>
-        <td colspan="7">
+        <td colspan="8">
           <button class="btn-sep-del no-print" onclick="removeLine('${line.lineId}')" title="区切り線を削除">&times;</button>
         </td>
       </tr>`;
@@ -2771,8 +2832,8 @@ function _buildLineRows(lines) {
         <td class="ec-sep no-print"></td>
         <td class="subtotal-label">小計</td>
         <td class="subtotal-sum" colspan="2">${fmtNum(sub)}</td>
-        <td class="subtotal-rate-cell">&times;<input type="number" step="0.01" value="${line.rate}"
-          onchange="onSubtotalRate('${line.lineId}',this.value)"></td>
+        <td class="subtotal-rate-cell"><span class="subtotal-rate-input">&times;<input type="number" step="0.01" value="${line.rate}"
+          onchange="onSubtotalRate('${line.lineId}',this.value)"></span><span class="subtotal-rate-text" style="display:none">&times; ${line.rate}</span></td>
         <td class="subtotal-eq">=</td>
         <td class="subtotal-value">${fmtNum(result)}</td>
         <td class="ec-del no-print">
@@ -2786,7 +2847,7 @@ function _buildLineRows(lines) {
           <button class="btn-sep" onclick="insertSep('${line.lineId}')" title="下に区切り線を挿入">▶</button>
           <button class="btn-cmt" onclick="insertComment('${line.lineId}')" title="下にコメント行を挿入">💬</button>
         </td>
-        <td colspan="6" class="ec-comment-cell">
+        <td colspan="7" class="ec-comment-cell">
           <input type="text" class="comment-input" value="${esc(line.text || '')}"
             onchange="onCommentText('${line.lineId}',this.value)"
             placeholder="コメントを入力...">
@@ -2817,10 +2878,10 @@ function _buildLineRows(lines) {
       <td class="ec-no">${itemNo}</td>
       <td class="ec-name">${srcBadge}${esc(name)}</td>
       <td class="ec-spec">${esc(spec)}</td>
-      <td class="ec-qty"><input type="number" min="0" value="${line.qty}"
-           onchange="onLineQty('${line.lineId}',this.value)" onfocus="this.select()"></td>
       <td class="ec-price"><input type="number" min="0" step="0.1" value="${line.unitPrice}"
            onchange="onLinePrice('${line.lineId}',this.value)" onfocus="this.select()"></td>
+      <td class="ec-qty"><input type="number" min="0" value="${line.qty}"
+           onchange="onLineQty('${line.lineId}',this.value)" onfocus="this.select()"></td>
       <td class="ec-subtotal" id="sub-${line.lineId}">${fmtNum(sub)}</td>
       <td class="ec-del no-print">
         <button class="btn btn-danger btn-sm" onclick="removeLine('${line.lineId}')">&times;</button>
@@ -2835,8 +2896,8 @@ function _estTheadHtml() {
     <th class="col-no">No</th>
     <th class="col-name">品名</th>
     <th class="col-spec">仕様</th>
-    <th class="col-qty">数量</th>
     <th class="col-price">単価</th>
+    <th class="col-qty">数量</th>
     <th class="col-subtotal">金額</th>
     <th class="col-actions no-print"></th>
   </tr></thead>`;
@@ -2861,38 +2922,35 @@ function renderEstimateLinesForPrint() {
   const rowsHtml = _buildLineRows(lines);
   const theadHtml = _estTheadHtml();
 
-  // 常に3カラム固定幅。1列目→2列目→3列目の順に埋める。
-  // 3列目が溢れたら次ページでまた3カラム。
-  const COL_COUNT = 3;
+  // 2カラム構成。1列目→2列目の順に埋める。
+  const COL_COUNT = 2;
   const perCol = EST_PRINT_ROW_LIMIT;
 
   section.style.cssText = "display:flex; flex-wrap:wrap; gap:2px; align-items:flex-start; overflow:visible;";
 
-  // 行がある分だけテーブルを作成（最低でも3つ = 1ページ分の3カラム）
-  const totalCols = Math.max(COL_COUNT, Math.ceil(rowsHtml.length / perCol));
-  // ページ単位で3の倍数にする（空テーブルで幅を揃える）
-  const colCount = Math.ceil(totalCols / COL_COUNT) * COL_COUNT;
+  const totalCols = Math.max(1, Math.ceil(rowsHtml.length / perCol));
 
-  for (let c = 0; c < colCount; c++) {
+  for (let c = 0; c < totalCols; c++) {
     const chunk = rowsHtml.slice(c * perCol, (c + 1) * perCol);
+    if (chunk.length === 0) continue;
     const tbl = document.createElement("table");
     tbl.className = "estimate-table est-col-table";
-    tbl.style.cssText = "flex:1 1 0; min-width:0; max-width:calc(33.33% - 2px); font-size:9px; border-collapse:collapse; table-layout:fixed;";
-    if (chunk.length > 0) {
-      tbl.innerHTML = theadHtml + "<tbody>" + chunk.join("") + "</tbody>";
-    } else {
-      // 空テーブル（幅確保用）— ヘッダーだけ表示
-      tbl.innerHTML = theadHtml + "<tbody></tbody>";
-    }
+    tbl.style.cssText = "flex:0 0 calc(50% - 2px); min-width:0; max-width:calc(50% - 2px); font-size:9px; border-collapse:collapse; table-layout:fixed;";
+    tbl.innerHTML = theadHtml + "<tbody>" + chunk.join("") + "</tbody>";
+    // 印刷不要セルをDOMから物理削除（Safari対策）
+    tbl.querySelectorAll(".col-sep, .col-actions, .ec-sep, .ec-del").forEach(el => el.remove());
+    // colspan調整（不要列削除後は6列）
+    tbl.querySelectorAll(".sep-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
+    tbl.querySelectorAll(".comment-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
     section.insertBefore(tbl, empty);
   }
 
-  // 仕様セルの文字あふれ対策: テキストが収まらなければfont-sizeを縮小
-  section.querySelectorAll(".ec-spec").forEach(td => {
-    td.classList.add("ec-spec-print");
+  // 品名・仕様セルの文字あふれ対策: テキストが収まらなければfont-sizeを縮小
+  section.querySelectorAll(".ec-name, .ec-spec").forEach(td => {
+    td.classList.add("ec-shrink-print");
     const text = td.textContent;
     if (!text) return;
-    const origSize = 9;
+    const origSize = 8;
     let fs = origSize;
     td.style.fontSize = fs + "px";
     while (td.scrollWidth > td.clientWidth && fs > 4) {
@@ -3137,8 +3195,8 @@ function calcNetPrice()  { return calcListPrice() * currentEstimate.netRate; }
 
 function renderTotals() {
   document.getElementById("total-grand").textContent = fmtNum(calcGrandTotal());
-  const listPrice = Math.round(calcListPrice()) * 1000;
-  const netRaw = Math.round(calcNetPrice()) * 1000;
+  const listPrice = Math.ceil(calcListPrice()) * 1000;
+  const netRaw = Math.ceil(calcNetPrice()) * 1000;
   const netPrice = Math.ceil(netRaw / 10000) * 10000; // 万単位切り上げ
   document.getElementById("total-list").textContent  = fmtNum(listPrice);
   document.getElementById("total-net").textContent    = fmtNum(netPrice);

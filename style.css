@@ -66,7 +66,21 @@ body {
   background: #1a365d; color: #fff; padding: 6px 16px;
   font-size: 1rem; font-weight: 700; text-align: center; letter-spacing: 4px;
 }
-.project-info-grid { display: grid; grid-template-columns: 1fr 1fr; }
+.project-info-grid { }
+.info-grid-2col { display: grid; grid-template-columns: 1fr 1fr; }
+.info-panel-name {
+  border-bottom: 2px solid #1a365d; padding: 8px 12px;
+  display: flex; align-items: center; gap: 10px;
+}
+.info-panel-name label {
+  font-weight: 700; font-size: 0.9rem; color: #1a365d; white-space: nowrap;
+}
+.info-panel-name input {
+  flex: 1; font-size: 1.1rem; font-weight: 900; text-align: center;
+  border: 1px solid #cbd5e0; border-radius: 3px; padding: 4px 8px;
+  letter-spacing: 2px; color: #1a365d;
+}
+.info-panel-name input:focus { border-color: #3182ce; outline: none; background: #fffff0; }
 .info-row {
   display: flex; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;
 }
@@ -918,8 +932,9 @@ tr[draggable="true"]:active { cursor: grabbing; }
   .app-header { position: static; }
   .no-print, .tabs, .estimate-manager, .toolbar, .add-bar,
   .col-sep, .col-actions, .ec-sep, .ec-del, .toast { display: none !important; }
-  /* 品名列を印刷時に非表示 */
-  .col-name, .ec-name { display: none !important; }
+  /* 品名・仕様列を均等幅 */
+  .col-name, .col-spec { font-size: 8px; }
+  .ec-name, .ec-spec { font-size: 8px; overflow: hidden; white-space: nowrap; }
   .main-container { max-width: 100%; padding: 0; margin: 0; }
   .estimate-section { overflow: visible !important; page-break-inside: auto; }
   .est-col-table { page-break-inside: avoid; }
@@ -939,12 +954,12 @@ tr[draggable="true"]:active { cursor: grabbing; }
   .estimate-table input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none; margin: 0;
   }
-  /* 数量・単価・金額を狭く、仕様を広く */
+  /* 数量・単価・金額を狭く、品名・仕様を均等に */
   .estimate-table .col-qty { width: 26px; }
   .estimate-table .col-price { width: 34px; }
   .estimate-table .col-subtotal { width: 40px; }
   .estimate-table .col-no { width: 20px; }
-  .estimate-table .col-spec { width: auto; } /* 残り幅を仕様列に */
+  .estimate-table .col-name, .estimate-table .col-spec { width: auto; }
   .estimate-table .ec-qty { width: 26px; }
   .estimate-table .ec-price { width: 34px; }
   .estimate-table .ec-subtotal { width: 40px; padding-right: 2px !important; }
@@ -953,19 +968,29 @@ tr[draggable="true"]:active { cursor: grabbing; }
   .ec-qty input, .ec-price input, .totals-table .rate-cell input {
     border: none; background: transparent;
   }
-  /* 仕様セル: 文字が溢れたら縮小して1行に収める */
-  .estimate-table td.ec-spec-print {
+  /* 品名・仕様セル: 文字が溢れたら縮小して1行に収める */
+  .estimate-table td.ec-shrink-print {
     overflow: hidden; white-space: nowrap;
     line-height: 1.4; height: 1.4em;
   }
   /* ヘッダー・合計・備考をA4幅いっぱいに */
   .project-info, .totals-section, .notes-section { width: 100%; }
+  .info-grid-2col { display: grid !important; grid-template-columns: 1fr 1fr !important; }
+  .info-row label { font-size: 0.7rem; min-width: 60px; padding: 2px 6px; }
+  .info-row input { font-size: 0.75rem; padding: 2px 4px; }
+  .info-panel-name { border-bottom: 2px solid #1a365d; padding: 6px 10px; text-align: center; }
+  .info-panel-name label { display: none; }
+  .info-panel-name input {
+    font-size: 1.2rem; font-weight: 900; text-align: center; border: none;
+    width: 100%; letter-spacing: 2px;
+  }
   .project-info, .totals-section, .notes-section, .estimate-section {
     box-shadow: none; margin-bottom: 4px;
   }
   .sep-row td { background: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .subtotal-row { background: #edf2f7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .subtotal-rate input { border: none; background: transparent; font-weight: 700; }
+  .subtotal-rate-input { display: none !important; }
+  .subtotal-rate-text { display: inline !important; }
   .totals-table .net-row td { background: #e8f5e9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .totals-table td { padding: 3px 8px; font-size: 9px; }
   .notes-section { padding: 6px 10px; }

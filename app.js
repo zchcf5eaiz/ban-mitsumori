@@ -2827,7 +2827,7 @@ function _buildLineRows(lines) {
     }
     if (line.type === "subtotal") {
       const sub = calcSubtotal(lines, i);
-      const result = Math.round(sub * line.rate);
+      const result = Math.ceil(sub * line.rate);
       return `<tr class="subtotal-row" ${dragAttrs}>
         <td class="ec-sep no-print"></td>
         <td class="subtotal-label">小計</td>
@@ -3183,7 +3183,7 @@ function calcGrandTotal() {
     if (line.type === "item" || line.type === "custom") {
       blockSum += line.qty * line.unitPrice;
     } else if (line.type === "subtotal") {
-      total += Math.round(blockSum * line.rate);
+      total += Math.ceil(blockSum * line.rate);
       blockSum = 0;
     }
   }

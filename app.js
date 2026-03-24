@@ -2977,6 +2977,12 @@ function clearPrintFit() {
 }
 
 window.addEventListener("beforeprint", () => {
+  if (isSummaryMode) {
+    // サマリーモード: 盤名称欄を非表示にしてそのまま印刷
+    const panelNameEl = document.querySelector(".project-info .info-panel-name");
+    if (panelNameEl) panelNameEl.style.display = "none";
+    return;
+  }
   renderEstimateLinesForPrint();
   fitPrintToOnePage();
   // 備考: textareaを非表示にし、全文表示用のdivを挿入
@@ -2991,6 +2997,10 @@ window.addEventListener("beforeprint", () => {
   }
 });
 window.addEventListener("afterprint", () => {
+  if (isSummaryMode) {
+    // サマリーモード: 復帰処理は不要（サマリーを維持）
+    return;
+  }
   clearPrintFit();
   renderEstimateLines();
   // 備考: 印刷用divを削除してtextareaを復帰
@@ -3312,6 +3322,181 @@ function importAllData() {
     r.readAsText(f);
   };
   inp.click();
+}
+
+// ============================================================
+// 見積サマリー（集計表）
+// ============================================================
+
+let isSummaryMode = false;
+
+/** 任意の見積オブジェクトの積算合計を計算（calcGrandTotal の汎用版） */
+function calcGrandTotalFor(est) {
+  const lines = est.lines;
+  let total = 0;
+  let blockSum = 0;
+  for (const line of lines) {
+    if (line.type === "item" || line.type === "custom") {
+      blockSum += line.qty * line.unitPrice;
+    } else if (line.type === "subtotal") {
+      total += Math.ceil(blockSum * line.rate);
+      blockSum = 0;
+    }
+  }
+  total += blockSum;
+  return total;
+}
+
+/** 集計表: 見積選択画面を表示 */
+function showSummarySelector() {
+  if (savedEstimates.length === 0) {
+    showToast("保存済み見積もりがありません");
+    return;
+  }
+  // 見積タブに切り替え
+  switchTab("estimate");
+
+  // プロジェクト情報・合計・備考・追加バーを一時非表示
+  document.querySelector(".project-info").style.display = "none";
+  document.querySelector(".totals-section").style.display = "none";
+  document.querySelector(".notes-section").style.display = "none";
+  document.querySelector(".add-bar").style.display = "none";
+  document.querySelector(".estimate-manager").style.display = "none";
+
+  const section = document.getElementById("est-section");
+  section.innerHTML = `
+    <div class="summary-selector">
+      <h3>集計する見積もりを選択</h3>
+      <div class="summary-checklist">
+        ${savedEstimates.map(e => {
+          const panel = e.project && e.project.panelName ? e.project.panelName : "";
+          const d = new Date(e.createdAt);
+          const ds = d.getFullYear() + "/" + (d.getMonth()+1) + "/" + d.getDate();
+          return `<label class="summary-check-item">
+            <input type="checkbox" value="${e.id}" checked>
+            <span class="summary-check-name">${esc(e.name)}</span>
+            ${panel ? `<span class="summary-check-panel">${esc(panel)}</span>` : ""}
+            <span class="summary-check-date">${ds}</span>
+          </label>`;
+        }).join("")}
+      </div>
+      <div class="summary-selector-actions">
+        <button class="btn btn-primary" onclick="onSummaryConfirm()">集計する</button>
+        <button class="btn btn-secondary" onclick="closeSummary()">キャンセル</button>
+      </div>
+    </div>
+  `;
+}
+
+/** 選択画面の「集計する」ボタン */
+function onSummaryConfirm() {
+  const checks = document.querySelectorAll(".summary-checklist input[type=checkbox]:checked");
+  const ids = Array.from(checks).map(c => c.value);
+  if (ids.length === 0) { showToast("見積もりを選択してください"); return; }
+  renderSummary(ids);
+}
+
+/** サマリー表示 */
+function renderSummary(ids) {
+  isSummaryMode = true;
+
+  const estimates = ids.map(id => savedEstimates.find(e => e.id === id)).filter(Boolean);
+
+  // 明細行を構築: 各見積ごとに定価・NETを計算
+  let grandListTotal = 0;
+  let grandNetTotal = 0;
+  const rows = estimates.map(est => {
+    const raw = calcGrandTotalFor(est);
+    const listPrice = Math.ceil(raw * est.listRate) * 1000;
+    const netRaw = Math.ceil(listPrice * est.netRate / 10000) * 10000;
+    grandListTotal += listPrice;
+    grandNetTotal += netRaw;
+    return {
+      name: est.name,
+      panelName: (est.project && est.project.panelName) || "",
+      listPrice,
+      netPrice: netRaw,
+      notes: est.notes || "",
+    };
+  });
+
+  // プロジェクト情報は表示、盤名称は非表示
+  const projInfo = document.querySelector(".project-info");
+  projInfo.style.display = "";
+  // 盤名称パネルを非表示にする
+  const panelNameEl = projInfo.querySelector(".info-panel-name");
+  if (panelNameEl) panelNameEl.style.display = "none";
+
+  // 合計・備考・追加バー・見積管理バーを非表示のまま
+  document.querySelector(".totals-section").style.display = "none";
+  document.querySelector(".notes-section").style.display = "none";
+  document.querySelector(".add-bar").style.display = "none";
+  document.querySelector(".estimate-manager").style.display = "none";
+
+  const section = document.getElementById("est-section");
+  section.innerHTML = `
+    <div class="summary-grand-totals">
+      <div class="summary-grand-item">
+        <span class="summary-grand-label">定価合計</span>
+        <span class="summary-grand-value">${fmtNum(grandListTotal)}<span class="summary-grand-unit">円</span></span>
+      </div>
+      <div class="summary-grand-item summary-grand-net">
+        <span class="summary-grand-label">NET合計</span>
+        <span class="summary-grand-value">${fmtNum(grandNetTotal)}<span class="summary-grand-unit">円</span></span>
+      </div>
+    </div>
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th class="summary-th-no">No.</th>
+          <th class="summary-th-panel">盤名称</th>
+          <th class="summary-th-price">定価</th>
+          <th class="summary-th-net">NET</th>
+          <th class="summary-th-notes">備考</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map((r, i) => `<tr>
+          <td class="summary-td-no">${i + 1}</td>
+          <td class="summary-td-panel">${esc(r.panelName || r.name)}</td>
+          <td class="summary-td-price">${fmtNum(r.listPrice)}</td>
+          <td class="summary-td-net">${fmtNum(r.netPrice)}</td>
+          <td class="summary-td-notes">${esc(r.notes)}</td>
+        </tr>`).join("")}
+      </tbody>
+      <tfoot>
+        <tr class="summary-tfoot-row">
+          <td colspan="2" class="summary-tfoot-label">合計</td>
+          <td class="summary-td-price">${fmtNum(grandListTotal)}</td>
+          <td class="summary-td-net">${fmtNum(grandNetTotal)}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="summary-actions no-print">
+      <button class="btn btn-primary" onclick="printEstimate()">印刷</button>
+      <button class="btn btn-secondary" onclick="closeSummary()">戻る</button>
+    </div>
+  `;
+}
+
+/** サマリーモードを閉じて通常画面に復帰 */
+function closeSummary() {
+  isSummaryMode = false;
+  // すべてのセクションを復帰
+  document.querySelector(".project-info").style.display = "";
+  const panelNameEl = document.querySelector(".project-info .info-panel-name");
+  if (panelNameEl) panelNameEl.style.display = "";
+  document.querySelector(".totals-section").style.display = "";
+  document.querySelector(".notes-section").style.display = "";
+  document.querySelector(".add-bar").style.display = "";
+  document.querySelector(".estimate-manager").style.display = "";
+  // est-section に元の空メッセージを戻す
+  const section = document.getElementById("est-section");
+  section.innerHTML = `<div id="est-empty" class="empty-msg">
+    明細がありません。上のカテゴリ・品名・仕様を選んで「追加」してください。
+  </div>`;
+  renderEstimateTab();
 }
 
 // ============================================================

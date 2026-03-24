@@ -925,6 +925,72 @@ tr[draggable="true"]:active { cursor: grabbing; }
   .add-bar select { min-width: 100%; }
 }
 
+/* === 見積サマリー（集計表） === */
+.btn-info { background: #2b6cb0; color: #fff; }
+
+.summary-selector {
+  padding: 20px; background: #fff;
+}
+.summary-selector h3 {
+  font-size: 1rem; color: #1a365d; margin-bottom: 12px;
+  border-bottom: 2px solid #1a365d; padding-bottom: 6px;
+}
+.summary-checklist {
+  display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;
+}
+.summary-check-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  border: 1px solid #e2e8f0; border-radius: 4px; cursor: pointer;
+  transition: background 0.15s;
+}
+.summary-check-item:hover { background: #f7fafc; }
+.summary-check-item input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+.summary-check-name { font-weight: 600; font-size: 0.9rem; color: #2d3748; }
+.summary-check-panel { font-size: 0.82rem; color: #718096; }
+.summary-check-date { font-size: 0.78rem; color: #a0aec0; margin-left: auto; white-space: nowrap; }
+.summary-selector-actions { display: flex; gap: 8px; }
+
+.summary-grand-totals {
+  display: flex; gap: 0; margin-bottom: 12px; border-radius: 6px;
+  overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+.summary-grand-item {
+  flex: 1; background: #1a365d; color: #fff; padding: 16px 24px;
+  display: flex; flex-direction: column; align-items: center;
+}
+.summary-grand-item.summary-grand-net { background: #276749; }
+.summary-grand-label {
+  font-size: 0.85rem; font-weight: 600; letter-spacing: 2px; opacity: 0.85;
+  margin-bottom: 4px;
+}
+.summary-grand-value {
+  font-size: 1.8rem; font-weight: 900; font-family: "Menlo", monospace;
+  letter-spacing: 1px;
+}
+.summary-grand-unit { font-size: 0.9rem; font-weight: 400; margin-left: 4px; }
+
+.summary-table {
+  width: 100%; border-collapse: collapse; font-size: 0.9rem;
+  background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.08);
+  margin-bottom: 12px;
+}
+.summary-table thead th {
+  background: #2d3748; color: #fff; padding: 8px 12px; text-align: center;
+  font-weight: 600; font-size: 0.85rem; border: 1px solid #4a5568;
+}
+.summary-table tbody td {
+  padding: 8px 12px; border: 1px solid #e2e8f0; vertical-align: middle;
+}
+.summary-table tbody tr:hover { background: #fffff0; }
+.summary-td-no { text-align: center; width: 40px; color: #a0aec0; }
+.summary-td-panel { font-weight: 600; }
+.summary-td-price { text-align: right; font-family: "Menlo", monospace; white-space: nowrap; }
+.summary-td-net { text-align: right; font-family: "Menlo", monospace; font-weight: 700; color: #276749; white-space: nowrap; }
+.summary-td-notes { font-size: 0.82rem; color: #4a5568; max-width: 300px; white-space: pre-wrap; word-break: break-all; }
+.summary-tfoot-row { background: #edf2f7; font-weight: 700; border-top: 2px solid #2d3748; }
+.summary-tfoot-label { text-align: center; font-size: 0.95rem; color: #1a365d; }
+.summary-actions { display: flex; gap: 8px; margin-top: 12px; }
+
 /* === 印刷 === */
 @media print {
   @page { size: A4 portrait; margin: 8mm; }
@@ -995,4 +1061,31 @@ tr[draggable="true"]:active { cursor: grabbing; }
   .totals-table td { padding: 3px 8px; font-size: 9px; }
   .notes-section { padding: 6px 10px; }
   .notes-section textarea { min-height: 30px; font-size: 8px; }
+  /* サマリー印刷 */
+  .summary-grand-totals {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    margin-bottom: 8px;
+  }
+  .summary-grand-item {
+    background: #1a365d !important; color: #fff !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    padding: 12px 16px;
+  }
+  .summary-grand-item.summary-grand-net {
+    background: #276749 !important;
+  }
+  .summary-grand-value { font-size: 1.4rem; }
+  .summary-table { font-size: 10px; }
+  .summary-table thead th {
+    background: #ddd !important; color: #000 !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    padding: 4px 6px; font-size: 9px;
+  }
+  .summary-table tbody td { padding: 4px 6px; }
+  .summary-tfoot-row {
+    background: #edf2f7 !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .summary-actions { display: none !important; }
+  .summary-selector { display: none !important; }
 }

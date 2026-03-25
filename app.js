@@ -182,6 +182,16 @@ function resetCubicle() {
   showToast("キュービクルマスタを初期状態に戻しました（保存済み価格は維持）");
 }
 
+function exportCubiclePrices() {
+  const data = cubicleItems.map(i => ({ id: i.id, basePrice: i.basePrice, _listPrice: i._listPrice, _extraPrice: i._extraPrice }));
+  const text = JSON.stringify(data);
+  navigator.clipboard.writeText(text).then(() => {
+    showToast("価格データをクリップボードにコピーしました。貼り付けてください。");
+  }).catch(() => {
+    prompt("以下をコピーしてください:", text);
+  });
+}
+
 // ============================================================
 // 空調盤SR-1 コメント管理
 // ============================================================

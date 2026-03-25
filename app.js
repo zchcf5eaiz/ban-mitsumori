@@ -111,8 +111,15 @@ function loadCubicle() {
       item.basePrice = prices[item.id];
     }
     if (lpMap[item.id] != null) {
-      item._listPrice = lpMap[item.id];
-      item.basePrice = -Math.floor(item._listPrice * 0.75);
+      const v = lpMap[item.id];
+      if (typeof v === "number") {
+        item._listPrice = v;
+        item._extraPrice = 0;
+      } else {
+        item._listPrice = v.lp || 0;
+        item._extraPrice = v.extra || 0;
+      }
+      item.basePrice = calcTrSpaceBasePrice(item._listPrice, item._extraPrice);
     }
   }
   return items;
@@ -123,8 +130,8 @@ function saveCubicle() {
   const lpMap = {};
   for (const item of cubicleItems) {
     prices[item.id] = item.basePrice;
-    if (item._listPrice != null && item._listPrice > 0) {
-      lpMap[item.id] = item._listPrice;
+    if ((item._listPrice != null && item._listPrice > 0) || (item._extraPrice != null && item._extraPrice !== 0)) {
+      lpMap[item.id] = { lp: item._listPrice || 0, extra: item._extraPrice || 0 };
     }
   }
   try {
@@ -142,7 +149,9 @@ function resetCubicle() {
   const lpMap = {};
   for (const item of cubicleItems) {
     prices[item.id] = item.basePrice;
-    if (item._listPrice != null && item._listPrice > 0) lpMap[item.id] = item._listPrice;
+    if ((item._listPrice != null && item._listPrice > 0) || (item._extraPrice != null && item._extraPrice !== 0)) {
+      lpMap[item.id] = { lp: item._listPrice || 0, extra: item._extraPrice || 0 };
+    }
   }
   // DOM上の合計欄も保存
   document.querySelectorAll(".mg-solar-total-input").forEach(inp => {
@@ -157,8 +166,15 @@ function resetCubicle() {
       item.basePrice = prices[item.id];
     }
     if (lpMap[item.id] != null) {
-      item._listPrice = lpMap[item.id];
-      item.basePrice = -Math.floor(item._listPrice * 0.75);
+      const v = lpMap[item.id];
+      if (typeof v === "number") {
+        item._listPrice = v;
+        item._extraPrice = 0;
+      } else {
+        item._listPrice = v.lp || 0;
+        item._extraPrice = v.extra || 0;
+      }
+      item.basePrice = calcTrSpaceBasePrice(item._listPrice, item._extraPrice);
     }
   }
   saveCubicle();
@@ -2131,6 +2147,10 @@ function renderNameGroup(ng, matrixDefs, blockNum) {
   return h;
 }
 
+function calcTrSpaceBasePrice(lp, extra) {
+  return -Math.floor(lp * 0.75) + (extra || 0);
+}
+
 /** TRスペース専用テーブルレンダリング */
 function renderTrSpaceGroup(ng, blockNum) {
   const numPrefix = blockNum ? `<span class="mg-block-num">${blockNum}</span> ` : "";
@@ -2140,11 +2160,13 @@ function renderTrSpaceGroup(ng, blockNum) {
   h += `<th class="mg-name">${numPrefix}${esc(ng.name)}</th>`;
   h += `<th class="mg-trsp-col">当時の定価</th>`;
   h += `<th class="mg-trsp-col-label">×0.75</th>`;
+  h += `<th class="mg-trsp-col">追加価格</th>`;
   h += `<th class="mg-trsp-col">マイナス積算</th>`;
   h += `</tr></thead><tbody>`;
   for (const item of ng.items) {
     const lp = item._listPrice || 0;
-    const minus = -Math.floor(lp * 0.75);
+    const extra = item._extraPrice || 0;
+    const minus = calcTrSpaceBasePrice(lp, extra);
     const cnt = masterClickCounts[item.id] || 0;
     const bgStyle = cnt > 0 ? `style="background:rgba(202,138,4,${Math.min(cnt * 0.25, 0.85)})"` : "";
     h += `<tr class="mg-row" data-item-id="${item.id}" ${bgStyle} onclick="addFromMaster(event,'${item.id}')">`;
@@ -2152,6 +2174,8 @@ function renderTrSpaceGroup(ng, blockNum) {
     h += `<td class="mg-price mg-trsp-input"><input type="number" min="0" step="1" value="${lp}"
          oninput="onTrSpaceListPriceChange('${item.id}',this)" onclick="event.stopPropagation()"></td>`;
     h += `<td class="mg-trsp-label">×0.75</td>`;
+    h += `<td class="mg-price mg-trsp-input"><input type="number" step="1" value="${extra || ""}"
+         oninput="onTrSpaceExtraPriceChange('${item.id}',this)" onclick="event.stopPropagation()"></td>`;
     h += `<td class="mg-trsp-minus">${lp ? fmtNum(minus) : ""}</td>`;
     h += `</tr>`;
   }
@@ -2164,12 +2188,28 @@ function onTrSpaceListPriceChange(id, input) {
   const m = getMasterItem(id);
   if (!m) return;
   m._listPrice = lp;
-  m.basePrice = -Math.floor(lp * 0.75);
+  const extra = m._extraPrice || 0;
+  m.basePrice = calcTrSpaceBasePrice(lp, extra);
   debouncedSaveCubicle();
   const tr = input.closest("tr");
   if (tr) {
     const cells = tr.querySelectorAll("td");
-    if (cells[3]) cells[3].textContent = lp ? fmtNum(-Math.floor(lp * 0.75)) : "";
+    if (cells[4]) cells[4].textContent = lp ? fmtNum(calcTrSpaceBasePrice(lp, extra)) : "";
+  }
+}
+
+function onTrSpaceExtraPriceChange(id, input) {
+  const extra = parseFloat(input.value) || 0;
+  const m = getMasterItem(id);
+  if (!m) return;
+  m._extraPrice = extra;
+  const lp = m._listPrice || 0;
+  m.basePrice = calcTrSpaceBasePrice(lp, extra);
+  debouncedSaveCubicle();
+  const tr = input.closest("tr");
+  if (tr) {
+    const cells = tr.querySelectorAll("td");
+    if (cells[4]) cells[4].textContent = lp ? fmtNum(calcTrSpaceBasePrice(lp, extra)) : "";
   }
 }
 

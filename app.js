@@ -506,9 +506,11 @@ function renderMasterTable() {
     }
   }
 
+  const COLLAPSED_CATS_MASTER = new Set(["D", "E", "F", "H", "I", "J"]);
   let html = "";
   for (const cg of catGroups) {
-    html += `<div class="cat-block">`;
+    const collapsed = COLLAPSED_CATS_MASTER.has(cg.id) ? " collapsed" : "";
+    html += `<div class="cat-block${collapsed}">`;
     html += `<div class="cat-heading" onclick="toggleCat(this)"><span class="cat-toggle">▼</span> ${esc(cg.id)}. ${esc(cg.label)}</div>`;
 
     // カテゴリ内を品名でさらにグループ化
@@ -1557,9 +1559,11 @@ function renderCubicleTable() {
     }
   }
 
+  const COLLAPSED_CATS_CUBICLE = new Set(["K2", "K5", "K6", "K9", "K10", "K11"]);
   let html = "";
   for (const cg of catGroups) {
-    html += `<div class="cat-block">`;
+    const collapsed = COLLAPSED_CATS_CUBICLE.has(cg.id) ? " collapsed" : "";
+    html += `<div class="cat-block${collapsed}">`;
     html += `<div class="cat-heading cat-heading-cubicle" onclick="toggleCat(this)"><span class="cat-toggle">▼</span> ${esc(cg.id)}. ${esc(cg.label)}</div>`;
 
     // カテゴリ内を品名でさらにグループ化

@@ -25,7 +25,7 @@ const CUBICLE_CATEGORIES = [
   { id: "K7", name: "MCB/ELB" },
   { id: "K8", name: "筐体・FAN" },
   { id: "K9", name: "その他部品" },
-  { id: "K10", name: "変圧器" },
+  { id: "K10", name: "変圧器スペースの場合" },
   { id: "K11", name: "カスタム" },
 ];
 

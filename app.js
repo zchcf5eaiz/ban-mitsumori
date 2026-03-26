@@ -2685,12 +2685,13 @@ function addFromMaster(event, id) {
   const tr = event.target.closest("tr");
   if (cell) {
     cell.style.background = bgColor;
-    // フッターテーブル（その他）の場合はtr全体にも色を適用
     if (tr && tr.classList.contains("mg-clickable")) {
       tr.style.background = bgColor;
+      tr.querySelectorAll("td").forEach(td => td.style.background = bgColor);
     }
   } else if (tr) {
     tr.style.background = bgColor;
+    tr.querySelectorAll("td").forEach(td => td.style.background = bgColor);
   }
 
   // 行フラッシュ（視覚フィードバック）
@@ -3276,7 +3277,7 @@ function renderNotes() {
 function renderEstimateSelector() {
   const sel = document.getElementById("estimate-selector");
   sel.innerHTML = '<option value="">-- 保存済み見積もり --</option>' +
-    [...savedEstimates].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).map(e => {
+    [...savedEstimates].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || "")).map(e => {
       const d = new Date(e.updatedAt);
       const ds = d.getFullYear()+"/"+(d.getMonth()+1)+"/"+d.getDate();
       return `<option value="${e.id}" ${e.id===currentEstimate.id?"selected":""}>${esc(e.name)} (${ds})</option>`;
@@ -3423,7 +3424,7 @@ function showSummarySelector() {
     <div class="summary-selector">
       <h3>集計する見積もりを選択</h3>
       <div class="summary-checklist">
-        ${[...savedEstimates].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).map(e => {
+        ${[...savedEstimates].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || "")).map(e => {
           const panel = e.project && e.project.panelName ? e.project.panelName : "";
           const d = new Date(e.createdAt);
           const ds = d.getFullYear() + "/" + (d.getMonth()+1) + "/" + d.getDate();

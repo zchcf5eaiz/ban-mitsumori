@@ -132,11 +132,11 @@ const DEFAULT_CUBICLE_ITEMS = [
   { id: "K1046", category: "K1", name: "継電器・部品", spec: "CTD コンデサ引外装置", unit: "個", basePrice: 102, note: "AC→DC変換 VCB電圧・エネ使用時" },
 
   // --- 高圧DT(7.2kV) 新愛知製 ---
-  { id: "K3070", category: "K1", name: "高圧DT(7.2kV)", spec: "固定型 400A(VSS-6H4)", unit: "台", basePrice: 4500, note: "仕入750×6" },
-  { id: "K3071", category: "K1", name: "高圧DT(7.2kV)", spec: "固定型 600A(VSS-6H6)", unit: "台", basePrice: 4626, note: "仕入771×6" },
-  { id: "K3072", category: "K1", name: "高圧DT(7.2kV)", spec: "引出型 400A(VSS-6H4E)", unit: "台", basePrice: 5802, note: "仕入967×6" },
-  { id: "K3073", category: "K1", name: "高圧DT(7.2kV)", spec: "引出型 600A(VSS-6H6E)", unit: "台", basePrice: 5826, note: "仕入971×6" },
-  { id: "K3074", category: "K1", name: "高圧DT(7.2kV)", spec: "操作回路部品 加算", unit: "式", basePrice: 1704, note: "" },
+  { id: "K10DT0", category: "K1", name: "高圧DT(7.2kV)", spec: "固定型 400A(VSS-6H4)", unit: "台", basePrice: 4500, note: "仕入750×6" },
+  { id: "K10DT1", category: "K1", name: "高圧DT(7.2kV)", spec: "固定型 600A(VSS-6H6)", unit: "台", basePrice: 4626, note: "仕入771×6" },
+  { id: "K10DT2", category: "K1", name: "高圧DT(7.2kV)", spec: "引出型 400A(VSS-6H4E)", unit: "台", basePrice: 5802, note: "仕入967×6" },
+  { id: "K10DT3", category: "K1", name: "高圧DT(7.2kV)", spec: "引出型 600A(VSS-6H6E)", unit: "台", basePrice: 5826, note: "仕入971×6" },
+  { id: "K10DT4", category: "K1", name: "高圧DT(7.2kV)", spec: "操作回路部品 加算", unit: "式", basePrice: 1704, note: "" },
 
   // --- メーター (マトリクス: 種類 × 角型/広角) ---
   { id: "K103J", category: "K1", name: "メーターオプション", spec: "VM/AM 広角差額", unit: "個", basePrice: 19, note: "" },
@@ -313,11 +313,11 @@ const DEFAULT_CUBICLE_ITEMS = [
   { id: "K3054", category: "K3", name: "SCパターン(6%)", spec: "300kvar 窒素ガス", unit: "式", basePrice: 4088, note: "" },
 
   // --- SCスペース・SRスペース ---
-  { id: "K3070", category: "K3", name: "SCパターン(6%)", spec: "12kvar SCスペース", unit: "式", basePrice: 4500, note: "" },
-  { id: "K3071", category: "K3", name: "SCパターン(6%)", spec: "12kvar SRスペース", unit: "式", basePrice: 4626, note: "" },
-  { id: "K3072", category: "K3", name: "SCパターン(6%)", spec: "18kvar SCスペース", unit: "式", basePrice: 5802, note: "" },
-  { id: "K3073", category: "K3", name: "SCパターン(6%)", spec: "18kvar SRスペース", unit: "式", basePrice: 5826, note: "" },
-  { id: "K3074", category: "K3", name: "SCパターン(6%)", spec: "24kvar SCスペース", unit: "式", basePrice: 1704, note: "" },
+  { id: "K3070", category: "K3", name: "SCパターン(6%)", spec: "12kvar SCスペース", unit: "式", basePrice: 37, note: "" },
+  { id: "K3071", category: "K3", name: "SCパターン(6%)", spec: "12kvar SRスペース", unit: "式", basePrice: 88, note: "" },
+  { id: "K3072", category: "K3", name: "SCパターン(6%)", spec: "18kvar SCスペース", unit: "式", basePrice: 37, note: "" },
+  { id: "K3073", category: "K3", name: "SCパターン(6%)", spec: "18kvar SRスペース", unit: "式", basePrice: 88, note: "" },
+  { id: "K3074", category: "K3", name: "SCパターン(6%)", spec: "24kvar SCスペース", unit: "式", basePrice: 37, note: "" },
   { id: "K3075", category: "K3", name: "SCパターン(6%)", spec: "24kvar SRスペース", unit: "式", basePrice: 88, note: "" },
   { id: "K3076", category: "K3", name: "SCパターン(6%)", spec: "30kvar SCスペース", unit: "式", basePrice: 37, note: "" },
   { id: "K3077", category: "K3", name: "SCパターン(6%)", spec: "30kvar SRスペース", unit: "式", basePrice: 88, note: "" },

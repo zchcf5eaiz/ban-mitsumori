@@ -17,7 +17,7 @@ const STORAGE_SR1_COMMENTS   = "ban_sr1_comments_v2";
 const STORAGE_TRSPACE_LP     = "ban_trspace_lp_v1";
 
 // データバージョン: この値を上げるとlocalStorageのマスタを破棄してデフォルトに戻す
-const DATA_VERSION = 6;
+const DATA_VERSION = 7;
 const STORAGE_DATA_VERSION = "ban_data_version";
 
 if (parseInt(localStorage.getItem(STORAGE_DATA_VERSION) || "0") < DATA_VERSION) {
@@ -28,6 +28,7 @@ if (parseInt(localStorage.getItem(STORAGE_DATA_VERSION) || "0") < DATA_VERSION) 
   localStorage.removeItem("ban_option_prices");
   localStorage.removeItem(STORAGE_GROUP_TOTALS);
   localStorage.removeItem(STORAGE_SR1_COMMENTS);
+  localStorage.removeItem(STORAGE_TRSPACE_LP);
   localStorage.setItem(STORAGE_DATA_VERSION, String(DATA_VERSION));
 }
 

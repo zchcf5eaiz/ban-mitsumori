@@ -2684,6 +2684,10 @@ function addFromMaster(event, id) {
   const tr = event.target.closest("tr");
   if (cell) {
     cell.style.background = bgColor;
+    // フッターテーブル（その他）の場合はtr全体にも色を適用
+    if (tr && tr.classList.contains("mg-clickable")) {
+      tr.style.background = bgColor;
+    }
   } else if (tr) {
     tr.style.background = bgColor;
   }
@@ -3271,7 +3275,7 @@ function renderNotes() {
 function renderEstimateSelector() {
   const sel = document.getElementById("estimate-selector");
   sel.innerHTML = '<option value="">-- 保存済み見積もり --</option>' +
-    savedEstimates.map(e => {
+    [...savedEstimates].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).map(e => {
       const d = new Date(e.updatedAt);
       const ds = d.getFullYear()+"/"+(d.getMonth()+1)+"/"+d.getDate();
       return `<option value="${e.id}" ${e.id===currentEstimate.id?"selected":""}>${esc(e.name)} (${ds})</option>`;
@@ -3418,12 +3422,12 @@ function showSummarySelector() {
     <div class="summary-selector">
       <h3>集計する見積もりを選択</h3>
       <div class="summary-checklist">
-        ${savedEstimates.map(e => {
+        ${[...savedEstimates].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).map(e => {
           const panel = e.project && e.project.panelName ? e.project.panelName : "";
           const d = new Date(e.createdAt);
           const ds = d.getFullYear() + "/" + (d.getMonth()+1) + "/" + d.getDate();
           return `<label class="summary-check-item">
-            <input type="checkbox" value="${e.id}" checked>
+            <input type="checkbox" value="${e.id}">
             <span class="summary-check-name">${esc(e.name)}</span>
             ${panel ? `<span class="summary-check-panel">${esc(panel)}</span>` : ""}
             <span class="summary-check-date">${ds}</span>

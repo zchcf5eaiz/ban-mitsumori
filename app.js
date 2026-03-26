@@ -1677,6 +1677,41 @@ function renderCubicleTable() {
   }
   container.innerHTML = html;
   updateCubicleAddedCount();
+  setupCrosshair();
+}
+
+// ============================================================
+// クロスヘア（十字カーソル）ホバー
+// ============================================================
+function setupCrosshair() {
+  const container = document.getElementById("cubicle-content");
+  if (!container) return;
+  let lastCell = null;
+
+  container.addEventListener("mouseover", function(e) {
+    const td = e.target.closest("td");
+    if (!td || td === lastCell) return;
+    lastCell = td;
+    // 前回のハイライトをクリア
+    container.querySelectorAll(".crosshair-row").forEach(el => el.classList.remove("crosshair-row"));
+    container.querySelectorAll(".crosshair-col").forEach(el => el.classList.remove("crosshair-col"));
+    const tr = td.parentElement;
+    if (!tr || tr.parentElement.tagName !== "TBODY") return;
+    const table = td.closest("table.mg-matrix");
+    if (!table) return;
+    const colIdx = td.cellIndex;
+    tr.classList.add("crosshair-row");
+    table.querySelectorAll("tbody tr").forEach(row => {
+      const cell = row.cells[colIdx];
+      if (cell) cell.classList.add("crosshair-col");
+    });
+  });
+
+  container.addEventListener("mouseleave", function() {
+    lastCell = null;
+    container.querySelectorAll(".crosshair-row").forEach(el => el.classList.remove("crosshair-row"));
+    container.querySelectorAll(".crosshair-col").forEach(el => el.classList.remove("crosshair-col"));
+  });
 }
 
 // ============================================================

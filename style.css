@@ -640,6 +640,11 @@ tr[draggable="true"]:active { cursor: grabbing; }
 }
 .mg-clickable { cursor: pointer; }
 .mg-clickable:hover { background: #f0fff4 !important; }
+
+/* クロスヘア（十字カーソル）ホバー */
+.mg-matrix tbody tr.crosshair-row > td { background: #fffff0 !important; }
+.mg-matrix tbody td.crosshair-col { background: #fffff0 !important; }
+.mg-matrix tbody tr.crosshair-row > td.crosshair-col { background: #fefcbf !important; }
 .mg-empty { text-align: center; color: #cbd5e0; font-size: 0.75rem; min-width: 56px; }
 
 /* マトリクス内コメントセル */

@@ -1329,7 +1329,7 @@ function renderOptionTable() {
         </tr>
         <tr class="mg-row" onclick="addOptionToEstimate(event, '両扉')">
           <td class="mg-spec">両扉</td>
-          <td class="mg-price"><input type="number" id="opt-price-double" min="0" step="0.1" value="25"
+          <td class="mg-price"><input type="number" id="opt-price-double" min="0" step="0.1" value="41"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
         <tr class="mg-row" onclick="addOptionToEstimate(event, '窓')">

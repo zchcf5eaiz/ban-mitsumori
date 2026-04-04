@@ -415,7 +415,7 @@ const DEFAULT_MASTER_ITEMS = [
   { id: "B09i", category: "C", name: "WHM アナログ", spec: "3φ4W 発信装置付 検定付30A", unit: "台", basePrice: 219, note: "" },
   { id: "B09j", category: "C", name: "WHM アナログ", spec: "3φ4W 発信装置付 検定付120A", unit: "台", basePrice: 360, note: "" },
   { id: "B09l", category: "C", name: "WHM アナログ", spec: "3φ4W 発信装置付 検定付/5A", unit: "台", basePrice: 375, note: "" },
-  { id: "B001", category: "C", name: "MC", spec: "20A 常時励磁", unit: "台", basePrice: 20, note: "" },
+  { id: "B001", category: "C", name: "MC", spec: "20A 常時励磁", unit: "台", basePrice: 27, note: "" },
   { id: "B002", category: "C", name: "MC", spec: "25A 常時励磁", unit: "台", basePrice: 30, note: "" },
   { id: "B003", category: "C", name: "MC", spec: "35A 常時励磁", unit: "台", basePrice: 36, note: "" },
   { id: "B004", category: "C", name: "MC", spec: "50A 常時励磁", unit: "台", basePrice: 51, note: "" },
@@ -507,7 +507,7 @@ const DEFAULT_MASTER_ITEMS = [
   { id: "B05q", category: "C", name: "警報", spec: "OL", unit: "台", basePrice: 23, note: "" },
   { id: "B05m", category: "C", name: "警報", spec: "BZ", unit: "台", basePrice: 36, note: "" },
   { id: "B05n", category: "C", name: "警報", spec: "BZ(防水)", unit: "台", basePrice: 56, note: "" },
-  { id: "B052", category: "C", name: "TM", spec: "TM", unit: "台", basePrice: 35, note: "" },
+  { id: "B060", category: "C", name: "TM", spec: "TM", unit: "台", basePrice: 35, note: "" },
   { id: "B06a", category: "C", name: "TM", spec: "HM", unit: "台", basePrice: 35, note: "" },
   { id: "B06b", category: "C", name: "TM", spec: "TM(24時間・1回路)", unit: "台", basePrice: 59, note: "" },
   { id: "B06c", category: "C", name: "TM", spec: "TM(24時間・2回路)", unit: "台", basePrice: 88, note: "" },
@@ -2105,7 +2105,7 @@ const DEFAULT_GROUP_TOTALS = {
 };
 
 // デフォルト オプション価格（P-BOX・ダクト等の掛率）
-const DEFAULT_OPTION_PRICES = {"pbox-rate-1000":25,"pbox-rate-1600":30,"pbox-rate-2000":35,"pbox-rate-2300":40,"pbox-rate-over":45,"pbox-rate-outdoor":1.2,"pbox-rate-sus":3.5,"pbox-rate-door":25,"duct-rate-1000":25,"duct-rate-1600":30,"duct-rate-2000":35,"duct-rate-2300":40,"duct-rate-over":45,"duct-rate-outdoor":1.2,"duct-rate-sus":3.5,"duct-rate-door":25,"frame-rate-l":60,"frame-rate-lp":120,"frame-rate-b50":50,"frame-rate-b100":100,"frame-rate-sus":2,"tray-rate-1000":25,"tray-rate-1600":30,"tray-rate-2000":35,"tray-rate-2300":40,"tray-rate-over":45,"tray-rate-outdoor":1.2,"tray-rate-sus":3.5,"opt-price-single":25,"opt-price-double":25,"opt-price-window":25,"opt2-price-pole":100,"opt2-price-conchu":100,"opt2-price-stand":150,"quick-price-duct-top":88,"quick-price-duct-btm":88,"quick-price-standalone":225,"sus-diff-small":65,"sus-diff-large":105};
+const DEFAULT_OPTION_PRICES = {"pbox-rate-1000":25,"pbox-rate-1600":30,"pbox-rate-2000":35,"pbox-rate-2300":40,"pbox-rate-over":45,"pbox-rate-outdoor":1.2,"pbox-rate-sus":3.5,"pbox-rate-door":25,"duct-rate-1000":25,"duct-rate-1600":30,"duct-rate-2000":35,"duct-rate-2300":40,"duct-rate-over":45,"duct-rate-outdoor":1.2,"duct-rate-sus":3.5,"duct-rate-door":25,"frame-rate-l":60,"frame-rate-lp":120,"frame-rate-b50":50,"frame-rate-b100":100,"frame-rate-sus":2,"tray-rate-1000":25,"tray-rate-1600":30,"tray-rate-2000":35,"tray-rate-2300":40,"tray-rate-over":45,"tray-rate-outdoor":1.2,"tray-rate-sus":3.5,"opt-price-single":25,"opt-price-double":41,"opt-price-window":25,"opt2-price-pole":100,"opt2-price-conchu":100,"opt2-price-stand":150,"quick-price-duct-top":88,"quick-price-duct-btm":88,"quick-price-standalone":225,"sus-diff-small":65,"sus-diff-large":105};
 
 // デフォルト掛率
 const DEFAULT_RATES = {

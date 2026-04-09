@@ -17,7 +17,7 @@ const STORAGE_SR1_COMMENTS   = "ban_sr1_comments_v2";
 const STORAGE_TRSPACE_LP     = "ban_trspace_lp_v1";
 
 // データバージョン: この値を上げるとlocalStorageのマスタを破棄してデフォルトに戻す
-const DATA_VERSION = 10;
+const DATA_VERSION = 11;
 const STORAGE_DATA_VERSION = "ban_data_version";
 
 if (parseInt(localStorage.getItem(STORAGE_DATA_VERSION) || "0") < DATA_VERSION) {
@@ -3018,8 +3018,10 @@ function renderEstimateLinesForPrint() {
   const theadHtml = _estTheadHtml();
 
   // 2カラム構成。1列目→2列目の順に埋める。
+  // perColは行数に応じて動的に決定し、常に2列で収まるようにする
+  // （ただし上限EST_PRINT_ROW_LIMITを超える場合は自然に3列目へ流す）
   const COL_COUNT = 2;
-  const perCol = EST_PRINT_ROW_LIMIT;
+  const perCol = Math.max(1, Math.ceil(rowsHtml.length / COL_COUNT));
 
   section.style.cssText = "display:flex; flex-wrap:wrap; gap:2px; align-items:flex-start; overflow:visible;";
 

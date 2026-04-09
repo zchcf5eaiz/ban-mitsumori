@@ -549,6 +549,7 @@ const DEFAULT_MASTER_ITEMS = [
   { id: "Bx022", category: "C", name: "その他", spec: "SH", unit: "台", basePrice: 41, note: "" },
   { id: "Bx023", category: "C", name: "その他", spec: "サーモSW", unit: "台", basePrice: 28, note: "" },
   { id: "Bx024", category: "C", name: "その他", spec: "EESW", unit: "台", basePrice: 47, note: "" },
+  { id: "Bx025", category: "C", name: "その他", spec: "FAN", unit: "台", basePrice: 100, note: "" },
   { id: "B06A", category: "C", name: "ELR(ZCT付)", spec: "15Φ", unit: "台", basePrice: 77, note: "" },
   { id: "B06B", category: "C", name: "ELR(ZCT付)", spec: "30Φ(100A)", unit: "台", basePrice: 91, note: "" },
   { id: "B06C", category: "C", name: "ELR(ZCT付)", spec: "40Φ(200A)", unit: "台", basePrice: 106, note: "" },

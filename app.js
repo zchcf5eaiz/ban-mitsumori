@@ -2887,7 +2887,7 @@ function renderEstimateLines() {
   const lines = currentEstimate.lines;
 
   // 既存のテーブルを削除（est-empty は残す）
-  section.querySelectorAll(".est-col-table").forEach(el => el.remove());
+  section.querySelectorAll(".est-col-table, .est-print-page").forEach(el => el.remove());
 
   if (lines.length === 0) {
     empty.style.display = "";
@@ -3009,7 +3009,7 @@ function renderEstimateLinesForPrint() {
   const empty = document.getElementById("est-empty");
   const lines = currentEstimate.lines;
 
-  section.querySelectorAll(".est-col-table").forEach(el => el.remove());
+  section.querySelectorAll(".est-col-table, .est-print-page").forEach(el => el.remove());
 
   if (lines.length === 0) return;
   empty.style.display = "none";
@@ -3017,29 +3017,53 @@ function renderEstimateLinesForPrint() {
   const rowsHtml = _buildLineRows(lines);
   const theadHtml = _estTheadHtml();
 
-  // 2カラム構成。1列目→2列目の順に埋める。
-  // perColは行数に応じて動的に決定し、常に2列で収まるようにする
-  // （ただし上限EST_PRINT_ROW_LIMITを超える場合は自然に3列目へ流す）
-  const COL_COUNT = 2;
-  const perCol = Math.max(1, Math.ceil(rowsHtml.length / COL_COUNT));
+  // ページ分割: 1ページ2列×25行=最大50行。超過分は次ページへ。
+  // 25行以下なら1列（100%幅）で表示。
+  const perCol = EST_PRINT_ROW_LIMIT;
+  const perPage = perCol * 2; // 1ページあたり最大行数
 
-  section.style.cssText = "display:flex; flex-wrap:wrap; gap:2px; align-items:flex-start; overflow:visible;";
+  section.style.cssText = "display:block; overflow:visible;";
 
-  const totalCols = Math.max(1, Math.ceil(rowsHtml.length / perCol));
+  const totalPages = Math.max(1, Math.ceil(rowsHtml.length / perPage));
 
-  for (let c = 0; c < totalCols; c++) {
-    const chunk = rowsHtml.slice(c * perCol, (c + 1) * perCol);
-    if (chunk.length === 0) continue;
-    const tbl = document.createElement("table");
-    tbl.className = "estimate-table est-col-table";
-    tbl.style.cssText = "flex:0 0 calc(50% - 2px); min-width:0; max-width:calc(50% - 2px); font-size:9px; border-collapse:collapse; table-layout:fixed;";
-    tbl.innerHTML = theadHtml + "<tbody>" + chunk.join("") + "</tbody>";
-    // 印刷不要セルをDOMから物理削除（Safari対策）
-    tbl.querySelectorAll(".col-sep, .col-actions, .ec-sep, .ec-del").forEach(el => el.remove());
-    // colspan調整（不要列削除後は6列）
-    tbl.querySelectorAll(".sep-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
-    tbl.querySelectorAll(".comment-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
-    section.insertBefore(tbl, empty);
+  for (let p = 0; p < totalPages; p++) {
+    const pageRows = rowsHtml.slice(p * perPage, (p + 1) * perPage);
+    if (pageRows.length === 0) continue;
+
+    // ページラッパー（2ページ目以降は改ページ）
+    const pageDiv = document.createElement("div");
+    pageDiv.className = "est-print-page";
+    pageDiv.style.cssText = "display:flex; flex-wrap:wrap; gap:2px; align-items:flex-start;";
+    if (p > 0) pageDiv.style.pageBreakBefore = "always";
+
+    if (pageRows.length <= perCol) {
+      // 1列で収まる場合 → 100%幅
+      const tbl = document.createElement("table");
+      tbl.className = "estimate-table est-col-table";
+      tbl.style.cssText = "width:100%; font-size:9px; border-collapse:collapse; table-layout:fixed;";
+      tbl.innerHTML = theadHtml + "<tbody>" + pageRows.join("") + "</tbody>";
+      tbl.querySelectorAll(".col-sep, .col-actions, .ec-sep, .ec-del").forEach(el => el.remove());
+      tbl.querySelectorAll(".sep-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
+      tbl.querySelectorAll(".comment-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
+      pageDiv.appendChild(tbl);
+    } else {
+      // 2列に分割
+      const leftRows = pageRows.slice(0, perCol);
+      const rightRows = pageRows.slice(perCol);
+      [leftRows, rightRows].forEach(chunk => {
+        if (chunk.length === 0) return;
+        const tbl = document.createElement("table");
+        tbl.className = "estimate-table est-col-table";
+        tbl.style.cssText = "flex:0 0 calc(50% - 2px); min-width:0; max-width:calc(50% - 2px); font-size:9px; border-collapse:collapse; table-layout:fixed;";
+        tbl.innerHTML = theadHtml + "<tbody>" + chunk.join("") + "</tbody>";
+        tbl.querySelectorAll(".col-sep, .col-actions, .ec-sep, .ec-del").forEach(el => el.remove());
+        tbl.querySelectorAll(".sep-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
+        tbl.querySelectorAll(".comment-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
+        pageDiv.appendChild(tbl);
+      });
+    }
+
+    section.insertBefore(pageDiv, empty);
   }
 
   // 品名・仕様セルの文字あふれ対策: テキストが収まらなければfont-sizeを縮小

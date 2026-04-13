@@ -17,7 +17,7 @@ const STORAGE_SR1_COMMENTS   = "ban_sr1_comments_v2";
 const STORAGE_TRSPACE_LP     = "ban_trspace_lp_v1";
 
 // データバージョン: この値を上げるとlocalStorageのマスタを破棄してデフォルトに戻す
-const DATA_VERSION = 11;
+const DATA_VERSION = 12;
 const STORAGE_DATA_VERSION = "ban_data_version";
 
 if (parseInt(localStorage.getItem(STORAGE_DATA_VERSION) || "0") < DATA_VERSION) {
@@ -3352,6 +3352,20 @@ function renderEstimateSelector() {
 // ============================================================
 // ユーザー操作
 // ============================================================
+
+const RATE_PRESETS = {
+  govt:    { listRate: 1.5,  netRate: 0.33 },
+  private: { listRate: 0.86, netRate: 0.55 },
+};
+
+function applyRatePreset(key) {
+  const preset = RATE_PRESETS[key];
+  currentEstimate.listRate = preset.listRate;
+  currentEstimate.netRate = preset.netRate;
+  renderTotals();
+  document.getElementById("btn-preset-govt").classList.toggle("active", key === "govt");
+  document.getElementById("btn-preset-private").classList.toggle("active", key === "private");
+}
 
 function updateListRate(v) { currentEstimate.listRate = parseFloat(v)||DEFAULT_RATES.listRate; renderTotals(); }
 function updateNetRate(v)  { currentEstimate.netRate  = parseFloat(v)||DEFAULT_RATES.netRate;  renderTotals(); }

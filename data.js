@@ -2110,6 +2110,6 @@ const DEFAULT_OPTION_PRICES = {"pbox-rate-1000":25,"pbox-rate-1600":30,"pbox-rat
 
 // デフォルト掛率
 const DEFAULT_RATES = {
-  listRate: 1.4,
+  listRate: 1.5,
   netRate: 0.33,
 };

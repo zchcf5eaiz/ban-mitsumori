@@ -113,6 +113,10 @@
 
     <!-- 合計 -->
     <div class="totals-section">
+      <div class="rate-preset-buttons no-print">
+        <button class="btn btn-preset active" id="btn-preset-govt" onclick="applyRatePreset('govt')">役所件名</button>
+        <button class="btn btn-preset" id="btn-preset-private" onclick="applyRatePreset('private')">民間件名</button>
+      </div>
       <table class="totals-table">
         <tr>
           <td class="label-cell">積算合計</td>
@@ -122,7 +126,7 @@
         <tr>
           <td class="label-cell">定価</td>
           <td class="rate-cell">
-            掛率: <input type="number" id="rate-list-input" value="1.4" step="0.01" min="0"
+            掛率: <input type="number" id="rate-list-input" value="1.5" step="0.01" min="0"
                          onchange="updateListRate(this.value)">
           </td>
           <td class="value-cell" id="total-list">0</td>

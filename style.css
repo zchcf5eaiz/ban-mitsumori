@@ -221,6 +221,11 @@ tr[draggable="true"]:active { cursor: grabbing; }
   flex: 1 1 100%;
 }
 
+/* === 掛率プリセットボタン === */
+.rate-preset-buttons { display: flex; gap: 4px; margin-bottom: 6px; padding: 8px 16px 0; }
+.btn-preset { padding: 4px 12px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: #f7f7f7; font-size: 0.85rem; }
+.btn-preset.active { background: #1a365d; color: #fff; border-color: #1a365d; }
+
 /* === 合計 === */
 .totals-section {
   background: #fff; border: 2px solid #1a365d; border-radius: 4px;

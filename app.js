@@ -2426,7 +2426,7 @@ function renderMergedMatrix(md, nameGroups, blockNum) {
         const item = gd.itemMap[key];
         if (item) {
           const cnt = masterClickCounts[item.id] || 0;
-          const isHL = md.highlightCols && md.highlightCols.includes(col);
+          const isHL = (md.highlightCols && md.highlightCols.includes(col)) || (md.highlightRows && md.highlightRows.includes(row));
           const bgStyle = cnt > 0 ? `background:rgba(202,138,4,${Math.min(cnt * 0.25, 0.85)})` : isHL ? `background:rgba(66,153,225,0.15)` : "";
           h += `<td class="mg-price mg-clickable mg-matrix-cell${sep}" data-item-id="${item.id}" style="${bgStyle}" onclick="addFromMaster(event,'${item.id}')">`;
           h += `<input type="number" min="0" step="0.1" value="${item.basePrice}"
@@ -2610,7 +2610,7 @@ function renderMatrixGroup(ng, def, blockNum) {
           h += `<td class="mg-row-label">${tv}</td>`;
         } else {
           const cnt = masterClickCounts[item.id] || 0;
-          const isHL = (def.highlightCols && def.highlightCols.includes(flatCols[ci])) || HIGHLIGHT_ITEMS.has(item.id);
+          const isHL = (def.highlightCols && def.highlightCols.includes(flatCols[ci])) || (def.highlightRows && def.highlightRows.includes(row)) || HIGHLIGHT_ITEMS.has(item.id);
           const bgStyle = cnt > 0 ? `background:rgba(202,138,4,${Math.min(cnt * 0.25, 0.85)})` : isHL ? `background:rgba(66,153,225,0.15)` : "";
           h += `<td class="mg-price mg-clickable mg-matrix-cell" data-item-id="${item.id}" style="${bgStyle}" onclick="addFromMaster(event,'${item.id}')">`;
           h += `<input type="number" min="0" step="0.1" value="${item.basePrice}"
@@ -3229,6 +3229,12 @@ function onSubtotalRate(lineId, val) {
 
 let _dragLineId = null;
 
+// 集計表用ドラッグ＆ドロップ
+let _summaryDragIdx = null;
+let _summaryRows = [];
+let _summaryEstimateIds = [];
+let _summaryNotes = "";
+
 function onLineDragStart(e, lineId) {
   _dragLineId = lineId;
   e.dataTransfer.effectAllowed = "move";
@@ -3555,6 +3561,10 @@ function renderSummary(ids) {
     };
   });
 
+  // モジュールレベル変数に保持（並べ替え用）
+  _summaryRows = rows;
+  _summaryEstimateIds = ids.slice();
+
   // プロジェクト情報は表示、盤名称は非表示
   const projInfo = document.querySelector(".project-info");
   projInfo.style.display = "";
@@ -3590,14 +3600,7 @@ function renderSummary(ids) {
           <th class="summary-th-notes">備考</th>
         </tr>
       </thead>
-      <tbody>
-        ${rows.map((r, i) => `<tr>
-          <td class="summary-td-no">${i + 1}</td>
-          <td class="summary-td-panel">${esc(r.panelName || r.name)}</td>
-          <td class="summary-td-price">${fmtNum(r.listPrice)}</td>
-          <td class="summary-td-net">${fmtNum(r.netPrice)}</td>
-          <td class="summary-td-notes">${esc(r.notes)}</td>
-        </tr>`).join("")}
+      <tbody id="summary-tbody">
       </tbody>
       <tfoot>
         <tr class="summary-tfoot-row">
@@ -3608,16 +3611,111 @@ function renderSummary(ids) {
         </tr>
       </tfoot>
     </table>
+    <div class="summary-notes-section">
+      <label class="summary-notes-label">備考</label>
+      <textarea class="summary-notes" rows="3" placeholder="全体の備考を入力..."
+        oninput="_summaryNotes=this.value">${esc(_summaryNotes)}</textarea>
+    </div>
     <div class="summary-actions no-print">
       <button class="btn btn-primary" onclick="printEstimate()">印刷</button>
       <button class="btn btn-secondary" onclick="closeSummary()">戻る</button>
     </div>
   `;
+  _renderSummaryTbody();
+}
+
+/** 集計表の tbody だけ再描画 */
+function _renderSummaryTbody() {
+  const tbody = document.getElementById("summary-tbody");
+  if (!tbody) return;
+  tbody.innerHTML = _summaryRows.map((r, i) => `<tr draggable="true"
+      ondragstart="onSummaryDragStart(event,${i})"
+      ondragover="onSummaryDragOver(event)"
+      ondrop="onSummaryDrop(event,${i})"
+      ondragend="onSummaryDragEnd(event)"
+      ondragleave="onSummaryDragLeave(event)">
+    <td class="summary-td-no">${i + 1}</td>
+    <td class="summary-td-panel">${esc(r.panelName || r.name)}</td>
+    <td class="summary-td-price">${fmtNum(r.listPrice)}</td>
+    <td class="summary-td-net">${fmtNum(r.netPrice)}</td>
+    <td class="summary-td-notes">${esc(r.notes)}</td>
+  </tr>`).join("");
+}
+
+// 集計表ドラッグ＆ドロップハンドラ
+function onSummaryDragStart(e, idx) {
+  _summaryDragIdx = idx;
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", String(idx));
+  requestAnimationFrame(() => {
+    const row = e.target.closest("tr");
+    if (row) row.classList.add("dragging");
+  });
+}
+
+function onSummaryDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  const row = e.target.closest("tr");
+  if (!row) return;
+  const rect = row.getBoundingClientRect();
+  const midY = rect.top + rect.height / 2;
+  row.classList.remove("drag-over-top", "drag-over-bottom");
+  if (e.clientY < midY) {
+    row.classList.add("drag-over-top");
+  } else {
+    row.classList.add("drag-over-bottom");
+  }
+}
+
+function onSummaryDragLeave(e) {
+  const row = e.target.closest("tr");
+  if (row) row.classList.remove("drag-over-top", "drag-over-bottom");
+}
+
+function onSummaryDrop(e, targetIdx) {
+  e.preventDefault();
+  const srcIdx = _summaryDragIdx;
+  if (srcIdx === null || srcIdx === targetIdx) {
+    _clearSummaryDragStyles();
+    return;
+  }
+  // ドロップ位置（上半分=前に、下半分=後に）
+  const row = e.target.closest("tr");
+  const rect = row ? row.getBoundingClientRect() : null;
+  const insertBefore = rect ? e.clientY < rect.top + rect.height / 2 : false;
+
+  // 配列操作
+  const [movedRow] = _summaryRows.splice(srcIdx, 1);
+  const [movedId] = _summaryEstimateIds.splice(srcIdx, 1);
+  let newIdx = targetIdx > srcIdx ? targetIdx - 1 : targetIdx;
+  if (!insertBefore) newIdx++;
+  _summaryRows.splice(newIdx, 0, movedRow);
+  _summaryEstimateIds.splice(newIdx, 0, movedId);
+
+  _clearSummaryDragStyles();
+  _renderSummaryTbody();
+}
+
+function onSummaryDragEnd(e) {
+  const row = e.target.closest("tr");
+  if (row) row.classList.remove("dragging");
+  _clearSummaryDragStyles();
+}
+
+function _clearSummaryDragStyles() {
+  _summaryDragIdx = null;
+  document.querySelectorAll("#summary-tbody .drag-over-top, #summary-tbody .drag-over-bottom, #summary-tbody .dragging").forEach(el => {
+    el.classList.remove("drag-over-top", "drag-over-bottom", "dragging");
+  });
 }
 
 /** サマリーモードを閉じて通常画面に復帰 */
 function closeSummary() {
   isSummaryMode = false;
+  _summaryRows = [];
+  _summaryEstimateIds = [];
+  _summaryNotes = "";
   // すべてのセクションを復帰
   document.querySelector(".project-info").style.display = "";
   const panelNameEl = document.querySelector(".project-info .info-panel-name");

@@ -1000,6 +1000,12 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .summary-tfoot-row { background: #edf2f7; font-weight: 700; border-top: 2px solid #2d3748; }
 .summary-tfoot-label { text-align: center; font-size: 0.95rem; color: #1a365d; }
 .summary-actions { display: flex; gap: 8px; margin-top: 12px; }
+.summary-table tbody tr { cursor: grab; }
+.summary-table tbody tr:active { cursor: grabbing; }
+.summary-notes-section { margin-top: 16px; }
+.summary-notes-label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; color: #2d3748; }
+.summary-notes { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.9rem; font-family: inherit; resize: vertical; min-height: 60px; }
+.summary-notes:focus { outline: none; border-color: #3182ce; box-shadow: 0 0 0 2px rgba(49,130,206,0.15); }
 
 /* === 印刷 === */
 @media print {
@@ -1098,4 +1104,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
   }
   .summary-actions { display: none !important; }
   .summary-selector { display: none !important; }
+  .summary-notes-section { margin-top: 10px; }
+  .summary-notes-label { font-size: 9px; }
+  .summary-notes { border: 1px solid #999; font-size: 9px; padding: 4px 6px; min-height: 30px; }
 }

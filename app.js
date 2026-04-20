@@ -3002,7 +3002,7 @@ function _estTheadHtml() {
 // 印刷用 段組みレイアウト
 // ============================================================
 
-const EST_PRINT_ROW_LIMIT = 25; // 1列あたりの最大行数（A4高さ基準）
+const EST_PRINT_ROW_LIMIT = 33; // 1列あたりの最大行数（A4高さ基準）
 
 function renderEstimateLinesForPrint() {
   const section = document.getElementById("est-section");
@@ -3037,10 +3037,14 @@ function renderEstimateLinesForPrint() {
     if (p > 0) pageDiv.style.pageBreakBefore = "always";
 
     if (pageRows.length <= perCol) {
-      // 1列で収まる場合 → 100%幅
+      // 1列で収まる場合 → 1ページ目は100%幅、2ページ目以降は50%幅（左寄せ）
       const tbl = document.createElement("table");
       tbl.className = "estimate-table est-col-table";
-      tbl.style.cssText = "width:100%; font-size:9px; border-collapse:collapse; table-layout:fixed;";
+      if (p === 0) {
+        tbl.style.cssText = "width:100%; font-size:9px; border-collapse:collapse; table-layout:fixed;";
+      } else {
+        tbl.style.cssText = "flex:0 0 calc(50% - 2px); min-width:0; max-width:calc(50% - 2px); font-size:9px; border-collapse:collapse; table-layout:fixed;";
+      }
       tbl.innerHTML = theadHtml + "<tbody>" + pageRows.join("") + "</tbody>";
       tbl.querySelectorAll(".col-sep, .col-actions, .ec-sep, .ec-del").forEach(el => el.remove());
       tbl.querySelectorAll(".sep-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));

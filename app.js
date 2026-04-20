@@ -3002,7 +3002,7 @@ function _estTheadHtml() {
 // 印刷用 段組みレイアウト
 // ============================================================
 
-const EST_PRINT_ROW_LIMIT = 33; // 1列あたりの最大行数（A4高さ基準）
+const EST_PRINT_ROW_LIMIT = 30; // 1列あたりの最大行数（A4高さ基準、フッター+備考欄分を確保）
 
 function renderEstimateLinesForPrint() {
   const section = document.getElementById("est-section");

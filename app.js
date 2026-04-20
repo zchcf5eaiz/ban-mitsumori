@@ -3017,18 +3017,37 @@ function renderEstimateLinesForPrint() {
   const rowsHtml = _buildLineRows(lines);
   const theadHtml = _estTheadHtml();
 
-  // ページ分割: 1ページ2列×25行=最大50行。超過分は次ページへ。
-  // 25行以下なら1列（100%幅）で表示。
-  const perCol = EST_PRINT_ROW_LIMIT;
-  const perPage = perCol * 2; // 1ページあたり最大行数
+  // 各行の重みを計算（区切り行・コメント行は0.2行、通常行は1.0行）
+  const SEP_WEIGHT = 0.2;
+  const rowWeights = rowsHtml.map(h => (h.includes('sep-row') || h.includes('comment-row')) ? SEP_WEIGHT : 1.0);
+
+  const perCol = EST_PRINT_ROW_LIMIT; // 1列あたりの重み上限
+  const perPage = perCol * 2;
 
   section.style.cssText = "display:block; overflow:visible;";
 
-  const totalPages = Math.max(1, Math.ceil(rowsHtml.length / perPage));
+  // ページ分割: 重みベースで行を各ページに振り分け
+  const pages = [];
+  let pageStart = 0;
+  while (pageStart < rowsHtml.length) {
+    let weightSum = 0;
+    let pageEnd = pageStart;
+    while (pageEnd < rowsHtml.length && weightSum + rowWeights[pageEnd] <= perPage + 0.01) {
+      weightSum += rowWeights[pageEnd];
+      pageEnd++;
+    }
+    if (pageEnd === pageStart) pageEnd++; // 最低1行は進める
+    pages.push({ start: pageStart, end: pageEnd });
+    pageStart = pageEnd;
+  }
 
-  for (let p = 0; p < totalPages; p++) {
-    const pageRows = rowsHtml.slice(p * perPage, (p + 1) * perPage);
-    if (pageRows.length === 0) continue;
+  for (let p = 0; p < pages.length; p++) {
+    const pageRowsSlice = rowsHtml.slice(pages[p].start, pages[p].end);
+    const pageWeightsSlice = rowWeights.slice(pages[p].start, pages[p].end);
+    if (pageRowsSlice.length === 0) continue;
+
+    // ページの重み合計
+    const pageWeightTotal = pageWeightsSlice.reduce((a, b) => a + b, 0);
 
     // ページラッパー（2ページ目以降は改ページ）
     const pageDiv = document.createElement("div");
@@ -3036,7 +3055,7 @@ function renderEstimateLinesForPrint() {
     pageDiv.style.cssText = "display:flex; flex-wrap:wrap; gap:2px; align-items:flex-start;";
     if (p > 0) pageDiv.style.pageBreakBefore = "always";
 
-    if (pageRows.length <= perCol) {
+    if (pageWeightTotal <= perCol + 0.01) {
       // 1列で収まる場合 → 1ページ目は100%幅、2ページ目以降は50%幅（左寄せ）
       const tbl = document.createElement("table");
       tbl.className = "estimate-table est-col-table";
@@ -3045,15 +3064,22 @@ function renderEstimateLinesForPrint() {
       } else {
         tbl.style.cssText = "flex:0 0 calc(50% - 2px); min-width:0; max-width:calc(50% - 2px); font-size:9px; border-collapse:collapse; table-layout:fixed;";
       }
-      tbl.innerHTML = theadHtml + "<tbody>" + pageRows.join("") + "</tbody>";
+      tbl.innerHTML = theadHtml + "<tbody>" + pageRowsSlice.join("") + "</tbody>";
       tbl.querySelectorAll(".col-sep, .col-actions, .ec-sep, .ec-del").forEach(el => el.remove());
       tbl.querySelectorAll(".sep-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
       tbl.querySelectorAll(".comment-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
       pageDiv.appendChild(tbl);
     } else {
-      // 2列に分割
-      const leftRows = pageRows.slice(0, perCol);
-      const rightRows = pageRows.slice(perCol);
+      // 2列に分割: 重みベースで左列がperColに収まるまで詰める
+      let leftWeight = 0;
+      let splitIdx = 0;
+      for (let i = 0; i < pageRowsSlice.length; i++) {
+        if (leftWeight + pageWeightsSlice[i] > perCol + 0.01) break;
+        leftWeight += pageWeightsSlice[i];
+        splitIdx = i + 1;
+      }
+      const leftRows = pageRowsSlice.slice(0, splitIdx);
+      const rightRows = pageRowsSlice.slice(splitIdx);
       [leftRows, rightRows].forEach(chunk => {
         if (chunk.length === 0) return;
         const tbl = document.createElement("table");

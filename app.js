@@ -2302,8 +2302,35 @@ function buildSurchargeHtml(surcharges, matrixName) {
     h += '</div>'; // mg-surcharge-items
     h += '</div>';
   }
+  h += `<div class="mg-surcharge-reset"><button class="btn btn-sm btn-secondary" onclick="onSurchargeReset('${escAttr(matrixName)}')">ベースに戻す</button></div>`;
   h += '</div>';
   return h;
+}
+
+function onSurchargeReset(matrixName) {
+  // チェックボックスを全解除
+  document.querySelectorAll(`input[data-matrix="${matrixName}"]`).forEach(cb => cb.checked = false);
+  // DEFAULT_CUBICLE_ITEMS から元の価格を復元
+  const basePrices = matrixBasePrices[matrixName];
+  if (!basePrices) return;
+  for (const [itemId, _] of Object.entries(basePrices)) {
+    const def = DEFAULT_CUBICLE_ITEMS.find(d => d.id === itemId);
+    if (!def) continue;
+    const origPrice = def.basePrice;
+    // matrixBasePrices を元の値に戻す
+    matrixBasePrices[matrixName][itemId] = origPrice;
+    // DOM更新
+    const cell = document.querySelector(`[data-item-id="${itemId}"] input[type="number"]`);
+    if (cell) {
+      cell.value = origPrice;
+      delete cell.dataset.surchargeBase;
+      delete cell.dataset.surchargeApplied;
+    }
+    // マスタ更新
+    const m = getMasterItem(itemId);
+    if (m) m.basePrice = origPrice;
+  }
+  showToast("ベース価格に戻しました");
 }
 
 function onSurchargeChange(matrixName) {

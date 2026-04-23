@@ -684,6 +684,8 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .mg-surcharge-item { margin-left: 4px; }
 .mg-surcharge-item.disabled { color: #999; text-decoration: line-through; }
 .mg-surcharge-item label { cursor: pointer; }
+.mg-surcharge-reset { margin-top: 6px; }
+.mg-surcharge-reset .btn { font-size: 11px; padding: 2px 10px; }
 
 /* 参照テーブル（遮断容量表など） */
 .mg-ref-tables {

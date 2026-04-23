@@ -17,7 +17,7 @@ const STORAGE_SR1_COMMENTS   = "ban_sr1_comments_v2";
 const STORAGE_TRSPACE_LP     = "ban_trspace_lp_v1";
 
 // データバージョン: この値を上げるとlocalStorageのマスタを破棄してデフォルトに戻す
-const DATA_VERSION = 12;
+const DATA_VERSION = 13;
 const STORAGE_DATA_VERSION = "ban_data_version";
 
 if (parseInt(localStorage.getItem(STORAGE_DATA_VERSION) || "0") < DATA_VERSION) {
@@ -2317,9 +2317,12 @@ function onSurchargeChange(matrixName) {
   for (const [itemId, base] of Object.entries(basePrices)) {
     const newPrice = Math.round(base * totalRate);
     const cell = document.querySelector(`[data-item-id="${itemId}"] input[type="number"]`);
-    if (cell) cell.value = newPrice;
-    const master = getMasterItem(itemId);
-    if (master) master.basePrice = newPrice;
+    if (cell) {
+      cell.value = newPrice;
+      // 割増適用中はdata属性でマークし、ベース価格を保持
+      cell.dataset.surchargeBase = base;
+      cell.dataset.surchargeApplied = totalRate !== 1 ? "1" : "";
+    }
   }
 }
 
@@ -3789,7 +3792,10 @@ window.addEventListener("beforeunload", () => {
     const id = el.dataset.itemId;
     const inp = el.querySelector("input[type='number']");
     if (inp && id) {
-      const val = parseFloat(inp.value) || 0;
+      // 割増率が適用中のセルはベース価格を使う（割増後の価格を保存しない）
+      const val = inp.dataset.surchargeApplied === "1"
+        ? parseFloat(inp.dataset.surchargeBase) || 0
+        : parseFloat(inp.value) || 0;
       const m = getMasterItem(id);
       if (m) m.basePrice = val;
     }

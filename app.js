@@ -2323,6 +2323,9 @@ function onSurchargeChange(matrixName) {
       cell.dataset.surchargeBase = base;
       cell.dataset.surchargeApplied = totalRate !== 1 ? "1" : "";
     }
+    // マスタも更新（見積もり追加時に割増後の価格を使うため）
+    const master = getMasterItem(itemId);
+    if (master) master.basePrice = newPrice;
   }
 }
 

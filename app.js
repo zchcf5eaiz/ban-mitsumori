@@ -2724,7 +2724,7 @@ function addFromMaster(event, id) {
     lineId: genId(),
     masterItemId: id,
     qty: qty,
-    unitPrice: master.basePrice,
+    unitPrice: master.category === "K2" ? (groupTotals[master.name] || 0) : master.basePrice,
     lineNote: "",
   });
 
@@ -2864,7 +2864,7 @@ function addSelectedItem() {
     lineId: genId(),
     masterItemId: masterId,
     qty: 1,
-    unitPrice: master.basePrice,
+    unitPrice: master.category === "K2" ? (groupTotals[master.name] || 0) : master.basePrice,
     lineNote: "",
   });
 

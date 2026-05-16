@@ -3463,6 +3463,18 @@ function deleteCurrentEstimate() {
   renderEstimateTab();
 }
 
+function copyCurrentEstimate() {
+  const copy = JSON.parse(JSON.stringify(currentEstimate));
+  copy.id = genId();
+  copy.name = (copy.name || "見積もり") + " のコピー";
+  copy.updatedAt = new Date().toISOString();
+  savedEstimates.push(copy);
+  persistEstimates();
+  currentEstimate = copy;
+  renderEstimateTab();
+  showToast("コピーしました: " + copy.name);
+}
+
 // ============================================================
 // エクスポート / インポート
 // ============================================================

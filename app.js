@@ -3464,9 +3464,12 @@ function deleteCurrentEstimate() {
 }
 
 function copyCurrentEstimate() {
+  const baseName = (currentEstimate.name || currentEstimate.project.projectName || "見積もり") + " のコピー";
+  const n = prompt("コピーの名前を入力:", baseName);
+  if (!n) return;
   const copy = JSON.parse(JSON.stringify(currentEstimate));
   copy.id = genId();
-  copy.name = (copy.name || "見積もり") + " のコピー";
+  copy.name = n;
   copy.updatedAt = new Date().toISOString();
   savedEstimates.push(copy);
   persistEstimates();

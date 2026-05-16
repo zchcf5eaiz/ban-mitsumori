@@ -3464,18 +3464,16 @@ function deleteCurrentEstimate() {
 }
 
 function copyCurrentEstimate() {
-  const baseName = (currentEstimate.name || currentEstimate.project?.projectName || "見積もり") + " のコピー";
-  const n = prompt("コピーの名前を入力:", baseName);
-  if (n === null) return;
+  const base = currentEstimate.name || currentEstimate.project?.projectName || "見積もり";
   const copy = JSON.parse(JSON.stringify(currentEstimate));
   copy.id = genId();
-  copy.name = n;
+  copy.name = base + " のコピー";
   copy.updatedAt = new Date().toISOString();
   savedEstimates.push(copy);
   persistEstimates();
   currentEstimate = copy;
   renderEstimateTab();
-  showToast("コピーしました: " + copy.name);
+  showToast("「" + copy.name + "」を保存リストに追加しました");
 }
 
 // ============================================================

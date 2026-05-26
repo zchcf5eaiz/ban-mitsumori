@@ -1705,8 +1705,13 @@ function setupCrosshair() {
     if (!table) return;
     const colIdx = td.cellIndex;
     tr.classList.add("crosshair-row");
+    const hoveredHasSpan = tr.cells[0] && tr.cells[0].rowSpan > 1;
     table.querySelectorAll("tbody tr").forEach(row => {
-      const cell = row.cells[colIdx];
+      const targetHasSpan = row.cells[0] && row.cells[0].rowSpan > 1;
+      let idx = colIdx;
+      if (hoveredHasSpan && !targetHasSpan) idx = colIdx - 1;
+      if (!hoveredHasSpan && targetHasSpan) idx = colIdx + 1;
+      const cell = row.cells[idx];
       if (cell) cell.classList.add("crosshair-col");
     });
   });

@@ -1799,7 +1799,7 @@ const CUBICLE_MATRIX_GROUPS = {
     title: "SCパターン(6%) コンデンサ編",
     rows: ["12kvar", "18kvar", "24kvar", "30kvar", "36kvar", "50kvar", "75kvar", "100kvar", "150kvar", "200kvar", "250kvar", "300kvar"],
     highlightCols: ["PC無", "PC付", "LBS"],
-    rowInfoCols: ["SR\nkvar", "SC\nkvar"],
+    rowInfoCols: ["SC\nkvar", "SR\nkvar"],
     rowInfo: {
       "12kvar":  [12.8,  0.766],
       "18kvar":  [19.1,  1.15],

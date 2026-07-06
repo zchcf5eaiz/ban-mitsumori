@@ -239,7 +239,7 @@ function savePrices() {
     if (trSpInp) {
       const lp = parseFloat(trSpInp.value) || 0;
       m._listPrice = lp;
-      m.basePrice = -Math.floor(lp * 0.75);
+      m.basePrice = calcTrSpaceBasePrice(lp, m._extraPrice || 0);
       return;
     }
     const inp = el.querySelector("input[type='number']");
@@ -455,6 +455,7 @@ function loadEstimate(id) {
   const e = savedEstimates.find(x => x.id === id);
   if (!e) return;
   currentEstimate = JSON.parse(JSON.stringify(e));
+  rebuildClickCounts();
   renderEstimateTab();
   showToast("読み込みました: " + currentEstimate.name);
 }
@@ -2103,7 +2104,7 @@ const HIGHLIGHT_ITEMS = new Set([
   "A054b",
   "B07C", "B07D", "B07E", "B07F", "B08C", "B08D", "B08F",
   "B05o", "B051", "B05c", "B05f", "B05i", "B05j", "B05k", "B05q", "B05m",
-  "D061", "D062", "D065", "D068", "D06b", "D06c", "D06d", "D06h", "D06f",
+  "D061", "D062", "D065", "D068", "D06b", "D06c", "D06h", "D06f",
   "F001","F004","F007","F00A","F00D","F00G","F00J","F00M","F00P","F00S","F00V","F00Y","F0a1","F0a4","F0a7",
   "F020","F023","F026","F029","F02C","F02F","F02I","F02L","F02O","F02R","F02U",
   "F030","F033","F036","F039","F03C","F03F","F03I","F03L","F03O",
@@ -3255,12 +3256,11 @@ function insertComment(afterLineId) {
   if (idx < 0) return;
   currentEstimate.lines.splice(idx + 1, 0, { type: "comment", lineId: genId(), text: "" });
   renderEstimateLines();
-  saveEstimates();
 }
 
 function onCommentText(lineId, val) {
   const line = currentEstimate.lines.find(x => x.lineId === lineId);
-  if (line) { line.text = val; saveEstimates(); }
+  if (line) { line.text = val; }
 }
 
 function insertSubtotal(afterLineId) {

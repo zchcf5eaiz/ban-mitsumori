@@ -2926,7 +2926,7 @@ function renderEstimateTab() {
   renderEstimateSelector();
 }
 
-/** ユニットタブ行を描画 */
+/** ユニット操作バーを描画（追加先表示 + ＋ボタン） */
 function renderUnitTabs() {
   let container = document.getElementById("unit-tabs-container");
   if (!container) {
@@ -2936,25 +2936,23 @@ function renderUnitTabs() {
     estSection.parentNode.insertBefore(container, estSection);
   }
   const units = currentEstimate.units;
-  const canDel = units.length > 1;
-  let html = '<div class="unit-tabs no-print">';
-  for (let i = 0; i < units.length; i++) {
-    const u = units[i];
-    const cls = i === activeUnitIndex ? " unit-tab-active" : "";
-    html += `<div class="unit-tab${cls}" onclick="activateUnit(${i})">
-      <span class="unit-tab-name" ondblclick="renameUnit(event,${i})">${esc(u.unitName)}</span>
-      ${canDel ? `<button class="unit-tab-del" onclick="deleteUnit(event,${i})" title="削除">&times;</button>` : ""}
-    </div>`;
-  }
-  html += `<button class="unit-tab-add" onclick="addUnit()" title="項目を追加">＋</button>`;
-  html += '</div>';
-  container.innerHTML = html;
+  const u = units[activeUnitIndex];
+  // 1ユニットの場合は＋ボタンのみ表示
+  const info = units.length > 1
+    ? `<span class="unit-active-label">追加先: <strong>${esc(u.unitName)}</strong></span>`
+    : "";
+  container.innerHTML = `<div class="unit-action-bar no-print">${info}<button class="unit-tab-add" onclick="addUnit()" title="項目を追加">＋ 項目追加</button></div>`;
 }
 
 function activateUnit(idx) {
   activeUnitIndex = Math.max(0, Math.min(idx, currentEstimate.units.length - 1));
   renderUnitTabs();
-  renderEstimateLines();
+  // 列ヘッダーのアクティブ表示だけ更新（全再描画を避ける）
+  document.querySelectorAll(".unit-col").forEach((col, i) => {
+    col.classList.toggle("unit-col-active", i === activeUnitIndex);
+    const badge = col.querySelector(".unit-active-badge");
+    if (badge) badge.textContent = i === activeUnitIndex ? "← 追加先" : "";
+  });
   renderTotals();
 }
 
@@ -2968,10 +2966,8 @@ function addUnit() {
     netRate: prev ? prev.netRate : DEFAULT_RATES.netRate,
   });
   activeUnitIndex = currentEstimate.units.length - 1;
-  renderUnitTabs();
-  renderEstimateLines();
-  renderTotals();
-  showToast("項目" + activeUnitIndex + "を追加しました");
+  renderEstimateTab();
+  showToast("「項目" + currentEstimate.units.length + "」を追加しました");
 }
 
 function deleteUnit(event, idx) {
@@ -2987,9 +2983,7 @@ function deleteUnit(event, idx) {
     activeUnitIndex = currentEstimate.units.length - 1;
   }
   rebuildClickCounts();
-  renderUnitTabs();
-  renderEstimateLines();
-  renderTotals();
+  renderEstimateTab();
 }
 
 function renameUnit(event, idx) {
@@ -2998,7 +2992,7 @@ function renameUnit(event, idx) {
   const newName = prompt("項目名を変更:", unit.unitName);
   if (newName !== null && newName.trim()) {
     unit.unitName = newName.trim();
-    renderUnitTabs();
+    renderEstimateTab();
   }
 }
 
@@ -3027,22 +3021,59 @@ function renderProjectInfo() {
 function renderEstimateLines() {
   const section = document.getElementById("est-section");
   const empty = document.getElementById("est-empty");
-  const lines = activeUnit().lines;
 
-  // 既存のテーブルを削除（est-empty は残す）
-  section.querySelectorAll(".est-col-table, .est-print-page").forEach(el => el.remove());
+  section.querySelectorAll(".est-col-table, .est-print-page, .multi-unit-container").forEach(el => el.remove());
 
-  if (lines.length === 0) {
-    empty.style.display = "";
+  const units = currentEstimate.units;
+
+  // 1ユニット: 従来の全幅テーブル
+  if (units.length === 1) {
+    const lines = units[0].lines;
+    if (lines.length === 0) { empty.style.display = ""; return; }
+    empty.style.display = "none";
+    const html = `<table class="estimate-table est-col-table">${_estTheadHtml()}<tbody>${_buildLineRows(lines).join("")}</tbody></table>`;
+    empty.insertAdjacentHTML("beforebegin", html);
     return;
   }
+
+  // 複数ユニット: 全ユニットを横並びで常時表示
   empty.style.display = "none";
+  const container = document.createElement("div");
+  container.className = "multi-unit-container";
 
-  const rowsHtml = _buildLineRows(lines);
-  const theadHtml = _estTheadHtml();
+  for (let i = 0; i < units.length; i++) {
+    const unit = units[i];
+    const isActive = i === activeUnitIndex;
+    const col = document.createElement("div");
+    col.className = "unit-col" + (isActive ? " unit-col-active" : "");
 
-  const html = `<table class="estimate-table est-col-table">${theadHtml}<tbody>${rowsHtml.join("")}</tbody></table>`;
-  empty.insertAdjacentHTML("beforebegin", html);
+    // 列ヘッダー（クリックで追加先切替）
+    const hdr = document.createElement("div");
+    hdr.className = "unit-col-header no-print";
+    hdr.innerHTML = `
+      <span class="unit-col-name" onclick="activateUnit(${i})">${esc(unit.unitName)}</span>
+      <span class="unit-active-badge">${isActive ? "← 追加先" : ""}</span>
+      <button class="unit-col-btn" onclick="renameUnit(event,${i})" title="名前変更">✏</button>
+      <button class="unit-col-btn unit-col-del" onclick="deleteUnit(event,${i})" title="削除">&times;</button>
+    `;
+    col.appendChild(hdr);
+
+    // 明細テーブル
+    if (unit.lines.length > 0) {
+      const tbl = document.createElement("table");
+      tbl.className = "estimate-table est-col-table";
+      tbl.innerHTML = _estTheadHtml() + "<tbody>" + _buildLineRows(unit.lines).join("") + "</tbody>";
+      col.appendChild(tbl);
+    } else {
+      const emptyMsg = document.createElement("div");
+      emptyMsg.className = "unit-col-empty";
+      emptyMsg.textContent = "明細なし。追加先にして品目を追加してください。";
+      col.appendChild(emptyMsg);
+    }
+    container.appendChild(col);
+  }
+
+  empty.insertAdjacentElement("beforebegin", container);
 }
 
 /** 行HTML配列を生成（画面・印刷共通） */
@@ -3635,27 +3666,31 @@ function renderTotals() {
   document.getElementById("rate-list-input").value = unit.listRate;
   document.getElementById("rate-net-input").value  = unit.netRate;
 
-  // 複数ユニット: 全体合計を表示
+  // 複数ユニット: 全体合計を totals-table に追加行として表示
   const units = currentEstimate.units;
-  let gc = document.getElementById("global-totals-container");
+  const table = document.querySelector(".totals-table");
+  if (!table) return;
+  table.querySelectorAll(".global-total-row").forEach(tr => tr.remove());
   if (units.length > 1) {
     let gList = 0, gNet = 0;
     for (const u of units) {
       const raw = calcLinesGrandTotal(u.lines);
       const ul = Math.ceil(raw * u.listRate) * 1000;
       const un = Math.ceil(ul * u.netRate / 10000) * 10000;
-      gList += ul;
-      gNet += un;
+      gList += ul; gNet += un;
     }
-    if (!gc) {
-      gc = document.createElement("div");
-      gc.id = "global-totals-container";
-      const ts = document.querySelector(".totals-section");
-      if (ts) ts.insertAdjacentElement("afterend", gc);
-    }
-    gc.innerHTML = `<div class="global-totals no-print">全体合計 &nbsp; 定価: <strong>${fmtNum(gList)}</strong> 円 &nbsp; NET: <strong>${fmtNum(gNet)}</strong> 円</div>`;
-  } else if (gc) {
-    gc.innerHTML = "";
+    table.insertAdjacentHTML("beforeend", `
+      <tr class="global-total-row" style="border-top:2px solid #999;">
+        <td class="label-cell" style="font-size:11px;color:#555;">全体 定価合計</td>
+        <td class="rate-cell"></td>
+        <td class="value-cell" style="font-weight:bold;">${fmtNum(gList)}</td>
+      </tr>
+      <tr class="global-total-row net-row">
+        <td class="label-cell" style="font-size:11px;color:#555;">全体 NET合計</td>
+        <td class="rate-cell"></td>
+        <td class="value-cell" style="font-weight:bold;color:#744210;">${fmtNum(gNet)}</td>
+      </tr>
+    `);
   }
 }
 
@@ -4099,26 +4134,31 @@ document.addEventListener("DOMContentLoaded", () => {
   // ユニットタブ・全体合計のスタイルを動的注入
   const style = document.createElement("style");
   style.textContent = `
-.unit-tabs{display:flex;flex-wrap:wrap;gap:4px;padding:6px 0 0 0;align-items:center;}
-.unit-tab{display:flex;align-items:center;gap:3px;padding:4px 10px;background:#e2e8f0;border:1px solid #b2c0d0;border-radius:6px 6px 0 0;cursor:pointer;font-size:13px;border-bottom:2px solid #e2e8f0;user-select:none;}
-.unit-tab-active{background:#fff;border-color:#4299e1;border-bottom:2px solid #fff;font-weight:600;color:#2b6cb0;}
-.unit-tab:not(.unit-tab-active):hover{background:#bee3f8;border-color:#90cdf4;}
-.unit-tab-name{cursor:pointer;}
-.unit-tab-del{background:none;border:none;color:#e53e3e;cursor:pointer;font-size:15px;padding:0 1px;line-height:1;display:flex;align-items:center;}
-.unit-tab-del:hover{color:#c53030;}
-.unit-tab-add{background:#48bb78;border:1px solid #38a169;border-radius:6px;color:#fff;cursor:pointer;font-size:18px;padding:1px 10px;margin-left:4px;line-height:1.4;}
+/* ユニット操作バー */
+.unit-action-bar{display:flex;align-items:center;gap:10px;padding:6px 0 4px 0;}
+.unit-active-label{font-size:13px;color:#555;}
+.unit-active-label strong{color:#2b6cb0;}
+.unit-tab-add{background:#48bb78;border:1px solid #38a169;border-radius:6px;color:#fff;cursor:pointer;font-size:13px;padding:4px 12px;}
 .unit-tab-add:hover{background:#38a169;}
-.global-totals{padding:6px 12px;background:#ebf8ff;border:1px solid #bee3f8;border-radius:4px;margin:4px 0 8px 0;font-size:13px;display:flex;gap:16px;align-items:center;}
-.global-totals strong{color:#2b6cb0;font-size:14px;}
+/* 複数ユニット横並びコンテナ */
+.multi-unit-container{display:flex;gap:12px;overflow-x:auto;align-items:flex-start;padding-bottom:8px;}
+.unit-col{flex:0 0 auto;min-width:320px;border:2px solid #e2e8f0;border-radius:6px;overflow:hidden;}
+.unit-col-active{border-color:#4299e1;}
+.unit-col-header{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f7fafc;border-bottom:1px solid #e2e8f0;cursor:pointer;}
+.unit-col-active .unit-col-header{background:#ebf8ff;border-color:#bee3f8;}
+.unit-col-name{font-weight:600;font-size:13px;flex:1;}
+.unit-active-badge{font-size:11px;color:#4299e1;white-space:nowrap;}
+.unit-col-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:1px 3px;color:#718096;}
+.unit-col-btn:hover{color:#2d3748;}
+.unit-col-del{color:#e53e3e!important;}
+.unit-col-del:hover{color:#c53030!important;}
+.unit-col-empty{padding:12px;color:#999;font-size:12px;}
+/* 印刷時 */
 @media print{
-  .unit-tabs,.unit-tab-add,.unit-tab-del{display:none!important;}
-  .global-totals{display:none!important;}
-  .unit-print-header{font-weight:bold;font-size:9px;background:#f0f4f8;padding:2px 4px;border:1px solid #ccc;border-bottom:none;margin-top:4px;}
-  .unit-print-footer{font-size:8px;border-top:2px solid #444;padding:2px 0;}
-  .unit-print-footer table{width:100%;border-collapse:collapse;font-size:8px;}
-  .unit-print-footer td{padding:1px 3px;}
-  .unit-print-footer .uf-label{color:#555;}
-  .unit-print-footer .uf-value{text-align:right;font-weight:bold;}
+  .unit-action-bar,.unit-col-header,.no-print{display:none!important;}
+  .multi-unit-container{display:block!important;}
+  .unit-col{border:none!important;min-width:0!important;flex:none!important;}
+  .global-total-row{display:none!important;}
   .global-totals-print{font-size:9px;display:flex!important;gap:20px;margin-bottom:6px;padding:3px 6px;border:1px solid #444;font-weight:bold;background:#f7fafc;}
 }
   `;

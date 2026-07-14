@@ -3039,7 +3039,7 @@ function renderEstimateLines() {
   // 複数ユニット: 全ユニットを横並びで常時表示
   empty.style.display = "none";
   const container = document.createElement("div");
-  container.className = "multi-unit-container";
+  container.className = "multi-unit-container no-print";
 
   for (let i = 0; i < units.length; i++) {
     const unit = units[i];
@@ -3592,26 +3592,41 @@ function onLineDragLeave(e) {
 function onLineDrop(e, targetLineId) {
   e.preventDefault();
   const srcId = _dragLineId;
-  if (!srcId || srcId === targetLineId) {
-    _clearDragStyles();
-    return;
-  }
-  const lines = activeUnit().lines;
-  const srcIdx = lines.findIndex(x => x.lineId === srcId);
-  const tgtIdx = lines.findIndex(x => x.lineId === targetLineId);
-  if (srcIdx < 0 || tgtIdx < 0) { _clearDragStyles(); return; }
+  if (!srcId || srcId === targetLineId) { _clearDragStyles(); return; }
 
-  // ドロップ位置（上半分=前に、下半分=後に）
+  // どのユニットにsrc/tgtがあるか全ユニットを検索
+  let srcUnitIdx = -1, srcLineIdx = -1;
+  let tgtUnitIdx = -1;
+  for (let ui = 0; ui < currentEstimate.units.length; ui++) {
+    const uLines = currentEstimate.units[ui].lines;
+    const si = uLines.findIndex(x => x.lineId === srcId);
+    if (si >= 0) { srcUnitIdx = ui; srcLineIdx = si; }
+    const ti = uLines.findIndex(x => x.lineId === targetLineId);
+    if (ti >= 0) { tgtUnitIdx = ui; }
+  }
+  if (srcUnitIdx < 0 || tgtUnitIdx < 0) { _clearDragStyles(); return; }
+
   const row = e.target.closest("tr");
   const rect = row ? row.getBoundingClientRect() : null;
   const insertBefore = rect ? e.clientY < rect.top + rect.height / 2 : false;
 
-  // 配列操作: まず元の位置から取り出し
-  const [moved] = lines.splice(srcIdx, 1);
-  // 取り出し後のインデックスを再計算
-  let newIdx = lines.findIndex(x => x.lineId === targetLineId);
-  if (!insertBefore) newIdx++;
-  lines.splice(newIdx, 0, moved);
+  if (srcUnitIdx === tgtUnitIdx) {
+    // 同一ユニット: 移動
+    const lines = currentEstimate.units[srcUnitIdx].lines;
+    const [moved] = lines.splice(srcLineIdx, 1);
+    let newIdx = lines.findIndex(x => x.lineId === targetLineId);
+    if (!insertBefore) newIdx++;
+    lines.splice(newIdx, 0, moved);
+  } else {
+    // 異なるユニット: コピー（元は残す）
+    const srcLine = currentEstimate.units[srcUnitIdx].lines[srcLineIdx];
+    const copy = JSON.parse(JSON.stringify(srcLine));
+    copy.lineId = genId();
+    const tgtLines = currentEstimate.units[tgtUnitIdx].lines;
+    let newIdx = tgtLines.findIndex(x => x.lineId === targetLineId);
+    if (!insertBefore) newIdx++;
+    tgtLines.splice(newIdx, 0, copy);
+  }
 
   _clearDragStyles();
   renderEstimateLines();
@@ -4156,8 +4171,7 @@ document.addEventListener("DOMContentLoaded", () => {
 /* 印刷時 */
 @media print{
   .unit-action-bar,.unit-col-header,.no-print{display:none!important;}
-  .multi-unit-container{display:block!important;}
-  .unit-col{border:none!important;min-width:0!important;flex:none!important;}
+  .multi-unit-container{display:none!important;}
   .global-total-row{display:none!important;}
   .global-totals-print{font-size:9px;display:flex!important;gap:20px;margin-bottom:6px;padding:3px 6px;border:1px solid #444;font-weight:bold;background:#f7fafc;}
 }

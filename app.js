@@ -3305,6 +3305,7 @@ function renderEstimateLinesForPrint() {
 
     // ユニットヘッダー
     addSlot({
+      type: 'row',
       html: `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${esc(u.unitName)}</td></tr>`,
       weight: 1.0
     });
@@ -3312,15 +3313,13 @@ function renderEstimateLinesForPrint() {
     // 明細行（列が溢れたら右へ）
     for (const h of rowsHtml) {
       const w = (h.includes('sep-row') || h.includes('comment-row')) ? SEP_WEIGHT : 1.0;
-      addSlot({ html: h, weight: w });
+      addSlot({ type: 'row', html: h, weight: w });
     }
 
-    // フッター3行は原子的に（途中で列をまたがない）— 単独表記スタイルで
+    // フッターは独立divとして保存（テーブル行にしない）
     const fw = 3.5;
     if (colWeights[ci] + fw > perCol + 0.01 && colWeights[ci] > 0) advanceCol();
-    curCols[ci].push({ html: `<tr class="unit-footer-row" style="background:#f7fafc;border-top:2px solid #1a365d;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-weight:700;font-size:8px;color:#2d3748;">積算合計</td><td colspan="2"></td><td></td><td style="text-align:right;font-weight:700;font-size:9px;color:#1a365d;">${fmtNum(raw)}</td></tr>` });
-    curCols[ci].push({ html: `<tr class="unit-footer-row" style="background:#f7fafc;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-weight:700;font-size:8px;color:#2d3748;">定価</td><td colspan="2"></td><td style="font-size:7px;color:#555;">×${u.listRate}</td><td style="text-align:right;font-weight:700;font-size:9px;color:#1a365d;">${fmtNum(listP)}</td></tr>` });
-    curCols[ci].push({ html: `<tr class="unit-footer-row" style="background:#e8f5e9;border-bottom:2px solid #276749;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-weight:700;font-size:9px;color:#276749;">NET</td><td colspan="2"></td><td style="font-size:7px;color:#276749;">×${u.netRate}</td><td style="text-align:right;font-weight:700;font-size:10px;color:#276749;">${fmtNum(netP)}</td></tr>` });
+    curCols[ci].push({ type: 'footer', raw, listP, netP, listRate: u.listRate, netRate: u.netRate });
     colWeights[ci] += fw;
 
     // 次のユニットは必ず次の列の先頭から始める
@@ -3335,32 +3334,63 @@ function renderEstimateLinesForPrint() {
     pageDiv.className = "est-print-page";
     if (p > 0) pageDiv.style.pageBreakBefore = "always";
 
-    // 全体合計バナー（目立つデザイン）
+    // 全体合計バナー
     const gBanner = document.createElement("div");
     gBanner.className = "global-totals-print";
     gBanner.style.cssText = "display:flex;gap:32px;font-size:12px;font-weight:bold;padding:6px 12px;border:2px solid #1e3a5f;background:#1e3a5f;color:#fff;margin-bottom:5px;-webkit-print-color-adjust:exact;print-color-adjust:exact;";
     gBanner.innerHTML = `<span>定価合計: <span style="font-size:14px;">${fmtNum(gList)}</span> 円</span><span style="color:#fde68a;">NET合計: <span style="font-size:14px;">${fmtNum(gNet)}</span> 円</span>`;
     pageDiv.appendChild(gBanner);
 
-    // 列グリッド（width:100%で列幅を正確に算出）
+    // 列グリッド
     const colsDiv = document.createElement("div");
     colsDiv.style.cssText = "display:flex;width:100%;gap:2px;align-items:flex-start;";
 
     for (let c = 0; c < numCols; c++) {
       const colSlots = page[c] || [];
-      const tbl = document.createElement("table");
-      tbl.className = "estimate-table est-col-table";
-      tbl.style.cssText = `flex:0 0 ${colW};min-width:0;max-width:${colW};font-size:9px;border-collapse:collapse;table-layout:fixed;`;
-      tbl.innerHTML = theadHtml + "<tbody>" + colSlots.map(s => s.html).join("") + "</tbody>";
-      tbl.querySelectorAll(".col-sep,.col-actions,.ec-sep,.ec-del").forEach(el => el.remove());
-      tbl.querySelectorAll(".sep-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
-      tbl.querySelectorAll(".comment-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
-      tbl.querySelectorAll(".unit-header-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
-      tbl.querySelectorAll(".unit-footer-row td[colspan]").forEach(td => {
-        const span = parseInt(td.getAttribute("colspan"), 10);
-        if (span > 2) td.setAttribute("colspan", String(span - 2));
-      });
-      colsDiv.appendChild(tbl);
+
+      // 列コンテナ（table + footerを縦に並べる）
+      const colContainer = document.createElement("div");
+      colContainer.style.cssText = `flex:0 0 ${colW};min-width:0;max-width:${colW};display:flex;flex-direction:column;`;
+
+      // rowスロットをまとめてtableに、footerスロットはdivに
+      let rowBuf = [];
+      const flushRows = () => {
+        if (rowBuf.length === 0) return;
+        const tbl = document.createElement("table");
+        tbl.className = "estimate-table est-col-table";
+        tbl.style.cssText = "width:100%;font-size:9px;border-collapse:collapse;table-layout:fixed;";
+        tbl.innerHTML = theadHtml + "<tbody>" + rowBuf.join("") + "</tbody>";
+        tbl.querySelectorAll(".col-sep,.col-actions,.ec-sep,.ec-del").forEach(el => el.remove());
+        tbl.querySelectorAll(".sep-row td[colspan],.comment-row td[colspan],.unit-header-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
+        colContainer.appendChild(tbl);
+        rowBuf = [];
+      };
+
+      for (const slot of colSlots) {
+        if (slot.type === 'footer') {
+          flushRows();
+          const fd = document.createElement("div");
+          fd.style.cssText = "border:1.5px solid #1a365d;margin-top:2px;font-size:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact;";
+          fd.innerHTML =
+            `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 5px;background:#f7fafc;border-bottom:1px solid #e2e8f0;">` +
+              `<span style="font-weight:700;color:#2d3748;">積算合計</span>` +
+              `<span style="font-weight:700;color:#1a365d;">${fmtNum(slot.raw)}</span>` +
+            `</div>` +
+            `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 5px;background:#f7fafc;border-bottom:1px solid #e2e8f0;">` +
+              `<span style="font-weight:700;color:#2d3748;">定価<small style="font-weight:normal;color:#888;"> ×${slot.listRate}</small></span>` +
+              `<span style="font-weight:700;color:#1a365d;">${fmtNum(slot.listP)}</span>` +
+            `</div>` +
+            `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 5px;background:#e8f5e9;">` +
+              `<span style="font-weight:700;color:#276749;">NET<small style="font-weight:normal;color:#276749;"> ×${slot.netRate}</small></span>` +
+              `<span style="font-weight:700;font-size:9px;color:#276749;">${fmtNum(slot.netP)}</span>` +
+            `</div>`;
+          colContainer.appendChild(fd);
+        } else {
+          rowBuf.push(slot.html);
+        }
+      }
+      flushRows();
+      colsDiv.appendChild(colContainer);
     }
     pageDiv.appendChild(colsDiv);
     section.insertBefore(pageDiv, empty);
@@ -3623,12 +3653,14 @@ function onLineDrop(e, targetLineId) {
     if (!insertBefore) newIdx++;
     lines.splice(newIdx, 0, moved);
   } else {
-    // 異なるユニット: 移動（元から削除して先に追加）
-    const [moved] = currentEstimate.units[srcUnitIdx].lines.splice(srcLineIdx, 1);
+    // 異なるユニット: コピー（元は残す）
+    const srcLine = currentEstimate.units[srcUnitIdx].lines[srcLineIdx];
+    const copy = JSON.parse(JSON.stringify(srcLine));
+    copy.lineId = genId();
     const tgtLines = currentEstimate.units[tgtUnitIdx].lines;
     let newIdx = tgtLines.findIndex(x => x.lineId === targetLineId);
     if (!insertBefore) newIdx++;
-    tgtLines.splice(newIdx, 0, moved);
+    tgtLines.splice(newIdx, 0, copy);
   }
 
   _clearDragStyles();

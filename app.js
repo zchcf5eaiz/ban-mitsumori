@@ -3269,30 +3269,8 @@ function renderEstimateLinesForPrint() {
     gList += ul; gNet += un;
   }
 
-  // スロットストリームを構築（全ユニットの行を1本のストリームに）
-  const slots = [];
-  for (let ui = 0; ui < units.length; ui++) {
-    const u = units[ui];
-    const rowsHtml = _buildLineRows(u.lines);
-    slots.push({
-      html: `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${esc(u.unitName)}</td></tr>`,
-      weight: 1.0, footerGroup: null
-    });
-    for (const h of rowsHtml) {
-      const w = (h.includes('sep-row') || h.includes('comment-row')) ? SEP_WEIGHT : 1.0;
-      slots.push({ html: h, weight: w, footerGroup: null });
-    }
-    // フッター3行を原子的なグループとして扱う
-    const raw = calcLinesGrandTotal(u.lines);
-    const listP = Math.ceil(raw * u.listRate) * 1000;
-    const netP = Math.ceil(listP * u.netRate / 10000) * 10000;
-    const fg = `fg${ui}`;
-    slots.push({ html: `<tr class="unit-footer-row" style="background:#f1f5f9;border-top:2px solid #475569;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-weight:bold;font-size:9px;color:#1e293b;">積算合計</td><td colspan="2" style="text-align:right;font-weight:bold;font-size:9px;">${fmtNum(raw)}</td><td></td><td></td></tr>`, weight: 1.0, footerGroup: fg });
-    slots.push({ html: `<tr class="unit-footer-row" style="background:#e2e8f0;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-size:9px;color:#334155;">定価</td><td colspan="2" style="text-align:right;font-size:9px;">${fmtNum(listP)}</td><td style="font-size:7px;color:#64748b;">×${u.listRate}</td><td></td></tr>`, weight: 1.0, footerGroup: fg });
-    slots.push({ html: `<tr class="unit-footer-row" style="background:#fef3c7;border-bottom:2px solid #d97706;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-weight:bold;font-size:11px;color:#92400e;">NET</td><td colspan="2" style="text-align:right;font-weight:bold;font-size:11px;color:#92400e;">${fmtNum(netP)}</td><td style="font-size:7px;color:#92400e;">×${u.netRate}</td><td></td></tr>`, weight: 1.5, footerGroup: fg });
-  }
-
-  // スロットを列/ページに振り分け
+  // ハイブリッド方式: 各ユニットは必ず列の先頭から開始（1ユニット=1列）
+  // ユニット内で行数が列上限を超えたら右の列に流れる（新聞フロー）
   const pages = [];
   let curCols = Array.from({length: numCols}, () => []);
   let colWeights = Array(numCols).fill(0);
@@ -3308,25 +3286,41 @@ function renderEstimateLinesForPrint() {
     }
   }
 
-  let si = 0;
-  while (si < slots.length) {
-    const slot = slots[si];
-    if (slot.footerGroup) {
-      const fg = slot.footerGroup;
-      let j = si; let fw = 0;
-      while (j < slots.length && slots[j].footerGroup === fg) { fw += slots[j].weight; j++; }
-      if (colWeights[ci] + fw > perCol + 0.01 && colWeights[ci] > 0) advanceCol();
-      while (si < j) {
-        curCols[ci].push(slots[si]);
-        colWeights[ci] += slots[si].weight;
-        si++;
-      }
-    } else {
-      if (colWeights[ci] + slot.weight > perCol + 0.01 && colWeights[ci] > 0) advanceCol();
-      curCols[ci].push(slot);
-      colWeights[ci] += slot.weight;
-      si++;
+  function addSlot(slot) {
+    if (colWeights[ci] + slot.weight > perCol + 0.01 && colWeights[ci] > 0) advanceCol();
+    curCols[ci].push(slot);
+    colWeights[ci] += slot.weight;
+  }
+
+  for (let ui = 0; ui < units.length; ui++) {
+    const u = units[ui];
+    const rowsHtml = _buildLineRows(u.lines);
+    const raw = calcLinesGrandTotal(u.lines);
+    const listP = Math.ceil(raw * u.listRate) * 1000;
+    const netP = Math.ceil(listP * u.netRate / 10000) * 10000;
+
+    // ユニットヘッダー
+    addSlot({
+      html: `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${esc(u.unitName)}</td></tr>`,
+      weight: 1.0
+    });
+
+    // 明細行（列が溢れたら右へ）
+    for (const h of rowsHtml) {
+      const w = (h.includes('sep-row') || h.includes('comment-row')) ? SEP_WEIGHT : 1.0;
+      addSlot({ html: h, weight: w });
     }
+
+    // フッター3行は原子的に（途中で列をまたがない）
+    const fw = 3.5;
+    if (colWeights[ci] + fw > perCol + 0.01 && colWeights[ci] > 0) advanceCol();
+    curCols[ci].push({ html: `<tr class="unit-footer-row" style="background:#f1f5f9;border-top:2px solid #475569;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-weight:bold;font-size:9px;color:#1e293b;">積算合計</td><td colspan="2" style="text-align:right;font-weight:bold;font-size:9px;">${fmtNum(raw)}</td><td></td><td></td></tr>` });
+    curCols[ci].push({ html: `<tr class="unit-footer-row" style="background:#e2e8f0;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-size:9px;color:#334155;">定価</td><td colspan="2" style="text-align:right;font-size:9px;">${fmtNum(listP)}</td><td style="font-size:7px;color:#64748b;">×${u.listRate}</td><td></td></tr>` });
+    curCols[ci].push({ html: `<tr class="unit-footer-row" style="background:#fef3c7;border-bottom:2px solid #d97706;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-weight:bold;font-size:11px;color:#92400e;">NET</td><td colspan="2" style="text-align:right;font-weight:bold;font-size:11px;color:#92400e;">${fmtNum(netP)}</td><td style="font-size:7px;color:#92400e;">×${u.netRate}</td><td></td></tr>` });
+    colWeights[ci] += fw;
+
+    // 次のユニットは必ず次の列の先頭から始める
+    if (ui < units.length - 1) advanceCol();
   }
   if (curCols.some(c => c.length > 0)) pages.push(curCols);
 

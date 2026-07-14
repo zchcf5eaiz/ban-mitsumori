@@ -414,14 +414,43 @@ function createNewEstimate() {
       date: new Date().toISOString().split("T")[0],
       estimateNo: "", staff: "",
     },
-    lines: [],
-    listRate: DEFAULT_RATES.listRate,
-    netRate: DEFAULT_RATES.netRate,
+    units: [{
+      unitId: genId(),
+      unitName: "項目1",
+      lines: [],
+      listRate: DEFAULT_RATES.listRate,
+      netRate: DEFAULT_RATES.netRate,
+    }],
     notes: "",
   };
 }
 
+/** 旧形式（lines直下）→新形式（units配列）へ変換。新形式はそのまま返す。 */
+function migrateEstimate(e) {
+  if (e.units) return e;
+  const unitName = (e.project && e.project.panelName) || "項目1";
+  const migrated = Object.assign({}, e);
+  if (migrated.project) {
+    migrated.project = Object.assign({}, migrated.project);
+    delete migrated.project.panelName;
+  }
+  migrated.units = [{
+    unitId: genId(),
+    unitName: unitName,
+    lines: e.lines || [],
+    listRate: e.listRate != null ? e.listRate : DEFAULT_RATES.listRate,
+    netRate: e.netRate != null ? e.netRate : DEFAULT_RATES.netRate,
+  }];
+  delete migrated.lines;
+  delete migrated.listRate;
+  delete migrated.netRate;
+  return migrated;
+}
+
 let currentEstimate = createNewEstimate();
+let activeUnitIndex = 0;
+function activeUnit() { return currentEstimate.units[activeUnitIndex]; }
+
 let savedEstimates = loadSavedEstimates();
 
 // ============================================================
@@ -429,7 +458,10 @@ let savedEstimates = loadSavedEstimates();
 // ============================================================
 
 function loadSavedEstimates() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_ESTIMATES) || "[]"); }
+  try {
+    const arr = JSON.parse(localStorage.getItem(STORAGE_ESTIMATES) || "[]");
+    return arr.map(e => migrateEstimate(e));
+  }
   catch { return []; }
 }
 function persistEstimates() {
@@ -454,7 +486,8 @@ function saveCurrentEstimate() {
 function loadEstimate(id) {
   const e = savedEstimates.find(x => x.id === id);
   if (!e) return;
-  currentEstimate = JSON.parse(JSON.stringify(e));
+  currentEstimate = migrateEstimate(JSON.parse(JSON.stringify(e)));
+  activeUnitIndex = 0;
   rebuildClickCounts();
   renderEstimateTab();
   showToast("読み込みました: " + currentEstimate.name);
@@ -913,7 +946,7 @@ function addPBoxToEstimate(type) {
   const qty = parseInt(input, 10);
   if (isNaN(qty) || qty <= 0) return;
 
-  currentEstimate.lines.push({
+  activeUnit().lines.push({
     type: "custom",
     lineId: genId(),
     name: "P-BOX",
@@ -1057,7 +1090,7 @@ function addDuctToEstimate(type) {
   const qty = parseInt(input, 10);
   if (isNaN(qty) || qty <= 0) return;
 
-  currentEstimate.lines.push({
+  activeUnit().lines.push({
     type: "custom",
     lineId: genId(),
     name: "ダクト",
@@ -1193,7 +1226,7 @@ function addFrameToEstimate(type) {
   const qty = parseInt(input, 10);
   if (isNaN(qty) || qty <= 0) return;
 
-  currentEstimate.lines.push({
+  activeUnit().lines.push({
     type: "custom",
     lineId: genId(),
     name: type,
@@ -1298,7 +1331,7 @@ function addTrayToEstimate() {
   const qty = parseInt(input, 10);
   if (isNaN(qty) || qty <= 0) return;
 
-  currentEstimate.lines.push({
+  activeUnit().lines.push({
     type: "custom",
     lineId: genId(),
     name: "防油トレー",
@@ -1354,7 +1387,7 @@ function addOptionToEstimate(event, type) {
   const qty = parseInt(input, 10);
   if (isNaN(qty) || qty <= 0) return;
 
-  currentEstimate.lines.push({
+  activeUnit().lines.push({
     type: "custom",
     lineId: genId(),
     name: type,
@@ -1410,7 +1443,7 @@ function addOption2ToEstimate(event, type) {
   const qty = parseInt(input, 10);
   if (isNaN(qty) || qty <= 0) return;
 
-  currentEstimate.lines.push({
+  activeUnit().lines.push({
     type: "custom",
     lineId: genId(),
     name: type,
@@ -1472,7 +1505,7 @@ function addQuickItemToEstimate(event, type) {
   const qty = parseInt(input, 10);
   if (isNaN(qty) || qty <= 0) return;
 
-  currentEstimate.lines.push({
+  activeUnit().lines.push({
     type: "custom",
     lineId: genId(),
     name: type,
@@ -1523,7 +1556,7 @@ function addSusDiffToEstimate(event, type) {
   const qty = parseInt(input, 10);
   if (isNaN(qty) || qty <= 0) return;
 
-  currentEstimate.lines.push({
+  activeUnit().lines.push({
     type: "custom",
     lineId: genId(),
     name: "SUS差額",
@@ -1753,7 +1786,7 @@ function addCubicleCustomToEstimate(row) {
   if (input === null) return;
   const qty = parseInt(input, 10);
   if (isNaN(qty) || qty <= 0) return;
-  currentEstimate.lines.push({
+  activeUnit().lines.push({
     type: "custom",
     lineId: genId(),
     name: name,
@@ -1798,7 +1831,7 @@ function addCustomToEstimate(row) {
   if (input === null) return;
   const qty = parseInt(input, 10);
   if (isNaN(qty) || qty <= 0) return;
-  currentEstimate.lines.push({
+  activeUnit().lines.push({
     type: "custom",
     lineId: genId(),
     name: name,
@@ -2725,7 +2758,7 @@ function addFromMaster(event, id) {
   const qty = parseInt(input, 10);
   if (isNaN(qty) || qty <= 0) return;
 
-  currentEstimate.lines.push({
+  activeUnit().lines.push({
     type: "item",
     lineId: genId(),
     masterItemId: id,
@@ -2784,13 +2817,13 @@ function addFromMaster(event, id) {
 /** 追加済み件数を更新（盤） */
 function updateAddedCount() {
   const el = document.getElementById("added-count");
-  if (el) el.textContent = currentEstimate.lines.filter(l => l.type === "item" || l.type === "custom").length;
+  if (el) el.textContent = activeUnit().lines.filter(l => l.type === "item" || l.type === "custom").length;
 }
 
 /** 追加済み件数を更新（キュービクル） */
 function updateCubicleAddedCount() {
   const el = document.getElementById("cubicle-added-count");
-  if (el) el.textContent = currentEstimate.lines.filter(l => l.type === "item" || l.type === "custom").length;
+  if (el) el.textContent = activeUnit().lines.filter(l => l.type === "item" || l.type === "custom").length;
 }
 
 // ============================================================
@@ -2865,7 +2898,7 @@ function addSelectedItem() {
   const master = getMasterItem(masterId);
   if (!master) return;
 
-  currentEstimate.lines.push({
+  activeUnit().lines.push({
     type: "item",
     lineId: genId(),
     masterItemId: masterId,
@@ -2886,10 +2919,87 @@ function addSelectedItem() {
 function renderEstimateTab() {
   renderProjectInfo();
   renderAddSelectors();
+  renderUnitTabs();
   renderEstimateLines();
   renderTotals();
   renderNotes();
   renderEstimateSelector();
+}
+
+/** ユニットタブ行を描画 */
+function renderUnitTabs() {
+  let container = document.getElementById("unit-tabs-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "unit-tabs-container";
+    const estSection = document.getElementById("est-section");
+    estSection.parentNode.insertBefore(container, estSection);
+  }
+  const units = currentEstimate.units;
+  const canDel = units.length > 1;
+  let html = '<div class="unit-tabs no-print">';
+  for (let i = 0; i < units.length; i++) {
+    const u = units[i];
+    const cls = i === activeUnitIndex ? " unit-tab-active" : "";
+    html += `<div class="unit-tab${cls}" onclick="activateUnit(${i})">
+      <span class="unit-tab-name" ondblclick="renameUnit(event,${i})">${esc(u.unitName)}</span>
+      ${canDel ? `<button class="unit-tab-del" onclick="deleteUnit(event,${i})" title="削除">&times;</button>` : ""}
+    </div>`;
+  }
+  html += `<button class="unit-tab-add" onclick="addUnit()" title="項目を追加">＋</button>`;
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function activateUnit(idx) {
+  activeUnitIndex = Math.max(0, Math.min(idx, currentEstimate.units.length - 1));
+  renderUnitTabs();
+  renderEstimateLines();
+  renderTotals();
+}
+
+function addUnit() {
+  const prev = currentEstimate.units[currentEstimate.units.length - 1];
+  currentEstimate.units.push({
+    unitId: genId(),
+    unitName: "項目" + (currentEstimate.units.length + 1),
+    lines: [],
+    listRate: prev ? prev.listRate : DEFAULT_RATES.listRate,
+    netRate: prev ? prev.netRate : DEFAULT_RATES.netRate,
+  });
+  activeUnitIndex = currentEstimate.units.length - 1;
+  renderUnitTabs();
+  renderEstimateLines();
+  renderTotals();
+  showToast("項目" + activeUnitIndex + "を追加しました");
+}
+
+function deleteUnit(event, idx) {
+  event.stopPropagation();
+  if (currentEstimate.units.length <= 1) return;
+  const unit = currentEstimate.units[idx];
+  const msg = unit.lines.length > 0
+    ? `「${unit.unitName}」を削除しますか？明細 ${unit.lines.length} 行も削除されます。`
+    : `「${unit.unitName}」を削除しますか？`;
+  if (!confirm(msg)) return;
+  currentEstimate.units.splice(idx, 1);
+  if (activeUnitIndex >= currentEstimate.units.length) {
+    activeUnitIndex = currentEstimate.units.length - 1;
+  }
+  rebuildClickCounts();
+  renderUnitTabs();
+  renderEstimateLines();
+  renderTotals();
+}
+
+function renameUnit(event, idx) {
+  event.stopPropagation();
+  const unit = currentEstimate.units[idx];
+  const newName = prompt("項目名を変更:", unit.unitName);
+  if (newName !== null && newName.trim()) {
+    unit.unitName = newName.trim();
+    renderUnitTabs();
+  }
 }
 
 function renderProjectInfo() {
@@ -2901,13 +3011,7 @@ function renderProjectInfo() {
     { key: "location", label: "現場" },
     { key: "staff", label: "担当者" },
   ];
-  const panelName = currentEstimate.project["panelName"] || "";
-  let html = `<div class="info-panel-name">
-    <label>盤名称</label>
-    <input type="text" value="${escAttr(panelName)}"
-           onchange="currentEstimate.project['panelName']=this.value">
-  </div>`;
-  html += `<div class="info-grid-2col">`;
+  let html = `<div class="info-grid-2col">`;
   html += fields.map(f => {
     const v = currentEstimate.project[f.key] || "";
     return `<div class="info-row">
@@ -2923,7 +3027,7 @@ function renderProjectInfo() {
 function renderEstimateLines() {
   const section = document.getElementById("est-section");
   const empty = document.getElementById("est-empty");
-  const lines = currentEstimate.lines;
+  const lines = activeUnit().lines;
 
   // 既存のテーブルを削除（est-empty は残す）
   section.querySelectorAll(".est-col-table, .est-print-page").forEach(el => el.remove());
@@ -3041,112 +3145,206 @@ function _estTheadHtml() {
 // 印刷用 段組みレイアウト
 // ============================================================
 
-const EST_PRINT_ROW_LIMIT = 27; // 1列あたりの最大行数（A4高さ基準、フッター+備考欄分を確保）
+const EST_PRINT_ROW_LIMIT = 27; // 1列あたりの最大行数（A4高さ基準）
 
 function renderEstimateLinesForPrint() {
   const section = document.getElementById("est-section");
   const empty = document.getElementById("est-empty");
-  const lines = currentEstimate.lines;
-
   section.querySelectorAll(".est-col-table, .est-print-page").forEach(el => el.remove());
 
-  if (lines.length === 0) return;
-  empty.style.display = "none";
+  const units = currentEstimate.units;
 
-  const rowsHtml = _buildLineRows(lines);
-  const theadHtml = _estTheadHtml();
-
-  // 各行の重みを計算（区切り行・コメント行は0.2行、通常行は1.0行）
-  const SEP_WEIGHT = 0.2;
-  const rowWeights = rowsHtml.map(h => (h.includes('sep-row') || h.includes('comment-row')) ? SEP_WEIGHT : 1.0);
-
-  const perCol = EST_PRINT_ROW_LIMIT; // 1列あたりの重み上限
-  const perPage = perCol * 2;
-
-  section.style.cssText = "display:block; overflow:visible;";
-
-  // ページ分割: 重みベースで行を各ページに振り分け
-  const pages = [];
-  let pageStart = 0;
-  while (pageStart < rowsHtml.length) {
-    let weightSum = 0;
-    let pageEnd = pageStart;
-    while (pageEnd < rowsHtml.length && weightSum + rowWeights[pageEnd] <= perPage + 0.01) {
-      weightSum += rowWeights[pageEnd];
-      pageEnd++;
+  // 1ユニット: 従来の1/2列レイアウト（変更なし）
+  if (units.length === 1) {
+    const lines = units[0].lines;
+    if (lines.length === 0) return;
+    empty.style.display = "none";
+    const rowsHtml = _buildLineRows(lines);
+    const theadHtml = _estTheadHtml();
+    const SEP_WEIGHT = 0.2;
+    const rowWeights = rowsHtml.map(h => (h.includes('sep-row') || h.includes('comment-row')) ? SEP_WEIGHT : 1.0);
+    const perCol = EST_PRINT_ROW_LIMIT;
+    const perPage = perCol * 2;
+    section.style.cssText = "display:block; overflow:visible;";
+    const pages = [];
+    let pageStart = 0;
+    while (pageStart < rowsHtml.length) {
+      let weightSum = 0, pageEnd = pageStart;
+      while (pageEnd < rowsHtml.length && weightSum + rowWeights[pageEnd] <= perPage + 0.01) {
+        weightSum += rowWeights[pageEnd]; pageEnd++;
+      }
+      if (pageEnd === pageStart) pageEnd++;
+      pages.push({ start: pageStart, end: pageEnd });
+      pageStart = pageEnd;
     }
-    if (pageEnd === pageStart) pageEnd++; // 最低1行は進める
-    pages.push({ start: pageStart, end: pageEnd });
-    pageStart = pageEnd;
-  }
-
-  for (let p = 0; p < pages.length; p++) {
-    const pageRowsSlice = rowsHtml.slice(pages[p].start, pages[p].end);
-    const pageWeightsSlice = rowWeights.slice(pages[p].start, pages[p].end);
-    if (pageRowsSlice.length === 0) continue;
-
-    // ページの重み合計
-    const pageWeightTotal = pageWeightsSlice.reduce((a, b) => a + b, 0);
-
-    // ページラッパー（2ページ目以降は改ページ）
-    const pageDiv = document.createElement("div");
-    pageDiv.className = "est-print-page";
-    pageDiv.style.cssText = "display:flex; flex-wrap:wrap; gap:2px; align-items:flex-start;";
-    if (p > 0) pageDiv.style.pageBreakBefore = "always";
-
-    if (pageWeightTotal <= perCol + 0.01) {
-      // 1列で収まる場合 → 1ページ目は100%幅、2ページ目以降は50%幅（左寄せ）
+    const _makeTable = (rows, fullWidth) => {
       const tbl = document.createElement("table");
       tbl.className = "estimate-table est-col-table";
-      if (p === 0) {
-        tbl.style.cssText = "width:100%; font-size:9px; border-collapse:collapse; table-layout:fixed;";
-      } else {
-        tbl.style.cssText = "flex:0 0 calc(50% - 2px); min-width:0; max-width:calc(50% - 2px); font-size:9px; border-collapse:collapse; table-layout:fixed;";
-      }
-      tbl.innerHTML = theadHtml + "<tbody>" + pageRowsSlice.join("") + "</tbody>";
-      tbl.querySelectorAll(".col-sep, .col-actions, .ec-sep, .ec-del").forEach(el => el.remove());
+      tbl.style.cssText = fullWidth
+        ? "width:100%; font-size:9px; border-collapse:collapse; table-layout:fixed;"
+        : "flex:0 0 calc(50% - 2px); min-width:0; max-width:calc(50% - 2px); font-size:9px; border-collapse:collapse; table-layout:fixed;";
+      tbl.innerHTML = theadHtml + "<tbody>" + rows.join("") + "</tbody>";
+      tbl.querySelectorAll(".col-sep,.col-actions,.ec-sep,.ec-del").forEach(el => el.remove());
       tbl.querySelectorAll(".sep-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
       tbl.querySelectorAll(".comment-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
-      pageDiv.appendChild(tbl);
-    } else {
-      // 2列に分割: 重みベースで左列がperColに収まるまで詰める
-      let leftWeight = 0;
-      let splitIdx = 0;
-      for (let i = 0; i < pageRowsSlice.length; i++) {
-        if (leftWeight + pageWeightsSlice[i] > perCol + 0.01) break;
-        leftWeight += pageWeightsSlice[i];
-        splitIdx = i + 1;
+      return tbl;
+    };
+    for (let p = 0; p < pages.length; p++) {
+      const rowsSlice = rowsHtml.slice(pages[p].start, pages[p].end);
+      const weightsSlice = rowWeights.slice(pages[p].start, pages[p].end);
+      const wTotal = weightsSlice.reduce((a, b) => a + b, 0);
+      const pageDiv = document.createElement("div");
+      pageDiv.className = "est-print-page";
+      pageDiv.style.cssText = "display:flex; flex-wrap:wrap; gap:2px; align-items:flex-start;";
+      if (p > 0) pageDiv.style.pageBreakBefore = "always";
+      if (wTotal <= perCol + 0.01) {
+        pageDiv.appendChild(_makeTable(rowsSlice, p === 0));
+      } else {
+        let leftWeight = 0, splitIdx = 0;
+        for (let i = 0; i < rowsSlice.length; i++) {
+          if (leftWeight + weightsSlice[i] > perCol + 0.01) break;
+          leftWeight += weightsSlice[i]; splitIdx = i + 1;
+        }
+        [rowsSlice.slice(0, splitIdx), rowsSlice.slice(splitIdx)].forEach(chunk => {
+          if (chunk.length === 0) return;
+          pageDiv.appendChild(_makeTable(chunk, false));
+        });
       }
-      const leftRows = pageRowsSlice.slice(0, splitIdx);
-      const rightRows = pageRowsSlice.slice(splitIdx);
-      [leftRows, rightRows].forEach(chunk => {
-        if (chunk.length === 0) return;
-        const tbl = document.createElement("table");
-        tbl.className = "estimate-table est-col-table";
-        tbl.style.cssText = "flex:0 0 calc(50% - 2px); min-width:0; max-width:calc(50% - 2px); font-size:9px; border-collapse:collapse; table-layout:fixed;";
-        tbl.innerHTML = theadHtml + "<tbody>" + chunk.join("") + "</tbody>";
-        tbl.querySelectorAll(".col-sep, .col-actions, .ec-sep, .ec-del").forEach(el => el.remove());
-        tbl.querySelectorAll(".sep-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
-        tbl.querySelectorAll(".comment-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
-        pageDiv.appendChild(tbl);
-      });
+      section.insertBefore(pageDiv, empty);
     }
+    section.querySelectorAll(".ec-name, .ec-spec").forEach(td => {
+      td.classList.add("ec-shrink-print");
+      let fs = 8; td.style.fontSize = fs + "px";
+      while (td.scrollWidth > td.clientWidth && fs > 4) { fs -= 0.5; td.style.fontSize = fs + "px"; }
+    });
+    return;
+  }
 
+  // 複数ユニット: 段組みフロー
+  empty.style.display = "none";
+  section.style.cssText = "display:block; overflow:visible;";
+  const theadHtml = _estTheadHtml();
+  const SEP_WEIGHT = 0.2;
+  const perCol = EST_PRINT_ROW_LIMIT;
+  const numCols = units.length <= 2 ? 2 : 4;
+  const colW = `calc(${(100/numCols).toFixed(2)}% - 2px)`;
+
+  // 全体合計を計算
+  let gList = 0, gNet = 0;
+  for (const u of units) {
+    const raw = calcLinesGrandTotal(u.lines);
+    const ul = Math.ceil(raw * u.listRate) * 1000;
+    const un = Math.ceil(ul * u.netRate / 10000) * 10000;
+    gList += ul; gNet += un;
+  }
+
+  // スロットストリームを構築
+  const slots = []; // { html, weight, footerGroup }
+  for (let ui = 0; ui < units.length; ui++) {
+    const u = units[ui];
+    const rowsHtml = _buildLineRows(u.lines);
+    // ユニットヘッダー行
+    slots.push({
+      html: `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:9px;padding:2px 4px;background:#f0f4f8;border-top:2px solid #4299e1;border-bottom:1px solid #ccc;">${esc(u.unitName)}</td></tr>`,
+      weight: 1.0, footerGroup: null
+    });
+    // 明細行
+    for (const h of rowsHtml) {
+      const w = (h.includes('sep-row') || h.includes('comment-row')) ? SEP_WEIGHT : 1.0;
+      slots.push({ html: h, weight: w, footerGroup: null });
+    }
+    // フッターブロック（積算合計・定価・NET）— 原子的
+    const raw = calcLinesGrandTotal(u.lines);
+    const listP = Math.ceil(raw * u.listRate) * 1000;
+    const netP = Math.ceil(listP * u.netRate / 10000) * 10000;
+    const fg = `fg${ui}`;
+    const fStyle = "font-size:8px;border-top:1px solid #999;";
+    slots.push({ html: `<tr class="unit-footer-row" style="${fStyle}"><td class="ec-sep"></td><td style="color:#555;">積算合計</td><td colspan="2" style="text-align:right;">${fmtNum(raw)}</td><td></td><td></td><td></td><td class="ec-del"></td></tr>`, weight: 1.0, footerGroup: fg });
+    slots.push({ html: `<tr class="unit-footer-row" style="${fStyle}"><td class="ec-sep"></td><td style="color:#555;">定価</td><td colspan="2" style="text-align:right;">${fmtNum(listP)}</td><td style="font-size:7px;color:#888;">×${u.listRate}</td><td></td><td></td><td class="ec-del"></td></tr>`, weight: 1.0, footerGroup: fg });
+    slots.push({ html: `<tr class="unit-footer-row" style="${fStyle}background:#fff8e1;"><td class="ec-sep"></td><td style="font-weight:bold;color:#b7791f;">NET</td><td colspan="2" style="text-align:right;font-weight:bold;color:#b7791f;">${fmtNum(netP)}</td><td style="font-size:7px;color:#888;">×${u.netRate}</td><td></td><td></td><td class="ec-del"></td></tr>`, weight: 1.0, footerGroup: fg });
+  }
+
+  // スロットをページ/列に振り分け
+  const pages = [];
+  let curCols = Array.from({length: numCols}, () => []);
+  let colWeights = Array(numCols).fill(0);
+  let ci = 0;
+
+  function advanceCol() {
+    ci++;
+    if (ci >= numCols) {
+      pages.push(curCols);
+      curCols = Array.from({length: numCols}, () => []);
+      colWeights = Array(numCols).fill(0);
+      ci = 0;
+    }
+  }
+
+  let si = 0;
+  while (si < slots.length) {
+    const slot = slots[si];
+    if (slot.footerGroup) {
+      // フッターブロック: 同じグループを収集して原子的に配置
+      const fg = slot.footerGroup;
+      let j = si; let fw = 0;
+      while (j < slots.length && slots[j].footerGroup === fg) { fw += slots[j].weight; j++; }
+      if (colWeights[ci] + fw > perCol + 0.01 && colWeights[ci] > 0) advanceCol();
+      while (si < j) {
+        curCols[ci].push(slots[si]);
+        colWeights[ci] += slots[si].weight;
+        si++;
+      }
+    } else {
+      if (colWeights[ci] + slot.weight > perCol + 0.01 && colWeights[ci] > 0) advanceCol();
+      curCols[ci].push(slot);
+      colWeights[ci] += slot.weight;
+      si++;
+    }
+  }
+  if (curCols.some(c => c.length > 0)) pages.push(curCols);
+
+  // ページHTMLを生成
+  for (let p = 0; p < pages.length; p++) {
+    const page = pages[p];
+    const pageDiv = document.createElement("div");
+    pageDiv.className = "est-print-page";
+    if (p > 0) pageDiv.style.pageBreakBefore = "always";
+
+    // 全体合計バナー
+    const gBanner = document.createElement("div");
+    gBanner.className = "global-totals-print";
+    gBanner.style.cssText = "display:flex;gap:20px;font-size:9px;font-weight:bold;padding:3px 6px;border:1px solid #444;background:#f7fafc;margin-bottom:4px;";
+    gBanner.innerHTML = `<span>定価合計: ${fmtNum(gList)} 円</span><span style="color:#b7791f;">NET合計: ${fmtNum(gNet)} 円</span>`;
+    pageDiv.appendChild(gBanner);
+
+    // 列グリッド
+    const colsDiv = document.createElement("div");
+    colsDiv.style.cssText = "display:flex;gap:2px;align-items:flex-start;";
+
+    for (let c = 0; c < numCols; c++) {
+      const colSlots = page[c] || [];
+      const tbl = document.createElement("table");
+      tbl.className = "estimate-table est-col-table";
+      tbl.style.cssText = `flex:0 0 ${colW};min-width:0;max-width:${colW};font-size:9px;border-collapse:collapse;table-layout:fixed;`;
+      tbl.innerHTML = theadHtml + "<tbody>" + colSlots.map(s => s.html).join("") + "</tbody>";
+      tbl.querySelectorAll(".col-sep,.col-actions,.ec-sep,.ec-del").forEach(el => el.remove());
+      tbl.querySelectorAll(".sep-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
+      tbl.querySelectorAll(".comment-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
+      tbl.querySelectorAll(".unit-header-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
+      tbl.querySelectorAll(".unit-footer-row td[colspan]").forEach(td => {
+        const span = parseInt(td.getAttribute("colspan"), 10);
+        if (span > 2) td.setAttribute("colspan", String(span - 2));
+      });
+      colsDiv.appendChild(tbl);
+    }
+    pageDiv.appendChild(colsDiv);
     section.insertBefore(pageDiv, empty);
   }
 
-  // 品名・仕様セルの文字あふれ対策: テキストが収まらなければfont-sizeを縮小
   section.querySelectorAll(".ec-name, .ec-spec").forEach(td => {
     td.classList.add("ec-shrink-print");
-    const text = td.textContent;
-    if (!text) return;
-    const origSize = 8;
-    let fs = origSize;
-    td.style.fontSize = fs + "px";
-    while (td.scrollWidth > td.clientWidth && fs > 4) {
-      fs -= 0.5;
-      td.style.fontSize = fs + "px";
-    }
+    let fs = 8; td.style.fontSize = fs + "px";
+    while (td.scrollWidth > td.clientWidth && fs > 4) { fs -= 0.5; td.style.fontSize = fs + "px"; }
   });
 }
 
@@ -3168,29 +3366,49 @@ function clearPrintFit() {
 
 window.addEventListener("beforeprint", () => {
   if (isSummaryMode) {
-    // サマリーモード: 盤名称欄を非表示にしてそのまま印刷
-    const panelNameEl = document.querySelector(".project-info .info-panel-name");
-    if (panelNameEl) panelNameEl.style.display = "none";
     return;
   }
   renderEstimateLinesForPrint();
   fitPrintToOnePage();
-  // 備考: textareaを非表示にし、全文表示用のdivを挿入
-  const ta = document.getElementById("notes-textarea");
-  if (ta && ta.value) {
-    ta.style.display = "none";
-    const div = document.createElement("div");
-    div.id = "notes-print-div";
-    div.style.cssText = "font-size:8px; white-space:pre-wrap; word-break:break-all; border:1px solid #cbd5e0; border-radius:3px; padding:6px 8px; font-family:inherit; line-height:1.5;";
-    div.textContent = ta.value;
-    ta.parentNode.insertBefore(div, ta.nextSibling);
+  // 3-4ユニット: A3横向きページサイズを動的適用
+  if (currentEstimate.units.length >= 3) {
+    const ps = document.createElement("style");
+    ps.id = "print-page-size-override";
+    ps.textContent = "@page { size: A3 landscape; margin: 8mm; }";
+    document.head.appendChild(ps);
+  }
+  // 複数ユニット印刷時は totals-section と notes-section を非表示
+  if (currentEstimate.units.length > 1) {
+    const ts = document.querySelector(".totals-section");
+    const ns = document.querySelector(".notes-section");
+    if (ts) ts.dataset.printHidden = "1", ts.style.display = "none";
+    if (ns) ns.dataset.printHidden = "1", ns.style.display = "none";
+  }
+  // 備考: textareaを非表示にし、全文表示用のdivを挿入（1ユニットのみ）
+  if (currentEstimate.units.length === 1) {
+    const ta = document.getElementById("notes-textarea");
+    if (ta && ta.value) {
+      ta.style.display = "none";
+      const div = document.createElement("div");
+      div.id = "notes-print-div";
+      div.style.cssText = "font-size:8px; white-space:pre-wrap; word-break:break-all; border:1px solid #cbd5e0; border-radius:3px; padding:6px 8px; font-family:inherit; line-height:1.5;";
+      div.textContent = ta.value;
+      ta.parentNode.insertBefore(div, ta.nextSibling);
+    }
   }
 });
 window.addEventListener("afterprint", () => {
   if (isSummaryMode) {
-    // サマリーモード: 復帰処理は不要（サマリーを維持）
     return;
   }
+  // A3ページサイズ overrideを削除
+  const ps = document.getElementById("print-page-size-override");
+  if (ps) ps.remove();
+  // 非表示にしたセクションを復帰
+  document.querySelectorAll("[data-print-hidden]").forEach(el => {
+    el.style.display = "";
+    delete el.dataset.printHidden;
+  });
   clearPrintFit();
   renderEstimateLines();
   // 備考: 印刷用divを削除してtextareaを復帰
@@ -3205,7 +3423,7 @@ window.addEventListener("afterprint", () => {
 // ============================================================
 
 function onLineQty(lineId, val) {
-  const l = currentEstimate.lines.find(x => x.lineId === lineId);
+  const l = activeUnit().lines.find(x => x.lineId === lineId);
   if (!l) return;
   l.qty = Math.max(0, parseInt(val) || 0);
   const el = document.getElementById("sub-" + lineId);
@@ -3214,7 +3432,7 @@ function onLineQty(lineId, val) {
 }
 
 function onLinePrice(lineId, val) {
-  const l = currentEstimate.lines.find(x => x.lineId === lineId);
+  const l = activeUnit().lines.find(x => x.lineId === lineId);
   if (!l) return;
   l.unitPrice = parseFloat(val) || 0;
   const el = document.getElementById("sub-" + lineId);
@@ -3223,12 +3441,13 @@ function onLinePrice(lineId, val) {
 }
 
 function onLineNote(lineId, val) {
-  const l = currentEstimate.lines.find(x => x.lineId === lineId);
+  const l = activeUnit().lines.find(x => x.lineId === lineId);
   if (l) l.lineNote = val;
 }
 
 function removeLine(lineId) {
-  currentEstimate.lines = currentEstimate.lines.filter(x => x.lineId !== lineId);
+  const unit = activeUnit();
+  unit.lines = unit.lines.filter(x => x.lineId !== lineId);
   rebuildClickCounts();
   renderMasterTable();
   renderEstimateLines();
@@ -3237,36 +3456,41 @@ function removeLine(lineId) {
 
 function rebuildClickCounts() {
   masterClickCounts = {};
-  for (const line of currentEstimate.lines) {
-    if (line.type === "item" && line.masterItemId) {
-      masterClickCounts[line.masterItemId] = (masterClickCounts[line.masterItemId] || 0) + 1;
+  for (const unit of currentEstimate.units) {
+    for (const line of unit.lines) {
+      if (line.type === "item" && line.masterItemId) {
+        masterClickCounts[line.masterItemId] = (masterClickCounts[line.masterItemId] || 0) + 1;
+      }
     }
   }
 }
 
 function insertSep(afterLineId) {
-  const idx = currentEstimate.lines.findIndex(x => x.lineId === afterLineId);
+  const lines = activeUnit().lines;
+  const idx = lines.findIndex(x => x.lineId === afterLineId);
   if (idx < 0) return;
-  currentEstimate.lines.splice(idx + 1, 0, { type: "sep", lineId: genId() });
+  lines.splice(idx + 1, 0, { type: "sep", lineId: genId() });
   renderEstimateLines();
 }
 
 function insertComment(afterLineId) {
-  const idx = currentEstimate.lines.findIndex(x => x.lineId === afterLineId);
+  const lines = activeUnit().lines;
+  const idx = lines.findIndex(x => x.lineId === afterLineId);
   if (idx < 0) return;
-  currentEstimate.lines.splice(idx + 1, 0, { type: "comment", lineId: genId(), text: "" });
+  lines.splice(idx + 1, 0, { type: "comment", lineId: genId(), text: "" });
   renderEstimateLines();
 }
 
 function onCommentText(lineId, val) {
-  const line = currentEstimate.lines.find(x => x.lineId === lineId);
+  const line = activeUnit().lines.find(x => x.lineId === lineId);
   if (line) { line.text = val; }
 }
 
 function insertSubtotal(afterLineId) {
-  const idx = currentEstimate.lines.findIndex(x => x.lineId === afterLineId);
+  const lines = activeUnit().lines;
+  const idx = lines.findIndex(x => x.lineId === afterLineId);
   if (idx < 0) return;
-  currentEstimate.lines.splice(idx + 1, 0, {
+  lines.splice(idx + 1, 0, {
     type: "subtotal", lineId: genId(), rate: 1.0, label: ""
   });
   renderEstimateLines();
@@ -3285,7 +3509,7 @@ function calcSubtotal(lines, subtotalIndex) {
 }
 
 function onSubtotalRate(lineId, val) {
-  const line = currentEstimate.lines.find(l => l.lineId === lineId);
+  const line = activeUnit().lines.find(l => l.lineId === lineId);
   if (line) line.rate = parseFloat(val) || 1.0;
   renderEstimateLines();
   renderTotals();
@@ -3341,7 +3565,7 @@ function onLineDrop(e, targetLineId) {
     _clearDragStyles();
     return;
   }
-  const lines = currentEstimate.lines;
+  const lines = activeUnit().lines;
   const srcIdx = lines.findIndex(x => x.lineId === srcId);
   const tgtIdx = lines.findIndex(x => x.lineId === targetLineId);
   if (srcIdx < 0 || tgtIdx < 0) { _clearDragStyles(); return; }
@@ -3380,8 +3604,8 @@ function _clearDragStyles() {
 // 合計計算
 // ============================================================
 
-function calcGrandTotal() {
-  const lines = currentEstimate.lines;
+/** ライン配列の積算合計（汎用版） */
+function calcLinesGrandTotal(lines) {
   let total = 0;
   let blockSum = 0;
   for (const line of lines) {
@@ -3395,18 +3619,44 @@ function calcGrandTotal() {
   total += blockSum;
   return total;
 }
-function calcListPrice() { return calcGrandTotal() * currentEstimate.listRate; }
-function calcNetPrice()  { return calcListPrice() * currentEstimate.netRate; }
+
+function calcGrandTotal() { return calcLinesGrandTotal(activeUnit().lines); }
+function calcListPrice() { return calcGrandTotal() * activeUnit().listRate; }
+function calcNetPrice()  { return calcListPrice() * activeUnit().netRate; }
 
 function renderTotals() {
+  const unit = activeUnit();
   document.getElementById("total-grand").textContent = fmtNum(calcGrandTotal());
   const listPrice = Math.ceil(calcListPrice()) * 1000;
   const netRaw = Math.ceil(calcNetPrice()) * 1000;
-  const netPrice = Math.ceil(netRaw / 10000) * 10000; // 万単位切り上げ
+  const netPrice = Math.ceil(netRaw / 10000) * 10000;
   document.getElementById("total-list").textContent  = fmtNum(listPrice);
   document.getElementById("total-net").textContent    = fmtNum(netPrice);
-  document.getElementById("rate-list-input").value = currentEstimate.listRate;
-  document.getElementById("rate-net-input").value  = currentEstimate.netRate;
+  document.getElementById("rate-list-input").value = unit.listRate;
+  document.getElementById("rate-net-input").value  = unit.netRate;
+
+  // 複数ユニット: 全体合計を表示
+  const units = currentEstimate.units;
+  let gc = document.getElementById("global-totals-container");
+  if (units.length > 1) {
+    let gList = 0, gNet = 0;
+    for (const u of units) {
+      const raw = calcLinesGrandTotal(u.lines);
+      const ul = Math.ceil(raw * u.listRate) * 1000;
+      const un = Math.ceil(ul * u.netRate / 10000) * 10000;
+      gList += ul;
+      gNet += un;
+    }
+    if (!gc) {
+      gc = document.createElement("div");
+      gc.id = "global-totals-container";
+      const ts = document.querySelector(".totals-section");
+      if (ts) ts.insertAdjacentElement("afterend", gc);
+    }
+    gc.innerHTML = `<div class="global-totals no-print">全体合計 &nbsp; 定価: <strong>${fmtNum(gList)}</strong> 円 &nbsp; NET: <strong>${fmtNum(gNet)}</strong> 円</div>`;
+  } else if (gc) {
+    gc.innerHTML = "";
+  }
 }
 
 function renderNotes() {
@@ -3434,27 +3684,31 @@ const RATE_PRESETS = {
 
 function applyRatePreset(key) {
   const preset = RATE_PRESETS[key];
-  currentEstimate.listRate = preset.listRate;
-  currentEstimate.netRate = preset.netRate;
+  const unit = activeUnit();
+  unit.listRate = preset.listRate;
+  unit.netRate = preset.netRate;
   renderTotals();
   document.getElementById("btn-preset-govt").classList.toggle("active", key === "govt");
   document.getElementById("btn-preset-private").classList.toggle("active", key === "private");
 }
 
-function updateListRate(v) { currentEstimate.listRate = parseFloat(v)||DEFAULT_RATES.listRate; renderTotals(); }
-function updateNetRate(v)  { currentEstimate.netRate  = parseFloat(v)||DEFAULT_RATES.netRate;  renderTotals(); }
+function updateListRate(v) { activeUnit().listRate = parseFloat(v)||DEFAULT_RATES.listRate; renderTotals(); }
+function updateNetRate(v)  { activeUnit().netRate  = parseFloat(v)||DEFAULT_RATES.netRate;  renderTotals(); }
 function updateNotes(v) { currentEstimate.notes = v; }
 
 function newEstimate() {
-  if (currentEstimate.lines.length > 0 && !confirm("現在の見積もりを破棄して新規作成しますか？")) return;
+  const hasLines = currentEstimate.units.some(u => u.lines.length > 0);
+  if (hasLines && !confirm("現在の見積もりを破棄して新規作成しますか？")) return;
   currentEstimate = createNewEstimate();
+  activeUnitIndex = 0;
   renderEstimateTab();
   showToast("新規見積もりを作成しました");
 }
 
 function onEstimateSelect(v) {
   if (!v) return;
-  if (currentEstimate.lines.length > 0 && !confirm("現在の見積もりを破棄して読み込みますか？")) {
+  const hasLines = currentEstimate.units.some(u => u.lines.length > 0);
+  if (hasLines && !confirm("現在の見積もりを破棄して読み込みますか？")) {
     document.getElementById("estimate-selector").value = "";
     return;
   }
@@ -3501,8 +3755,13 @@ function importJSON() {
     r.onload = ev => {
       try {
         const d = JSON.parse(ev.target.result);
-        if (d.lines && d.project) { currentEstimate = d; currentEstimate.id = genId(); renderEstimateTab(); showToast("インポートしました"); }
-        else alert("無効なデータです。");
+        if ((d.units || d.lines) && d.project) {
+          currentEstimate = migrateEstimate(d);
+          currentEstimate.id = genId();
+          activeUnitIndex = 0;
+          renderEstimateTab();
+          showToast("インポートしました");
+        } else alert("無効なデータです。");
       } catch { alert("JSON読み込み失敗"); }
     };
     r.readAsText(f);
@@ -3552,21 +3811,12 @@ function importAllData() {
 
 let isSummaryMode = false;
 
-/** 任意の見積オブジェクトの積算合計を計算（calcGrandTotal の汎用版） */
+/** 任意の見積オブジェクトの積算合計を計算（新旧両形式対応） */
 function calcGrandTotalFor(est) {
-  const lines = est.lines;
-  let total = 0;
-  let blockSum = 0;
-  for (const line of lines) {
-    if (line.type === "item" || line.type === "custom") {
-      blockSum += line.qty * line.unitPrice;
-    } else if (line.type === "subtotal") {
-      total += Math.ceil(blockSum * line.rate);
-      blockSum = 0;
-    }
+  if (est.units) {
+    return est.units.reduce((sum, u) => sum + calcLinesGrandTotal(u.lines), 0);
   }
-  total += blockSum;
-  return total;
+  return calcLinesGrandTotal(est.lines || []);
 }
 
 /** 集計表: 見積選択画面を表示 */
@@ -3584,6 +3834,8 @@ function showSummarySelector() {
   document.querySelector(".notes-section").style.display = "none";
   document.querySelector(".add-bar").style.display = "none";
   document.querySelector(".estimate-manager").style.display = "none";
+  const _utc = document.getElementById("unit-tabs-container");
+  if (_utc) _utc.style.display = "none";
 
   const section = document.getElementById("est-section");
   section.innerHTML = `
@@ -3591,7 +3843,9 @@ function showSummarySelector() {
       <h3>集計する見積もりを選択</h3>
       <div class="summary-checklist">
         ${[...savedEstimates].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || "")).map(e => {
-          const panel = e.project && e.project.panelName ? e.project.panelName : "";
+          const panel = e.units
+            ? e.units.map(u => u.unitName).join("・")
+            : (e.project && e.project.panelName ? e.project.panelName : "");
           const d = new Date(e.createdAt);
           const ds = d.getFullYear() + "/" + (d.getMonth()+1) + "/" + d.getDate();
           return `<label class="summary-check-item">
@@ -3628,14 +3882,28 @@ function renderSummary(ids) {
   let grandListTotal = 0;
   let grandNetTotal = 0;
   const rows = estimates.map(est => {
-    const raw = calcGrandTotalFor(est);
-    const listPrice = Math.ceil(raw * est.listRate) * 1000;
-    const netRaw = Math.ceil(listPrice * est.netRate / 10000) * 10000;
+    let listPrice = 0, netRaw = 0;
+    if (est.units) {
+      for (const u of est.units) {
+        const uRaw = calcLinesGrandTotal(u.lines);
+        const uList = Math.ceil(uRaw * u.listRate) * 1000;
+        const uNet = Math.ceil(uList * u.netRate / 10000) * 10000;
+        listPrice += uList;
+        netRaw += uNet;
+      }
+    } else {
+      const raw = calcGrandTotalFor(est);
+      listPrice = Math.ceil(raw * est.listRate) * 1000;
+      netRaw = Math.ceil(listPrice * est.netRate / 10000) * 10000;
+    }
     grandListTotal += listPrice;
     grandNetTotal += netRaw;
+    const panelName = est.units
+      ? est.units.map(u => u.unitName).join("・")
+      : (est.project && est.project.panelName) || "";
     return {
       name: est.name,
-      panelName: (est.project && est.project.panelName) || "",
+      panelName,
       listPrice,
       netPrice: netRaw,
       notes: est.notes || "",
@@ -3646,12 +3914,9 @@ function renderSummary(ids) {
   _summaryRows = rows;
   _summaryEstimateIds = ids.slice();
 
-  // プロジェクト情報は表示、盤名称は非表示
+  // プロジェクト情報は表示
   const projInfo = document.querySelector(".project-info");
   projInfo.style.display = "";
-  // 盤名称パネルを非表示にする
-  const panelNameEl = projInfo.querySelector(".info-panel-name");
-  if (panelNameEl) panelNameEl.style.display = "none";
 
   // 合計・備考・追加バー・見積管理バーを非表示のまま
   document.querySelector(".totals-section").style.display = "none";
@@ -3799,12 +4064,12 @@ function closeSummary() {
   _summaryNotes = "";
   // すべてのセクションを復帰
   document.querySelector(".project-info").style.display = "";
-  const panelNameEl = document.querySelector(".project-info .info-panel-name");
-  if (panelNameEl) panelNameEl.style.display = "";
   document.querySelector(".totals-section").style.display = "";
   document.querySelector(".notes-section").style.display = "";
   document.querySelector(".add-bar").style.display = "";
   document.querySelector(".estimate-manager").style.display = "";
+  const _utcR = document.getElementById("unit-tabs-container");
+  if (_utcR) _utcR.style.display = "";
   // est-section に元の空メッセージを戻す
   const section = document.getElementById("est-section");
   section.innerHTML = `<div id="est-empty" class="empty-msg">
@@ -3831,6 +4096,33 @@ function showToast(msg) {
 // 初期化
 // ============================================================
 document.addEventListener("DOMContentLoaded", () => {
+  // ユニットタブ・全体合計のスタイルを動的注入
+  const style = document.createElement("style");
+  style.textContent = `
+.unit-tabs{display:flex;flex-wrap:wrap;gap:4px;padding:6px 0 0 0;align-items:center;}
+.unit-tab{display:flex;align-items:center;gap:3px;padding:4px 10px;background:#e2e8f0;border:1px solid #b2c0d0;border-radius:6px 6px 0 0;cursor:pointer;font-size:13px;border-bottom:2px solid #e2e8f0;user-select:none;}
+.unit-tab-active{background:#fff;border-color:#4299e1;border-bottom:2px solid #fff;font-weight:600;color:#2b6cb0;}
+.unit-tab:not(.unit-tab-active):hover{background:#bee3f8;border-color:#90cdf4;}
+.unit-tab-name{cursor:pointer;}
+.unit-tab-del{background:none;border:none;color:#e53e3e;cursor:pointer;font-size:15px;padding:0 1px;line-height:1;display:flex;align-items:center;}
+.unit-tab-del:hover{color:#c53030;}
+.unit-tab-add{background:#48bb78;border:1px solid #38a169;border-radius:6px;color:#fff;cursor:pointer;font-size:18px;padding:1px 10px;margin-left:4px;line-height:1.4;}
+.unit-tab-add:hover{background:#38a169;}
+.global-totals{padding:6px 12px;background:#ebf8ff;border:1px solid #bee3f8;border-radius:4px;margin:4px 0 8px 0;font-size:13px;display:flex;gap:16px;align-items:center;}
+.global-totals strong{color:#2b6cb0;font-size:14px;}
+@media print{
+  .unit-tabs,.unit-tab-add,.unit-tab-del{display:none!important;}
+  .global-totals{display:none!important;}
+  .unit-print-header{font-weight:bold;font-size:9px;background:#f0f4f8;padding:2px 4px;border:1px solid #ccc;border-bottom:none;margin-top:4px;}
+  .unit-print-footer{font-size:8px;border-top:2px solid #444;padding:2px 0;}
+  .unit-print-footer table{width:100%;border-collapse:collapse;font-size:8px;}
+  .unit-print-footer td{padding:1px 3px;}
+  .unit-print-footer .uf-label{color:#555;}
+  .unit-print-footer .uf-value{text-align:right;font-weight:bold;}
+  .global-totals-print{font-size:9px;display:flex!important;gap:20px;margin-bottom:6px;padding:3px 6px;border:1px solid #444;font-weight:bold;background:#f7fafc;}
+}
+  `;
+  document.head.appendChild(style);
   renderMasterTable();
 });
 

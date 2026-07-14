@@ -3251,14 +3251,12 @@ function renderEstimateLinesForPrint() {
     return;
   }
 
-  // 複数ユニット: 段組みフロー
+  // 複数ユニット: 各ユニットを1列ずつ横並び
   empty.style.display = "none";
   section.style.cssText = "display:block; overflow:visible;";
   const theadHtml = _estTheadHtml();
-  const SEP_WEIGHT = 0.2;
-  const perCol = EST_PRINT_ROW_LIMIT;
-  const numCols = units.length <= 2 ? 2 : 4;
-  const colW = `calc(${(100/numCols).toFixed(2)}% - 2px)`;
+  const numUnits = units.length;
+  const colW = `calc(${(100 / numUnits).toFixed(4)}% - 2px)`;
 
   // 全体合計を計算
   let gList = 0, gNet = 0;
@@ -3269,108 +3267,48 @@ function renderEstimateLinesForPrint() {
     gList += ul; gNet += un;
   }
 
-  // スロットストリームを構築
-  const slots = []; // { html, weight, footerGroup }
-  for (let ui = 0; ui < units.length; ui++) {
+  const pageDiv = document.createElement("div");
+  pageDiv.className = "est-print-page";
+
+  // 全体合計バナー
+  const gBanner = document.createElement("div");
+  gBanner.className = "global-totals-print";
+  gBanner.style.cssText = "display:flex;gap:20px;font-size:9px;font-weight:bold;padding:3px 6px;border:1px solid #444;background:#f7fafc;margin-bottom:4px;";
+  gBanner.innerHTML = `<span>定価合計: ${fmtNum(gList)} 円</span><span style="color:#b7791f;">NET合計: ${fmtNum(gNet)} 円</span>`;
+  pageDiv.appendChild(gBanner);
+
+  // 横並び列コンテナ
+  const colsDiv = document.createElement("div");
+  colsDiv.style.cssText = "display:flex;width:100%;gap:2px;align-items:flex-start;";
+
+  for (let ui = 0; ui < numUnits; ui++) {
     const u = units[ui];
     const rowsHtml = _buildLineRows(u.lines);
-    // ユニットヘッダー行
-    slots.push({
-      html: `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:9px;padding:2px 4px;background:#f0f4f8;border-top:2px solid #4299e1;border-bottom:1px solid #ccc;">${esc(u.unitName)}</td></tr>`,
-      weight: 1.0, footerGroup: null
-    });
-    // 明細行
-    for (const h of rowsHtml) {
-      const w = (h.includes('sep-row') || h.includes('comment-row')) ? SEP_WEIGHT : 1.0;
-      slots.push({ html: h, weight: w, footerGroup: null });
-    }
-    // フッターブロック（積算合計・定価・NET）— 原子的
     const raw = calcLinesGrandTotal(u.lines);
     const listP = Math.ceil(raw * u.listRate) * 1000;
     const netP = Math.ceil(listP * u.netRate / 10000) * 10000;
-    const fg = `fg${ui}`;
     const fStyle = "font-size:8px;border-top:1px solid #999;";
-    slots.push({ html: `<tr class="unit-footer-row" style="${fStyle}"><td class="ec-sep"></td><td style="color:#555;">積算合計</td><td colspan="2" style="text-align:right;">${fmtNum(raw)}</td><td></td><td></td><td></td><td class="ec-del"></td></tr>`, weight: 1.0, footerGroup: fg });
-    slots.push({ html: `<tr class="unit-footer-row" style="${fStyle}"><td class="ec-sep"></td><td style="color:#555;">定価</td><td colspan="2" style="text-align:right;">${fmtNum(listP)}</td><td style="font-size:7px;color:#888;">×${u.listRate}</td><td></td><td></td><td class="ec-del"></td></tr>`, weight: 1.0, footerGroup: fg });
-    slots.push({ html: `<tr class="unit-footer-row" style="${fStyle}background:#fff8e1;"><td class="ec-sep"></td><td style="font-weight:bold;color:#b7791f;">NET</td><td colspan="2" style="text-align:right;font-weight:bold;color:#b7791f;">${fmtNum(netP)}</td><td style="font-size:7px;color:#888;">×${u.netRate}</td><td></td><td></td><td class="ec-del"></td></tr>`, weight: 1.0, footerGroup: fg });
+
+    const unitHeaderHtml = `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:9px;padding:2px 4px;background:#f0f4f8;border-top:2px solid #4299e1;border-bottom:1px solid #ccc;">${esc(u.unitName)}</td></tr>`;
+    const footerHtml = [
+      `<tr class="unit-footer-row" style="${fStyle}"><td></td><td style="color:#555;">積算合計</td><td colspan="2" style="text-align:right;">${fmtNum(raw)}</td><td></td><td></td></tr>`,
+      `<tr class="unit-footer-row" style="${fStyle}"><td></td><td style="color:#555;">定価</td><td colspan="2" style="text-align:right;">${fmtNum(listP)}</td><td style="font-size:7px;color:#888;">×${u.listRate}</td><td></td></tr>`,
+      `<tr class="unit-footer-row" style="${fStyle}background:#fff8e1;"><td></td><td style="font-weight:bold;color:#b7791f;">NET</td><td colspan="2" style="text-align:right;font-weight:bold;color:#b7791f;">${fmtNum(netP)}</td><td style="font-size:7px;color:#888;">×${u.netRate}</td><td></td></tr>`,
+    ].join("");
+
+    const tbl = document.createElement("table");
+    tbl.className = "estimate-table est-col-table";
+    tbl.style.cssText = `flex:0 0 ${colW};min-width:0;max-width:${colW};font-size:9px;border-collapse:collapse;table-layout:fixed;`;
+    tbl.innerHTML = theadHtml + "<tbody>" + unitHeaderHtml + rowsHtml.join("") + footerHtml + "</tbody>";
+    tbl.querySelectorAll(".col-sep,.col-actions,.ec-sep,.ec-del").forEach(el => el.remove());
+    tbl.querySelectorAll(".sep-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
+    tbl.querySelectorAll(".comment-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
+    tbl.querySelectorAll(".unit-header-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
+    colsDiv.appendChild(tbl);
   }
 
-  // スロットをページ/列に振り分け
-  const pages = [];
-  let curCols = Array.from({length: numCols}, () => []);
-  let colWeights = Array(numCols).fill(0);
-  let ci = 0;
-
-  function advanceCol() {
-    ci++;
-    if (ci >= numCols) {
-      pages.push(curCols);
-      curCols = Array.from({length: numCols}, () => []);
-      colWeights = Array(numCols).fill(0);
-      ci = 0;
-    }
-  }
-
-  let si = 0;
-  while (si < slots.length) {
-    const slot = slots[si];
-    if (slot.footerGroup) {
-      // フッターブロック: 同じグループを収集して原子的に配置
-      const fg = slot.footerGroup;
-      let j = si; let fw = 0;
-      while (j < slots.length && slots[j].footerGroup === fg) { fw += slots[j].weight; j++; }
-      if (colWeights[ci] + fw > perCol + 0.01 && colWeights[ci] > 0) advanceCol();
-      while (si < j) {
-        curCols[ci].push(slots[si]);
-        colWeights[ci] += slots[si].weight;
-        si++;
-      }
-    } else {
-      if (colWeights[ci] + slot.weight > perCol + 0.01 && colWeights[ci] > 0) advanceCol();
-      curCols[ci].push(slot);
-      colWeights[ci] += slot.weight;
-      si++;
-    }
-  }
-  if (curCols.some(c => c.length > 0)) pages.push(curCols);
-
-  // ページHTMLを生成
-  for (let p = 0; p < pages.length; p++) {
-    const page = pages[p];
-    const pageDiv = document.createElement("div");
-    pageDiv.className = "est-print-page";
-    if (p > 0) pageDiv.style.pageBreakBefore = "always";
-
-    // 全体合計バナー
-    const gBanner = document.createElement("div");
-    gBanner.className = "global-totals-print";
-    gBanner.style.cssText = "display:flex;gap:20px;font-size:9px;font-weight:bold;padding:3px 6px;border:1px solid #444;background:#f7fafc;margin-bottom:4px;";
-    gBanner.innerHTML = `<span>定価合計: ${fmtNum(gList)} 円</span><span style="color:#b7791f;">NET合計: ${fmtNum(gNet)} 円</span>`;
-    pageDiv.appendChild(gBanner);
-
-    // 列グリッド
-    const colsDiv = document.createElement("div");
-    colsDiv.style.cssText = "display:flex;gap:2px;align-items:flex-start;";
-
-    for (let c = 0; c < numCols; c++) {
-      const colSlots = page[c] || [];
-      const tbl = document.createElement("table");
-      tbl.className = "estimate-table est-col-table";
-      tbl.style.cssText = `flex:0 0 ${colW};min-width:0;max-width:${colW};font-size:9px;border-collapse:collapse;table-layout:fixed;`;
-      tbl.innerHTML = theadHtml + "<tbody>" + colSlots.map(s => s.html).join("") + "</tbody>";
-      tbl.querySelectorAll(".col-sep,.col-actions,.ec-sep,.ec-del").forEach(el => el.remove());
-      tbl.querySelectorAll(".sep-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
-      tbl.querySelectorAll(".comment-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
-      tbl.querySelectorAll(".unit-header-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
-      tbl.querySelectorAll(".unit-footer-row td[colspan]").forEach(td => {
-        const span = parseInt(td.getAttribute("colspan"), 10);
-        if (span > 2) td.setAttribute("colspan", String(span - 2));
-      });
-      colsDiv.appendChild(tbl);
-    }
-    pageDiv.appendChild(colsDiv);
-    section.insertBefore(pageDiv, empty);
-  }
+  pageDiv.appendChild(colsDiv);
+  section.insertBefore(pageDiv, empty);
 
   section.querySelectorAll(".ec-name, .ec-spec").forEach(td => {
     td.classList.add("ec-shrink-print");

@@ -3391,8 +3391,16 @@ window.addEventListener("afterprint", () => {
 // 見積作成 - 行操作
 // ============================================================
 
+function _findLineAnyUnit(lineId) {
+  for (const u of currentEstimate.units) {
+    const l = u.lines.find(x => x.lineId === lineId);
+    if (l) return l;
+  }
+  return null;
+}
+
 function onLineQty(lineId, val) {
-  const l = activeUnit().lines.find(x => x.lineId === lineId);
+  const l = _findLineAnyUnit(lineId);
   if (!l) return;
   l.qty = Math.max(0, parseInt(val) || 0);
   const el = document.getElementById("sub-" + lineId);
@@ -3401,7 +3409,7 @@ function onLineQty(lineId, val) {
 }
 
 function onLinePrice(lineId, val) {
-  const l = activeUnit().lines.find(x => x.lineId === lineId);
+  const l = _findLineAnyUnit(lineId);
   if (!l) return;
   l.unitPrice = parseFloat(val) || 0;
   const el = document.getElementById("sub-" + lineId);
@@ -3410,13 +3418,15 @@ function onLinePrice(lineId, val) {
 }
 
 function onLineNote(lineId, val) {
-  const l = activeUnit().lines.find(x => x.lineId === lineId);
+  const l = _findLineAnyUnit(lineId);
   if (l) l.lineNote = val;
 }
 
 function removeLine(lineId) {
-  const unit = activeUnit();
-  unit.lines = unit.lines.filter(x => x.lineId !== lineId);
+  for (const u of currentEstimate.units) {
+    const idx = u.lines.findIndex(x => x.lineId === lineId);
+    if (idx >= 0) { u.lines.splice(idx, 1); break; }
+  }
   rebuildClickCounts();
   renderMasterTable();
   renderEstimateLines();
@@ -3435,33 +3445,34 @@ function rebuildClickCounts() {
 }
 
 function insertSep(afterLineId) {
-  const lines = activeUnit().lines;
-  const idx = lines.findIndex(x => x.lineId === afterLineId);
-  if (idx < 0) return;
-  lines.splice(idx + 1, 0, { type: "sep", lineId: genId() });
+  for (const u of currentEstimate.units) {
+    const idx = u.lines.findIndex(x => x.lineId === afterLineId);
+    if (idx >= 0) { u.lines.splice(idx + 1, 0, { type: "sep", lineId: genId() }); break; }
+  }
   renderEstimateLines();
 }
 
 function insertComment(afterLineId) {
-  const lines = activeUnit().lines;
-  const idx = lines.findIndex(x => x.lineId === afterLineId);
-  if (idx < 0) return;
-  lines.splice(idx + 1, 0, { type: "comment", lineId: genId(), text: "" });
+  for (const u of currentEstimate.units) {
+    const idx = u.lines.findIndex(x => x.lineId === afterLineId);
+    if (idx >= 0) { u.lines.splice(idx + 1, 0, { type: "comment", lineId: genId(), text: "" }); break; }
+  }
   renderEstimateLines();
 }
 
 function onCommentText(lineId, val) {
-  const line = activeUnit().lines.find(x => x.lineId === lineId);
+  const line = _findLineAnyUnit(lineId);
   if (line) { line.text = val; }
 }
 
 function insertSubtotal(afterLineId) {
-  const lines = activeUnit().lines;
-  const idx = lines.findIndex(x => x.lineId === afterLineId);
-  if (idx < 0) return;
-  lines.splice(idx + 1, 0, {
-    type: "subtotal", lineId: genId(), rate: 1.0, label: ""
-  });
+  for (const u of currentEstimate.units) {
+    const idx = u.lines.findIndex(x => x.lineId === afterLineId);
+    if (idx >= 0) {
+      u.lines.splice(idx + 1, 0, { type: "subtotal", lineId: genId(), rate: 1.0, label: "" });
+      break;
+    }
+  }
   renderEstimateLines();
   renderTotals();
 }
@@ -3478,7 +3489,7 @@ function calcSubtotal(lines, subtotalIndex) {
 }
 
 function onSubtotalRate(lineId, val) {
-  const line = activeUnit().lines.find(l => l.lineId === lineId);
+  const line = _findLineAnyUnit(lineId);
   if (line) line.rate = parseFloat(val) || 1.0;
   renderEstimateLines();
   renderTotals();

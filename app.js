@@ -3619,14 +3619,12 @@ function onLineDrop(e, targetLineId) {
     if (!insertBefore) newIdx++;
     lines.splice(newIdx, 0, moved);
   } else {
-    // 異なるユニット: コピー（元は残す）
-    const srcLine = currentEstimate.units[srcUnitIdx].lines[srcLineIdx];
-    const copy = JSON.parse(JSON.stringify(srcLine));
-    copy.lineId = genId();
+    // 異なるユニット: 移動（元から削除して先に追加）
+    const [moved] = currentEstimate.units[srcUnitIdx].lines.splice(srcLineIdx, 1);
     const tgtLines = currentEstimate.units[tgtUnitIdx].lines;
     let newIdx = tgtLines.findIndex(x => x.lineId === targetLineId);
     if (!insertBefore) newIdx++;
-    tgtLines.splice(newIdx, 0, copy);
+    tgtLines.splice(newIdx, 0, moved);
   }
 
   _clearDragStyles();

@@ -3176,7 +3176,7 @@ function _estTheadHtml() {
 // 印刷用 段組みレイアウト
 // ============================================================
 
-const EST_PRINT_ROW_LIMIT = 27; // 1列あたりの最大行数（A4高さ基準）
+const EST_PRINT_ROW_LIMIT = 35; // 1列あたりの最大行数（A4高さ基準）
 
 function renderEstimateLinesForPrint() {
   const section = document.getElementById("est-section");
@@ -3185,7 +3185,7 @@ function renderEstimateLinesForPrint() {
 
   const units = currentEstimate.units;
 
-  // 1ユニット: 従来の1/2列レイアウト（変更なし）
+  // 1ユニット: 従来の1/2列レイアウト + 盤名称ヘッダー追加
   if (units.length === 1) {
     const lines = units[0].lines;
     if (lines.length === 0) return;
@@ -3193,6 +3193,7 @@ function renderEstimateLinesForPrint() {
     const rowsHtml = _buildLineRows(lines);
     const theadHtml = _estTheadHtml();
     const SEP_WEIGHT = 0.2;
+    const unitHdrHtml = `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${esc(units[0].unitName)}</td></tr>`;
     const rowWeights = rowsHtml.map(h => (h.includes('sep-row') || h.includes('comment-row')) ? SEP_WEIGHT : 1.0);
     const perCol = EST_PRINT_ROW_LIMIT;
     const perPage = perCol * 2;
@@ -3208,16 +3209,17 @@ function renderEstimateLinesForPrint() {
       pages.push({ start: pageStart, end: pageEnd });
       pageStart = pageEnd;
     }
-    const _makeTable = (rows, fullWidth) => {
+    const _makeTable = (rows, fullWidth, prependHtml = "") => {
       const tbl = document.createElement("table");
       tbl.className = "estimate-table est-col-table";
       tbl.style.cssText = fullWidth
         ? "width:100%; font-size:9px; border-collapse:collapse; table-layout:fixed;"
         : "flex:0 0 calc(50% - 2px); min-width:0; max-width:calc(50% - 2px); font-size:9px; border-collapse:collapse; table-layout:fixed;";
-      tbl.innerHTML = theadHtml + "<tbody>" + rows.join("") + "</tbody>";
+      tbl.innerHTML = theadHtml + "<tbody>" + prependHtml + rows.join("") + "</tbody>";
       tbl.querySelectorAll(".col-sep,.col-actions,.ec-sep,.ec-del").forEach(el => el.remove());
       tbl.querySelectorAll(".sep-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
       tbl.querySelectorAll(".comment-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
+      tbl.querySelectorAll(".unit-header-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
       return tbl;
     };
     for (let p = 0; p < pages.length; p++) {
@@ -3228,8 +3230,9 @@ function renderEstimateLinesForPrint() {
       pageDiv.className = "est-print-page";
       pageDiv.style.cssText = "display:flex; flex-wrap:wrap; gap:2px; align-items:flex-start;";
       if (p > 0) pageDiv.style.pageBreakBefore = "always";
+      let firstTable = true;
       if (wTotal <= perCol + 0.01) {
-        pageDiv.appendChild(_makeTable(rowsSlice, p === 0));
+        pageDiv.appendChild(_makeTable(rowsSlice, p === 0, p === 0 ? unitHdrHtml : ""));
       } else {
         let leftWeight = 0, splitIdx = 0;
         for (let i = 0; i < rowsSlice.length; i++) {
@@ -3238,7 +3241,8 @@ function renderEstimateLinesForPrint() {
         }
         [rowsSlice.slice(0, splitIdx), rowsSlice.slice(splitIdx)].forEach(chunk => {
           if (chunk.length === 0) return;
-          pageDiv.appendChild(_makeTable(chunk, false));
+          pageDiv.appendChild(_makeTable(chunk, false, p === 0 && firstTable ? unitHdrHtml : ""));
+          firstTable = false;
         });
       }
       section.insertBefore(pageDiv, empty);
@@ -3311,12 +3315,12 @@ function renderEstimateLinesForPrint() {
       addSlot({ html: h, weight: w });
     }
 
-    // フッター3行は原子的に（途中で列をまたがない）
+    // フッター3行は原子的に（途中で列をまたがない）— 単独表記スタイルで
     const fw = 3.5;
     if (colWeights[ci] + fw > perCol + 0.01 && colWeights[ci] > 0) advanceCol();
-    curCols[ci].push({ html: `<tr class="unit-footer-row" style="background:#f1f5f9;border-top:2px solid #475569;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-weight:bold;font-size:9px;color:#1e293b;">積算合計</td><td colspan="2" style="text-align:right;font-weight:bold;font-size:9px;">${fmtNum(raw)}</td><td></td><td></td></tr>` });
-    curCols[ci].push({ html: `<tr class="unit-footer-row" style="background:#e2e8f0;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-size:9px;color:#334155;">定価</td><td colspan="2" style="text-align:right;font-size:9px;">${fmtNum(listP)}</td><td style="font-size:7px;color:#64748b;">×${u.listRate}</td><td></td></tr>` });
-    curCols[ci].push({ html: `<tr class="unit-footer-row" style="background:#fef3c7;border-bottom:2px solid #d97706;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-weight:bold;font-size:11px;color:#92400e;">NET</td><td colspan="2" style="text-align:right;font-weight:bold;font-size:11px;color:#92400e;">${fmtNum(netP)}</td><td style="font-size:7px;color:#92400e;">×${u.netRate}</td><td></td></tr>` });
+    curCols[ci].push({ html: `<tr class="unit-footer-row" style="background:#f7fafc;border-top:2px solid #1a365d;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-weight:700;font-size:8px;color:#2d3748;">積算合計</td><td colspan="2"></td><td></td><td style="text-align:right;font-weight:700;font-size:9px;color:#1a365d;">${fmtNum(raw)}</td></tr>` });
+    curCols[ci].push({ html: `<tr class="unit-footer-row" style="background:#f7fafc;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-weight:700;font-size:8px;color:#2d3748;">定価</td><td colspan="2"></td><td style="font-size:7px;color:#555;">×${u.listRate}</td><td style="text-align:right;font-weight:700;font-size:9px;color:#1a365d;">${fmtNum(listP)}</td></tr>` });
+    curCols[ci].push({ html: `<tr class="unit-footer-row" style="background:#e8f5e9;border-bottom:2px solid #276749;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><td></td><td style="font-weight:700;font-size:9px;color:#276749;">NET</td><td colspan="2"></td><td style="font-size:7px;color:#276749;">×${u.netRate}</td><td style="text-align:right;font-weight:700;font-size:10px;color:#276749;">${fmtNum(netP)}</td></tr>` });
     colWeights[ci] += fw;
 
     // 次のユニットは必ず次の列の先頭から始める

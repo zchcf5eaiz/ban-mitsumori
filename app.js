@@ -3078,6 +3078,15 @@ function renderEstimateLines() {
   }
 
   empty.insertAdjacentElement("beforebegin", container);
+
+  // アクティブ列を中央にスクロール
+  requestAnimationFrame(() => {
+    const activeCol = container.querySelector(".unit-col-active");
+    if (!activeCol) return;
+    const cw = container.offsetWidth;
+    const target = activeCol.offsetLeft - (cw - activeCol.offsetWidth) / 2;
+    container.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
+  });
 }
 
 /** 行HTML配列を生成（画面・印刷共通） */

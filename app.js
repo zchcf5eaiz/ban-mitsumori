@@ -3022,12 +3022,16 @@ function renderEstimateLines() {
   const section = document.getElementById("est-section");
   const empty = document.getElementById("est-empty");
 
-  section.querySelectorAll(".est-col-table, .est-print-page, .multi-unit-container").forEach(el => el.remove());
+  section.querySelectorAll(".est-col-table, .est-print-page, .multi-unit-container, .single-unit-header").forEach(el => el.remove());
 
   const units = currentEstimate.units;
 
-  // 1ユニット: 従来の全幅テーブル
+  // 1ユニット: 項目名ヘッダー + 全幅テーブル
   if (units.length === 1) {
+    const hdr = document.createElement("div");
+    hdr.className = "single-unit-header unit-col-header no-print";
+    hdr.innerHTML = `<span class="unit-col-name">${esc(units[0].unitName)}</span><button class="unit-col-btn" onclick="renameUnit(event,0)" title="項目名を変更">✏ 名前変更</button>`;
+    empty.insertAdjacentElement("beforebegin", hdr);
     const lines = units[0].lines;
     if (lines.length === 0) { empty.style.display = ""; return; }
     empty.style.display = "none";

@@ -137,10 +137,10 @@ body {
 
 .col-sep     { width: 20px; text-align: center; }
 .col-no      { width: 24px; text-align: center; color: #a0aec0; font-size: 0.78rem; }
-.col-name    { width: 30%; }
+.col-name    { width: 22%; }
 .col-spec    { width: 15%; color: #4a5568; font-size: 0.82rem; }
 .col-unit    { width: 30px; text-align: center; }
-.col-qty     { width: 70px; text-align: center; white-space: nowrap; }
+.col-qty     { width: 90px; text-align: center; white-space: nowrap; }
 .col-price   { width: 80px; text-align: right; white-space: nowrap; }
 .col-subtotal { width: 90px; text-align: right; font-family: "Menlo", monospace; font-weight: 600; white-space: nowrap; }
 .col-actions { width: 24px; text-align: center; }

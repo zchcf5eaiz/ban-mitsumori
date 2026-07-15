@@ -3074,6 +3074,18 @@ function renderEstimateLines() {
       emptyMsg.textContent = "明細なし。追加先にして品目を追加してください。";
       col.appendChild(emptyMsg);
     }
+    // ユニット合計フッター
+    const ufRaw = calcLinesGrandTotal(unit.lines);
+    const ufList = Math.ceil(ufRaw * unit.listRate) * 1000;
+    const ufNet  = Math.ceil(ufList * unit.netRate / 10000) * 10000;
+    const uf = document.createElement("div");
+    uf.className = "unit-col-footer";
+    uf.dataset.unit = i;
+    uf.innerHTML =
+      `<div class="ucf-row"><span class="ucf-label">積算合計</span><span class="ucf-v ucf-v-raw">${fmtNum(ufRaw)}</span></div>` +
+      `<div class="ucf-row ucf-list"><span class="ucf-label">定価 <small>×${unit.listRate}</small></span><span class="ucf-v ucf-v-list">${fmtNum(ufList)}</span></div>` +
+      `<div class="ucf-row ucf-net"><span class="ucf-label">NET <small>×${unit.netRate}</small></span><span class="ucf-v ucf-v-net">${fmtNum(ufNet)}</span></div>`;
+    col.appendChild(uf);
     container.appendChild(col);
   }
 
@@ -3781,6 +3793,17 @@ function renderTotals() {
       </tr>
     `);
   }
+  // 各ユニットのフッター数値を更新（掛率変更時など）
+  document.querySelectorAll(".unit-col-footer[data-unit]").forEach(uf => {
+    const u = currentEstimate.units[parseInt(uf.dataset.unit)];
+    if (!u) return;
+    const raw  = calcLinesGrandTotal(u.lines);
+    const listP = Math.ceil(raw * u.listRate) * 1000;
+    const netP  = Math.ceil(listP * u.netRate / 10000) * 10000;
+    uf.querySelector(".ucf-v-raw").textContent  = fmtNum(raw);
+    uf.querySelector(".ucf-v-list").textContent = fmtNum(listP);
+    uf.querySelector(".ucf-v-net").textContent  = fmtNum(netP);
+  });
 }
 
 function renderNotes() {
@@ -4242,6 +4265,13 @@ document.addEventListener("DOMContentLoaded", () => {
 .unit-col-del{color:#e53e3e!important;}
 .unit-col-del:hover{color:#c53030!important;}
 .unit-col-empty{padding:12px;color:#999;font-size:12px;}
+.unit-col-footer{border-top:2px solid #e2e8f0;background:#f7fafc;font-size:12px;}
+.ucf-row{display:flex;justify-content:space-between;align-items:center;padding:3px 8px;border-bottom:1px solid #e2e8f0;}
+.ucf-row:last-child{border-bottom:none;}
+.ucf-label{color:#4a5568;}
+.ucf-v{font-weight:600;color:#1a365d;}
+.ucf-net{background:#e8f5e9;}
+.ucf-net .ucf-label,.ucf-net .ucf-v{color:#276749;}
 /* 印刷時 */
 @media print{
   .unit-action-bar,.unit-col-header,.no-print{display:none!important;}

@@ -3022,7 +3022,7 @@ function renderEstimateLines() {
   const section = document.getElementById("est-section");
   const empty = document.getElementById("est-empty");
 
-  section.querySelectorAll(".est-col-table, .est-print-page, .multi-unit-container, .single-unit-header").forEach(el => el.remove());
+  section.querySelectorAll(".est-col-table, .est-print-page, .multi-unit-container, .single-unit-header, .multi-unit-scroll-top").forEach(el => el.remove());
 
   const units = currentEstimate.units;
 
@@ -3077,15 +3077,39 @@ function renderEstimateLines() {
     container.appendChild(col);
   }
 
+  // 上部スクロールバー（下と同期）
+  const scrollTop = document.createElement("div");
+  scrollTop.className = "multi-unit-scroll-top no-print";
+  scrollTop.style.cssText = "overflow-x:auto;overflow-y:hidden;height:14px;";
+  const scrollTopInner = document.createElement("div");
+  scrollTopInner.style.cssText = "height:1px;";
+  scrollTop.appendChild(scrollTopInner);
+
+  empty.insertAdjacentElement("beforebegin", scrollTop);
   empty.insertAdjacentElement("beforebegin", container);
 
-  // アクティブ列を中央にスクロール
+  // スクロール同期
+  let syncing = false;
+  scrollTop.addEventListener("scroll", () => {
+    if (syncing) return; syncing = true;
+    container.scrollLeft = scrollTop.scrollLeft;
+    syncing = false;
+  });
+  container.addEventListener("scroll", () => {
+    if (syncing) return; syncing = true;
+    scrollTop.scrollLeft = container.scrollLeft;
+    syncing = false;
+  });
+
+  // アクティブ列を即時中央表示（アニメーションなし）
   requestAnimationFrame(() => {
+    scrollTopInner.style.width = container.scrollWidth + "px";
     const activeCol = container.querySelector(".unit-col-active");
     if (!activeCol) return;
     const cw = container.offsetWidth;
-    const target = activeCol.offsetLeft - (cw - activeCol.offsetWidth) / 2;
-    container.scrollTo({ left: Math.max(0, target), behavior: "smooth" });
+    const target = Math.max(0, activeCol.offsetLeft - (cw - activeCol.offsetWidth) / 2);
+    container.scrollLeft = target;
+    scrollTop.scrollLeft = target;
   });
 }
 

@@ -3284,10 +3284,11 @@ function renderEstimateLinesForPrint() {
       }
       section.insertBefore(pageDiv, empty);
     }
-    section.querySelectorAll(".ec-name, .ec-spec").forEach(td => {
+    section.querySelectorAll(".est-print-page .col-name, .est-print-page .col-spec").forEach(th => { th.style.width = "auto"; });
+    section.querySelectorAll(".est-print-page .ec-name, .est-print-page .ec-spec").forEach(td => {
       td.classList.add("ec-shrink-print");
-      let fs = 8; td.style.fontSize = fs + "px";
-      while (td.scrollWidth > td.clientWidth && fs > 4) { fs -= 0.5; td.style.fontSize = fs + "px"; }
+      let fs = 9; td.style.fontSize = fs + "px";
+      while (td.scrollWidth > td.clientWidth && fs > 7) { fs -= 0.5; td.style.fontSize = fs + "px"; }
     });
     return;
   }
@@ -3433,10 +3434,11 @@ function renderEstimateLinesForPrint() {
     section.insertBefore(pageDiv, empty);
   }
 
-  section.querySelectorAll(".ec-name, .ec-spec").forEach(td => {
+  section.querySelectorAll(".est-print-page .col-name, .est-print-page .col-spec").forEach(th => { th.style.width = "auto"; });
+  section.querySelectorAll(".est-print-page .ec-name, .est-print-page .ec-spec").forEach(td => {
     td.classList.add("ec-shrink-print");
-    let fs = 8; td.style.fontSize = fs + "px";
-    while (td.scrollWidth > td.clientWidth && fs > 4) { fs -= 0.5; td.style.fontSize = fs + "px"; }
+    let fs = 9; td.style.fontSize = fs + "px";
+    while (td.scrollWidth > td.clientWidth && fs > 7) { fs -= 0.5; td.style.fontSize = fs + "px"; }
   });
 }
 

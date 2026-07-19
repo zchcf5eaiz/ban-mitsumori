@@ -469,16 +469,17 @@ function persistEstimates() {
 }
 
 function saveCurrentEstimate() {
-  if (!currentEstimate.name) {
-    const n = prompt("見積もり名を入力:", currentEstimate.project.projectName || "新規見積もり");
-    if (!n) return;
-    currentEstimate.name = n;
-  }
+  // 毎回確認: Enterでそのまま、書き換えれば改名、キャンセルで保存中止
+  const n = prompt("見積もり名を入力:", currentEstimate.name || currentEstimate.project.projectName || "新規見積もり");
+  if (!n) return;
+  currentEstimate.name = n;
   currentEstimate.updatedAt = new Date().toISOString();
+  currentEstimate.project.date = new Date().toISOString().split("T")[0]; // 見積日を保存日に更新
   const i = savedEstimates.findIndex(e => e.id === currentEstimate.id);
   const copy = JSON.parse(JSON.stringify(currentEstimate));
   if (i >= 0) savedEstimates[i] = copy; else savedEstimates.push(copy);
   persistEstimates();
+  renderProjectInfo();
   renderEstimateSelector();
   showToast("保存しました: " + currentEstimate.name);
 }
@@ -3840,6 +3841,66 @@ function renderEstimateSelector() {
 }
 
 // ============================================================
+// 保存済み見積の検索パネル
+// ============================================================
+
+function showEstimateSearch() {
+  closeEstimateSearch();
+  const ov = document.createElement("div");
+  ov.id = "est-search-overlay";
+  ov.addEventListener("click", e => { if (e.target === ov) closeEstimateSearch(); });
+  ov.innerHTML = `
+    <div class="est-search-panel">
+      <input type="text" id="est-search-input" placeholder="名称・工事名・お客様名・見積No.で検索..."
+        oninput="renderEstimateSearchList(this.value)">
+      <div id="est-search-list"></div>
+    </div>`;
+  document.body.appendChild(ov);
+  const inp = document.getElementById("est-search-input");
+  inp.addEventListener("keydown", e => { if (e.key === "Escape") closeEstimateSearch(); });
+  inp.focus();
+  renderEstimateSearchList("");
+}
+
+function closeEstimateSearch() {
+  const ov = document.getElementById("est-search-overlay");
+  if (ov) ov.remove();
+}
+
+function renderEstimateSearchList(q) {
+  const list = document.getElementById("est-search-list");
+  if (!list) return;
+  const kw = (q || "").trim().toLowerCase();
+  const items = [...savedEstimates]
+    .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))
+    .filter(e => {
+      if (!kw) return true;
+      const p = e.project || {};
+      return [e.name, p.projectName, p.customerName, p.estimateNo, p.location, p.staff]
+        .some(v => (v || "").toLowerCase().includes(kw));
+    });
+  if (items.length === 0) {
+    list.innerHTML = '<div class="est-search-empty">該当する見積がありません</div>';
+    return;
+  }
+  list.innerHTML = items.map(e => {
+    const p = e.project || {};
+    const d = new Date(e.updatedAt);
+    const ds = d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate();
+    const sub = [p.projectName, p.customerName].filter(Boolean).join(" ／ ");
+    return `<div class="est-search-item" onclick="pickEstimateFromSearch('${e.id}')">
+      <div class="est-search-item-main"><span class="est-search-name">${esc(e.name)}</span><span class="est-search-date">${ds}</span></div>
+      ${sub ? `<div class="est-search-sub">${esc(sub)}</div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+function pickEstimateFromSearch(id) {
+  closeEstimateSearch();
+  onEstimateSelect(id); // 既存の「現在の見積を破棄しますか」確認を経由
+}
+
+// ============================================================
 // ユーザー操作
 // ============================================================
 
@@ -4295,6 +4356,19 @@ document.addEventListener("DOMContentLoaded", () => {
 .ucf-v{font-weight:600;color:#1a365d;}
 .ucf-net{background:#e8f5e9;}
 .ucf-net .ucf-label,.ucf-net .ucf-v{color:#276749;}
+/* 保存済み見積の検索パネル */
+#est-search-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding-top:10vh;}
+.est-search-panel{background:#fff;border-radius:8px;width:min(560px,90vw);max-height:70vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,0.3);overflow:hidden;}
+#est-search-input{margin:12px;padding:8px 10px;font-size:14px;border:1px solid #cbd5e0;border-radius:4px;font-family:inherit;}
+#est-search-input:focus{outline:none;border-color:#3182ce;box-shadow:0 0 0 2px rgba(49,130,206,0.15);}
+#est-search-list{overflow-y:auto;border-top:1px solid #e2e8f0;}
+.est-search-item{padding:8px 14px;cursor:pointer;border-bottom:1px solid #edf2f7;}
+.est-search-item:hover{background:#ebf8ff;}
+.est-search-item-main{display:flex;justify-content:space-between;gap:10px;align-items:baseline;}
+.est-search-name{font-weight:600;font-size:13px;}
+.est-search-date{color:#718096;font-size:12px;white-space:nowrap;}
+.est-search-sub{color:#4a5568;font-size:12px;margin-top:1px;}
+.est-search-empty{padding:16px;color:#999;font-size:13px;text-align:center;}
 /* 印刷時 */
 @media print{
   .unit-action-bar,.unit-col-header,.no-print{display:none!important;}

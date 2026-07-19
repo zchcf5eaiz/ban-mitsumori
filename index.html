@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>盤見積もりアプリ</title>
-  <link rel="stylesheet" href="style.css?v=20260324a">
+  <link rel="stylesheet" href="style.css?v=20260719a">
 </head>
 <body>
 
@@ -78,6 +78,7 @@
 
     <!-- 保存済み見積もり選択 -->
     <div class="estimate-manager no-print">
+      <button class="btn btn-primary btn-sm" onclick="showEstimateSearch()">🔍 検索</button>
       <select id="estimate-selector" onchange="onEstimateSelect(this.value)">
         <option value="">-- 保存済み見積もり --</option>
       </select>
@@ -154,6 +155,6 @@
 
 <script src="data.js?v=20260326e"></script>
 <script src="data-cubicle.js?v=20260326e"></script>
-<script src="app.js?v=20260326e"></script>
+<script src="app.js?v=20260719a"></script>
 </body>
 </html>

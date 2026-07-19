@@ -3083,8 +3083,8 @@ function renderEstimateLines() {
     uf.dataset.unit = i;
     uf.innerHTML =
       `<div class="ucf-row"><span class="ucf-label">積算合計</span><span class="ucf-v ucf-v-raw">${fmtNum(ufRaw)}</span></div>` +
-      `<div class="ucf-row ucf-list"><span class="ucf-label">定価 <small>×${unit.listRate}</small></span><span class="ucf-v ucf-v-list">${fmtNum(ufList)}</span></div>` +
-      `<div class="ucf-row ucf-net"><span class="ucf-label">NET <small>×${unit.netRate}</small></span><span class="ucf-v ucf-v-net">${fmtNum(ufNet)}</span></div>`;
+      `<div class="ucf-row ucf-list"><span class="ucf-label">定価 <small class="ucf-r-list">×${unit.listRate}</small></span><span class="ucf-v ucf-v-list">${fmtNum(ufList)}</span></div>` +
+      `<div class="ucf-row ucf-net"><span class="ucf-label">NET <small class="ucf-r-net">×${unit.netRate}</small></span><span class="ucf-v ucf-v-net">${fmtNum(ufNet)}</span></div>`;
     col.appendChild(uf);
     container.appendChild(col);
   }
@@ -3803,6 +3803,8 @@ function renderTotals() {
     uf.querySelector(".ucf-v-raw").textContent  = fmtNum(raw);
     uf.querySelector(".ucf-v-list").textContent = fmtNum(listP);
     uf.querySelector(".ucf-v-net").textContent  = fmtNum(netP);
+    uf.querySelector(".ucf-r-list").textContent = `×${u.listRate}`;
+    uf.querySelector(".ucf-r-net").textContent  = `×${u.netRate}`;
   });
 }
 

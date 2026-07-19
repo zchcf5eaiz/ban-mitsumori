@@ -3227,6 +3227,28 @@ function _estTheadHtml() {
 
 const EST_PRINT_ROW_LIMIT = 35; // 1列あたりの最大行数（A4高さ基準）
 
+// 品名・仕様セルの縮小判定。beforeprint時は画面CSS・画面幅のままなので、
+// 紙面幅と印刷用列幅を一時適用してから測定しないと判定がずれる
+function _shrinkPrintCells(section, paperW) {
+  const pages = section.querySelectorAll(".est-print-page");
+  pages.forEach(p => { p.style.width = paperW + "px"; });
+  const ms = document.createElement("style");
+  ms.textContent =
+    ".est-print-page .col-qty{width:26px}.est-print-page .col-price{width:34px}" +
+    ".est-print-page .col-subtotal{width:40px}.est-print-page .col-no{width:20px}" +
+    ".est-print-page .col-name,.est-print-page .col-spec{width:auto}" +
+    ".est-print-page .ec-name,.est-print-page .ec-spec{overflow:hidden;white-space:nowrap}" +
+    ".est-print-page .estimate-table tbody td{padding:1px 2px}";
+  document.head.appendChild(ms);
+  section.querySelectorAll(".est-print-page .ec-name, .est-print-page .ec-spec").forEach(td => {
+    td.classList.add("ec-shrink-print");
+    let fs = 9; td.style.fontSize = fs + "px";
+    while (td.scrollWidth > td.clientWidth && fs > 7) { fs -= 0.5; td.style.fontSize = fs + "px"; }
+  });
+  ms.remove();
+  pages.forEach(p => { p.style.width = ""; });
+}
+
 function renderEstimateLinesForPrint() {
   const section = document.getElementById("est-section");
   const empty = document.getElementById("est-empty");
@@ -3296,12 +3318,7 @@ function renderEstimateLinesForPrint() {
       }
       section.insertBefore(pageDiv, empty);
     }
-    section.querySelectorAll(".est-print-page .col-name, .est-print-page .col-spec").forEach(th => { th.style.width = "auto"; });
-    section.querySelectorAll(".est-print-page .ec-name, .est-print-page .ec-spec").forEach(td => {
-      td.classList.add("ec-shrink-print");
-      let fs = 9; td.style.fontSize = fs + "px";
-      while (td.scrollWidth > td.clientWidth && fs > 7) { fs -= 0.5; td.style.fontSize = fs + "px"; }
-    });
+    _shrinkPrintCells(section, 733); // A4縦の印字幅194mm ≈ 733px
     return;
   }
 
@@ -3446,12 +3463,7 @@ function renderEstimateLinesForPrint() {
     section.insertBefore(pageDiv, empty);
   }
 
-  section.querySelectorAll(".est-print-page .col-name, .est-print-page .col-spec").forEach(th => { th.style.width = "auto"; });
-  section.querySelectorAll(".est-print-page .ec-name, .est-print-page .ec-spec").forEach(td => {
-    td.classList.add("ec-shrink-print");
-    let fs = 9; td.style.fontSize = fs + "px";
-    while (td.scrollWidth > td.clientWidth && fs > 7) { fs -= 0.5; td.style.fontSize = fs + "px"; }
-  });
+  _shrinkPrintCells(section, units.length >= 3 ? 1527 : 733); // A3横404mm≈1527px / A4縦194mm≈733px
 }
 
 function fitPrintToOnePage() {
@@ -3715,6 +3727,11 @@ function onLineDrop(e, targetLineId) {
   }
 
   _clearDragStyles();
+  if (srcUnitIdx !== tgtUnitIdx) {
+    // コピーで行が増えたので管理表の追加済件数・色を更新
+    rebuildClickCounts();
+    renderMasterTable();
+  }
   renderEstimateLines();
   renderTotals();
 }
@@ -3850,6 +3867,7 @@ function newEstimate() {
   if (hasLines && !confirm("現在の見積もりを破棄して新規作成しますか？")) return;
   currentEstimate = createNewEstimate();
   activeUnitIndex = 0;
+  rebuildClickCounts();
   renderEstimateTab();
   showToast("新規見積もりを作成しました");
 }
@@ -3868,6 +3886,8 @@ function deleteCurrentEstimate() {
   if (!savedEstimates.find(e => e.id === currentEstimate.id)) { showToast("保存されていません"); return; }
   deleteEstimateById(currentEstimate.id);
   currentEstimate = createNewEstimate();
+  activeUnitIndex = 0;
+  rebuildClickCounts();
   renderEstimateTab();
 }
 
@@ -3908,6 +3928,7 @@ function importJSON() {
           currentEstimate = migrateEstimate(d);
           currentEstimate.id = genId();
           activeUnitIndex = 0;
+          rebuildClickCounts();
           renderEstimateTab();
           showToast("インポートしました");
         } else alert("無効なデータです。");

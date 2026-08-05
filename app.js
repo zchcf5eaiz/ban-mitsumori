@@ -3072,7 +3072,15 @@ function renderEstimateLines() {
     } else {
       const emptyMsg = document.createElement("div");
       emptyMsg.className = "unit-col-empty";
-      emptyMsg.textContent = "明細なし。追加先にして品目を追加してください。";
+      emptyMsg.textContent = "明細なし。追加先にして品目を追加するか、他の項目から行をドラッグしてください。";
+      // 空ユニットへのD&Dコピーを受け付ける
+      emptyMsg.addEventListener("dragover", e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        emptyMsg.classList.add("drop-target");
+      });
+      emptyMsg.addEventListener("dragleave", () => emptyMsg.classList.remove("drop-target"));
+      emptyMsg.addEventListener("drop", e => onLineDropToUnit(e, i));
       col.appendChild(emptyMsg);
     }
     // ユニット合計フッター
@@ -3686,6 +3694,28 @@ function onLineDragOver(e) {
 function onLineDragLeave(e) {
   const row = e.target.closest("tr");
   if (row) row.classList.remove("drag-over-top", "drag-over-bottom");
+}
+
+/** 空ユニットへのドロップ: 行が1つも無いユニットにもコピーできるようにする */
+function onLineDropToUnit(e, unitIdx) {
+  e.preventDefault();
+  const srcId = _dragLineId;
+  if (!srcId) { _clearDragStyles(); return; }
+  let srcUnitIdx = -1, srcLineIdx = -1;
+  for (let ui = 0; ui < currentEstimate.units.length; ui++) {
+    const si = currentEstimate.units[ui].lines.findIndex(x => x.lineId === srcId);
+    if (si >= 0) { srcUnitIdx = ui; srcLineIdx = si; break; }
+  }
+  if (srcUnitIdx < 0 || srcUnitIdx === unitIdx) { _clearDragStyles(); return; }
+  // 異なるユニット: コピー（元は残す）— onLineDropと同じ扱い
+  const copy = JSON.parse(JSON.stringify(currentEstimate.units[srcUnitIdx].lines[srcLineIdx]));
+  copy.lineId = genId();
+  currentEstimate.units[unitIdx].lines.push(copy);
+  rebuildClickCounts();
+  renderMasterTable();
+  _clearDragStyles();
+  renderEstimateLines();
+  renderTotals();
 }
 
 function onLineDrop(e, targetLineId) {
@@ -4349,6 +4379,7 @@ document.addEventListener("DOMContentLoaded", () => {
 .unit-col-del{color:#e53e3e!important;}
 .unit-col-del:hover{color:#c53030!important;}
 .unit-col-empty{padding:12px;color:#999;font-size:12px;}
+.unit-col-empty.drop-target{background:#ebf8ff;border:2px dashed #4299e1;color:#2b6cb0;}
 .unit-col-footer{border-top:2px solid #e2e8f0;background:#f7fafc;font-size:12px;}
 .ucf-row{display:flex;justify-content:space-between;align-items:center;padding:3px 8px;border-bottom:1px solid #e2e8f0;}
 .ucf-row:last-child{border-bottom:none;}

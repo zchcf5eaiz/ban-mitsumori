@@ -31,7 +31,6 @@ body {
 .btn-secondary { background: #4a5568; color: #fff; }
 .btn-outline-light { background: transparent; color: #fff; border: 1px solid #fff; }
 .btn-sm { padding: 3px 8px; font-size: 0.75rem; }
-.btn-add { font-size: 0.85rem; padding: 7px 18px; }
 
 /* === コンテナ === */
 .main-container { max-width: 1300px; margin: 0 auto; padding: 16px; }
@@ -107,18 +106,6 @@ body {
   padding: 5px 8px; border: 1px solid #cbd5e0; border-radius: 3px;
   font-family: inherit; font-size: 0.85rem;
 }
-
-/* === 品目追加バー（カスケード選択） === */
-.add-bar {
-  background: #f0f7ff; border: 1px solid #bee3f8; border-radius: 4px;
-  padding: 10px 14px; margin-bottom: 10px;
-  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
-}
-.add-bar select {
-  padding: 6px 10px; border: 1px solid #cbd5e0; border-radius: 3px;
-  font-family: inherit; font-size: 0.85rem; min-width: 140px;
-}
-.add-bar select:first-child { min-width: 180px; }
 
 /* === 見積もり明細テーブル === */
 .estimate-section {
@@ -933,8 +920,6 @@ tr[draggable="true"]:active { cursor: grabbing; }
   .info-row { border-right: none; }
   .main-container { padding: 8px; }
   .toolbar { flex-direction: column; align-items: stretch; }
-  .add-bar { flex-direction: column; }
-  .add-bar select { min-width: 100%; }
 }
 
 /* === 見積サマリー（集計表） === */
@@ -1014,7 +999,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
   @page { size: A4 portrait; margin: 8mm; }
   body { background: #fff; font-size: 10px; }
   .app-header { position: static; }
-  .no-print, .tabs, .estimate-manager, .toolbar, .add-bar,
+  .no-print, .tabs, .estimate-manager, .toolbar,
   .col-sep, .col-actions, .ec-sep, .ec-del, .toast { display: none !important; }
   /* 品名・仕様列を均等幅 */
   .col-name, .col-spec { font-size: 8px; }

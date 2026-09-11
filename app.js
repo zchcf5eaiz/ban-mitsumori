@@ -2828,98 +2828,11 @@ function updateCubicleAddedCount() {
 }
 
 // ============================================================
-// 見積作成 - カスケード選択UI（盤 + キュービクル両方対応）
-// ============================================================
-
-/** 全カテゴリ一覧を返す（盤 + キュービクル統合） */
-function getAllCategories() {
-  const panelCats = CATEGORIES.map(c => ({ ...c, source: "盤" }));
-  const cubCats = CUBICLE_CATEGORIES.map(c => ({ ...c, source: "キュービクル" }));
-  return [...panelCats, ...cubCats];
-}
-
-/** 全品目一覧を返す（盤 + キュービクル統合） */
-function getAllItems() {
-  return [...masterItems, ...cubicleItems];
-}
-
-function renderAddSelectors() {
-  const catSel = document.getElementById("add-cat");
-  const allCats = getAllCategories();
-  catSel.innerHTML = '<option value="">-- カテゴリ --</option>' +
-    '<optgroup label="盤">' +
-    CATEGORIES.map(c => `<option value="${c.id}">${c.id}. ${esc(c.name)}</option>`).join("") +
-    '</optgroup>' +
-    '<optgroup label="キュービクル">' +
-    CUBICLE_CATEGORIES.map(c => `<option value="${c.id}">${c.id}. ${esc(c.name)}</option>`).join("") +
-    '</optgroup>';
-  document.getElementById("add-name").innerHTML = '<option value="">-- 品名 --</option>';
-  document.getElementById("add-spec").innerHTML = '<option value="">-- 仕様 --</option>';
-}
-
-function onAddCatChange(catId) {
-  const nameSel = document.getElementById("add-name");
-  const specSel = document.getElementById("add-spec");
-  specSel.innerHTML = '<option value="">-- 仕様 --</option>';
-  if (!catId) {
-    nameSel.innerHTML = '<option value="">-- 品名 --</option>';
-    return;
-  }
-  const allItems = getAllItems();
-  const names = [...new Set(allItems.filter(m => m.category === catId).map(m => m.name))];
-  nameSel.innerHTML = '<option value="">-- 品名 --</option>' +
-    names.map(n => `<option value="${escAttr(n)}">${esc(n)}</option>`).join("");
-}
-
-function onAddNameChange(name) {
-  const catId = document.getElementById("add-cat").value;
-  const specSel = document.getElementById("add-spec");
-  if (!name || !catId) {
-    specSel.innerHTML = '<option value="">-- 仕様 --</option>';
-    return;
-  }
-  const allItems = getAllItems();
-  const items = allItems.filter(m => m.category === catId && m.name === name);
-  if (items.length === 1 && !items[0].spec) {
-    specSel.innerHTML = `<option value="${items[0].id}" selected>(なし)</option>`;
-  } else {
-    specSel.innerHTML = '<option value="">-- 仕様 --</option>' +
-      items.map(m => `<option value="${m.id}">${esc(m.spec || "(なし)")}</option>`).join("");
-  }
-}
-
-function onAddSpecChange(val) {
-  // 仕様選択時の追加処理（将来用）
-}
-
-function addSelectedItem() {
-  const specSel = document.getElementById("add-spec");
-  const masterId = specSel.value;
-  if (!masterId) { showToast("品目を選択してください"); return; }
-  const master = getMasterItem(masterId);
-  if (!master) return;
-
-  activeUnit().lines.push({
-    type: "item",
-    lineId: genId(),
-    masterItemId: masterId,
-    qty: 1,
-    unitPrice: master.category === "K2" ? (groupTotals[master.name] || 0) : master.basePrice,
-    lineNote: "",
-  });
-
-  renderEstimateLines();
-  renderTotals();
-  showToast("追加: " + master.name + (master.spec ? " " + master.spec : ""));
-}
-
-// ============================================================
 // 見積作成 - 明細レンダリング
 // ============================================================
 
 function renderEstimateTab() {
   renderProjectInfo();
-  renderAddSelectors();
   renderUnitTabs();
   renderEstimateLines();
   renderTotals();
@@ -3175,7 +3088,7 @@ function _buildLineRows(lines) {
           <button class="btn-cmt" onclick="insertComment('${line.lineId}')" title="下にコメント行を挿入">💬</button>
         </td>
         <td colspan="7" class="ec-comment-cell">
-          <input type="text" class="comment-input" value="${esc(line.text || '')}"
+          <input type="text" class="comment-input" value="${escAttr(line.text || '')}"
             onchange="onCommentText('${line.lineId}',this.value)"
             placeholder="コメントを入力...">
           <button class="btn btn-danger btn-sm no-print" onclick="removeLine('${line.lineId}')">&times;</button>
@@ -3802,14 +3715,12 @@ function calcLinesGrandTotal(lines) {
 
 function calcGrandTotal() { return calcLinesGrandTotal(activeUnit().lines); }
 function calcListPrice() { return calcGrandTotal() * activeUnit().listRate; }
-function calcNetPrice()  { return calcListPrice() * activeUnit().netRate; }
 
 function renderTotals() {
   const unit = activeUnit();
   document.getElementById("total-grand").textContent = fmtNum(calcGrandTotal());
   const listPrice = Math.ceil(calcListPrice()) * 1000;
-  const netRaw = Math.ceil(calcNetPrice()) * 1000;
-  const netPrice = Math.ceil(netRaw / 10000) * 10000;
+  const netPrice = Math.ceil(listPrice * unit.netRate / 10000) * 10000;
   document.getElementById("total-list").textContent  = fmtNum(listPrice);
   document.getElementById("total-net").textContent    = fmtNum(netPrice);
   document.getElementById("rate-list-input").value = unit.listRate;
@@ -4089,11 +4000,10 @@ function showSummarySelector() {
   // 見積タブに切り替え
   switchTab("estimate");
 
-  // プロジェクト情報・合計・備考・追加バーを一時非表示
+  // プロジェクト情報・合計・備考を一時非表示
   document.querySelector(".project-info").style.display = "none";
   document.querySelector(".totals-section").style.display = "none";
   document.querySelector(".notes-section").style.display = "none";
-  document.querySelector(".add-bar").style.display = "none";
   document.querySelector(".estimate-manager").style.display = "none";
   const _utc = document.getElementById("unit-tabs-container");
   if (_utc) _utc.style.display = "none";
@@ -4179,10 +4089,9 @@ function renderSummary(ids) {
   const projInfo = document.querySelector(".project-info");
   projInfo.style.display = "";
 
-  // 合計・備考・追加バー・見積管理バーを非表示のまま
+  // 合計・備考・見積管理バーを非表示のまま
   document.querySelector(".totals-section").style.display = "none";
   document.querySelector(".notes-section").style.display = "none";
-  document.querySelector(".add-bar").style.display = "none";
   document.querySelector(".estimate-manager").style.display = "none";
 
   const section = document.getElementById("est-section");
@@ -4327,14 +4236,13 @@ function closeSummary() {
   document.querySelector(".project-info").style.display = "";
   document.querySelector(".totals-section").style.display = "";
   document.querySelector(".notes-section").style.display = "";
-  document.querySelector(".add-bar").style.display = "";
   document.querySelector(".estimate-manager").style.display = "";
   const _utcR = document.getElementById("unit-tabs-container");
   if (_utcR) _utcR.style.display = "";
   // est-section に元の空メッセージを戻す
   const section = document.getElementById("est-section");
   section.innerHTML = `<div id="est-empty" class="empty-msg">
-    明細がありません。上のカテゴリ・品名・仕様を選んで「追加」してください。
+    明細がありません。管理表から品目を追加してください。
   </div>`;
   renderEstimateTab();
 }

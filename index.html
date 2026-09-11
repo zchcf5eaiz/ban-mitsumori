@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>盤見積もりアプリ</title>
-  <link rel="stylesheet" href="style.css?v=20260719a">
+  <link rel="stylesheet" href="style.css?v=20260911a">
 </head>
 <body>
 
@@ -92,24 +92,10 @@
       <div class="project-info-grid" id="project-info-grid"></div>
     </div>
 
-    <!-- 品目追加（カスケード選択） -->
-    <div class="add-bar no-print">
-      <select id="add-cat" onchange="onAddCatChange(this.value)">
-        <option value="">-- カテゴリ --</option>
-      </select>
-      <select id="add-name" onchange="onAddNameChange(this.value)">
-        <option value="">-- 品名 --</option>
-      </select>
-      <select id="add-spec" onchange="onAddSpecChange(this.value)">
-        <option value="">-- 仕様 --</option>
-      </select>
-      <button class="btn btn-primary btn-add" onclick="addSelectedItem()">追加</button>
-    </div>
-
     <!-- 見積もり明細テーブル -->
     <div class="estimate-section" id="est-section">
       <div id="est-empty" class="empty-msg">
-        明細がありません。上のカテゴリ・品名・仕様を選んで「追加」してください。
+        明細がありません。管理表から品目を追加してください。
       </div>
     </div>
 
@@ -155,6 +141,6 @@
 
 <script src="data.js?v=20260326e"></script>
 <script src="data-cubicle.js?v=20260326e"></script>
-<script src="app.js?v=20260719a"></script>
+<script src="app.js?v=20260911a"></script>
 </body>
 </html>

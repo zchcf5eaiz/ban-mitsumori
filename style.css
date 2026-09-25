@@ -362,8 +362,24 @@ tr[draggable="true"]:active { cursor: grabbing; }
 }
 .catalog-unit-chip.active { border-color: #3182ce; background: #ebf8ff; color: #1a365d; font-weight: 700; }
 .catalog-unit-add { border-color: #38a169; color: #276749; font-weight: 700; }
-.catalog-est-lines { flex: 1; min-height: 0; overflow-y: auto; padding: 6px; }
+.catalog-est-lines { flex: 1; min-height: 0; overflow: auto; padding: 0; }
 .catalog-est-empty { padding: 18px 8px; color: #718096; font-size: 11px; text-align: center; }
+.catalog-estimate-table { width: 100%; min-width: 540px; table-layout: fixed; font-size: 11px; }
+.catalog-estimate-table thead { position: sticky; top: 0; z-index: 2; }
+.catalog-estimate-table thead th { padding: 5px 3px; font-size: 10px; }
+.catalog-estimate-table tbody td { padding: 4px 3px; font-size: 10px; }
+.catalog-estimate-table .col-sep { width: 12px; }
+.catalog-estimate-table .col-no { width: 24px; }
+.catalog-estimate-table .col-name { width: 24%; }
+.catalog-estimate-table .col-spec { width: 20%; }
+.catalog-estimate-table .col-price { width: 68px; }
+.catalog-estimate-table .col-qty { width: 52px; }
+.catalog-estimate-table .col-subtotal { width: 76px; }
+.catalog-estimate-table .col-actions { width: 70px; }
+.catalog-estimate-table .ec-name, .catalog-estimate-table .ec-spec { overflow-wrap: anywhere; }
+.catalog-estimate-table .ec-price input, .catalog-estimate-table .ec-qty input { min-width: 0; }
+.catalog-estimate-table .catalog-table-actions { margin: 0; justify-content: center; flex-wrap: nowrap; }
+.catalog-estimate-table .catalog-table-actions button { min-width: 20px; padding: 0 3px; font-size: 10px; }
 .catalog-line {
   margin-bottom: 6px;
   padding: 6px;

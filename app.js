@@ -2870,51 +2870,7 @@ function buildCatalogEstimatePanel() {
   const unitButtons = currentEstimate.units.map((u, i) =>
     `<button type="button" class="catalog-unit-chip${i === activeUnitIndex ? " active" : ""}" onclick="activateUnit(${i})" title="${escAttr(u.unitName)}">${esc(u.unitName)}</button>`
   ).join("");
-
-  let itemNo = 0;
-  const linesHtml = unit.lines.map((line, index) => {
-    const moveButtons = `<div class="catalog-line-actions">` +
-      `<button type="button" onclick="moveCatalogLine('${line.lineId}',-1)" title="上へ移動"${index === 0 ? " disabled" : ""}>↑</button>` +
-      `<button type="button" onclick="moveCatalogLine('${line.lineId}',1)" title="下へ移動"${index === unit.lines.length - 1 ? " disabled" : ""}>↓</button>` +
-      `<button type="button" class="catalog-line-delete" onclick="removeLine('${line.lineId}')" title="削除">×</button>` +
-    `</div>`;
-
-    if (line.type === "sep") {
-      return `<div class="catalog-line catalog-line-special">区切り線${moveButtons}</div>`;
-    }
-    if (line.type === "comment") {
-      return `<div class="catalog-line catalog-line-special">コメント` +
-        `<input class="catalog-line-comment" type="text" value="${escAttr(line.text || "")}" onchange="onCatalogComment('${line.lineId}',this.value)">` +
-        moveButtons + `</div>`;
-    }
-    if (line.type === "subtotal") {
-      const subtotal = calcSubtotal(unit.lines, index);
-      const result = Math.ceil(subtotal * line.rate);
-      return `<div class="catalog-line catalog-line-special"><div class="catalog-line-main"><div class="catalog-line-desc"><div class="catalog-line-name">小計</div></div>` +
-        `<div class="catalog-line-amount">${fmtNum(result)}</div></div>` +
-        `<div class="catalog-line-fields"><label>掛率<input type="text" inputmode="decimal" data-numeric-input value="${line.rate}" onchange="onCatalogSubtotalRate('${line.lineId}',this.value)"></label></div>` +
-        moveButtons + `</div>`;
-    }
-
-    itemNo++;
-    let name = line.name || "(カスタム)";
-    let spec = line.spec || "";
-    if (line.type === "item") {
-      const master = getMasterItem(line.masterItemId);
-      name = master ? master.name : "(不明)";
-      spec = master ? (master.spec || "") : "";
-    }
-    const amount = line.qty * line.unitPrice;
-    return `<div class="catalog-line">` +
-      `<div class="catalog-line-main"><span class="catalog-line-no">${itemNo}</span><div class="catalog-line-desc">` +
-        `<div class="catalog-line-name">${esc(name)}</div><div class="catalog-line-spec">${esc(spec)}</div>` +
-      `</div><div class="catalog-line-amount">${fmtNum(amount)}</div></div>` +
-      `<div class="catalog-line-fields">` +
-        `<label>単価<input type="text" inputmode="decimal" data-numeric-input value="${line.unitPrice}" onchange="onCatalogLinePrice('${line.lineId}',this.value)"></label>` +
-        `<label>数量<input type="text" inputmode="numeric" data-numeric-input value="${line.qty}" onchange="onCatalogLineQty('${line.lineId}',this.value)"></label>` +
-        `<div><div style="color:#718096;font-size:9px">金額</div><div class="catalog-line-amount">${fmtNum(amount)}</div></div>` +
-      `</div>` + moveButtons + `</div>`;
-  }).join("");
+  const linesHtml = buildCatalogEstimateRows(unit);
 
   const raw = calcLinesGrandTotal(unit.lines);
   const list = Math.ceil(raw * unit.listRate) * 1000;
@@ -2922,12 +2878,56 @@ function buildCatalogEstimatePanel() {
   return `<div class="catalog-est-header"><div class="catalog-est-title">選択中: ${esc(unit.unitName)}</div>` +
     `<div class="catalog-est-help">ここでの編集は見積作成にも反映されます</div></div>` +
     `<div class="catalog-unit-switcher">${unitButtons}<button type="button" class="catalog-unit-chip catalog-unit-add" onclick="addUnit()">＋</button></div>` +
-    `<div class="catalog-est-lines">${linesHtml || `<div class="catalog-est-empty">管理表の品目をクリックすると、ここへ追加されます。</div>`}</div>` +
+    `<div class="catalog-est-lines">${linesHtml ? `<table class="estimate-table catalog-estimate-table">${_estTheadHtml()}<tbody>${linesHtml}</tbody></table>` : `<div class="catalog-est-empty">管理表の品目をクリックすると、ここへ追加されます。</div>`}</div>` +
     `<div class="catalog-est-totals">` +
       `<div class="catalog-est-total-row"><span>積算合計</span><strong>${fmtNum(raw)}</strong></div>` +
       `<div class="catalog-est-total-row"><span>定価 ×${unit.listRate}</span><strong>${fmtNum(list)}</strong></div>` +
       `<div class="catalog-est-total-row"><span>NET ×${unit.netRate}</span><strong>${fmtNum(net)}</strong></div>` +
     `</div>`;
+}
+
+function buildCatalogEstimateRows(unit) {
+  let itemNo = 0;
+  return unit.lines.map((line, index) => {
+    const actions = `<div class="catalog-line-actions catalog-table-actions">` +
+      `<button type="button" onclick="moveCatalogLine('${line.lineId}',-1)" title="上へ移動"${index === 0 ? " disabled" : ""}>↑</button>` +
+      `<button type="button" onclick="moveCatalogLine('${line.lineId}',1)" title="下へ移動"${index === unit.lines.length - 1 ? " disabled" : ""}>↓</button>` +
+      `<button type="button" class="catalog-line-delete" onclick="removeLine('${line.lineId}')" title="削除">×</button>` +
+    `</div>`;
+
+    if (line.type === "sep") {
+      return `<tr class="sep-row"><td colspan="7">区切り線</td><td class="ec-del">${actions}</td></tr>`;
+    }
+    if (line.type === "comment") {
+      return `<tr class="comment-row"><td class="ec-sep"></td><td colspan="6" class="ec-comment-cell">` +
+        `<input type="text" class="comment-input" value="${escAttr(line.text || "")}" onchange="onCatalogComment('${line.lineId}',this.value)" placeholder="コメントを入力..."></td>` +
+        `<td class="ec-del">${actions}</td></tr>`;
+    }
+    if (line.type === "subtotal") {
+      const subtotal = calcSubtotal(unit.lines, index);
+      const result = Math.ceil(subtotal * line.rate);
+      return `<tr class="subtotal-row"><td class="ec-sep"></td><td class="subtotal-label">小計</td>` +
+        `<td class="subtotal-sum" colspan="2">${fmtNum(subtotal)}</td>` +
+        `<td class="subtotal-rate-cell"><span class="subtotal-rate-input">&times;<input type="text" inputmode="decimal" data-numeric-input value="${line.rate}" onchange="onCatalogSubtotalRate('${line.lineId}',this.value)"></span></td>` +
+        `<td class="subtotal-eq">=</td><td class="subtotal-value">${fmtNum(result)}</td><td class="ec-del">${actions}</td></tr>`;
+    }
+
+    itemNo++;
+    let name = line.name || "(カスタム)";
+    let spec = line.spec || "";
+    let srcBadge = "";
+    if (line.type === "item") {
+      const master = getMasterItem(line.masterItemId);
+      name = master ? master.name : "(不明)";
+      spec = master ? (master.spec || "") : "";
+      srcBadge = isCubicleItem(line.masterItemId) ? '<span class="src-cubicle">Q</span>' : '';
+    }
+    return `<tr><td class="ec-sep"></td><td class="ec-no">${itemNo}</td><td class="ec-name">${srcBadge}${esc(name)}</td>` +
+      `<td class="ec-spec">${esc(spec)}</td>` +
+      `<td class="ec-price"><input type="text" inputmode="decimal" data-numeric-input value="${line.unitPrice}" onchange="onCatalogLinePrice('${line.lineId}',this.value)" onfocus="this.select()"></td>` +
+      `<td class="ec-qty"><input type="text" inputmode="numeric" data-numeric-input value="${line.qty}" onchange="onCatalogLineQty('${line.lineId}',this.value)" onfocus="this.select()"></td>` +
+      `<td class="ec-subtotal">${fmtNum(line.qty * line.unitPrice)}</td><td class="ec-del">${actions}</td></tr>`;
+  }).join("");
 }
 
 function onCatalogLineQty(lineId, value) {

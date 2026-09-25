@@ -521,6 +521,7 @@ function switchTab(name) {
   if (name === "master") renderMasterTable();
   if (name === "cubicle") renderCubicleTable();
   if (name === "estimate") renderEstimateTab();
+  requestAnimationFrame(updateStickyOffsets);
 }
 
 // ============================================================
@@ -4475,6 +4476,15 @@ function normalizeNumericInput(input) {
   input.value = after;
   if (nextCaret !== null) input.setSelectionRange(nextCaret, nextCaret);
 }
+function updateStickyOffsets() {
+  const header = document.querySelector(".app-header");
+  const tabs = document.querySelector(".tabs");
+  const masterHeader = document.querySelector(".tab-content.active .master-header");
+  const root = document.documentElement.style;
+  root.setProperty("--app-header-height", (header?.getBoundingClientRect().height || 0) + "px");
+  root.setProperty("--tabs-height", (tabs?.getBoundingClientRect().height || 0) + "px");
+  root.setProperty("--master-header-height", (masterHeader?.getBoundingClientRect().height || 0) + "px");
+}
 function showToast(msg) {
   document.querySelectorAll(".toast").forEach(t => t.remove());
   const el = document.createElement("div"); el.className = "toast"; el.textContent = msg;
@@ -4546,6 +4556,14 @@ document.addEventListener("DOMContentLoaded", () => {
   `;
   document.head.appendChild(style);
   renderMasterTable();
+  updateStickyOffsets();
+  window.addEventListener("resize", updateStickyOffsets);
+  if (window.ResizeObserver) {
+    const stickyObserver = new ResizeObserver(updateStickyOffsets);
+    [document.querySelector(".app-header"), document.querySelector(".tabs"), ...document.querySelectorAll(".master-header")]
+      .filter(Boolean)
+      .forEach(el => stickyObserver.observe(el));
+  }
 });
 
 // ページ離脱時にDOM上の価格をメモリに反映して保存

@@ -35,6 +35,21 @@ body {
 /* === コンテナ === */
 .main-container { max-width: 1300px; margin: 0 auto; padding: 16px; }
 
+/* 見積作成だけは横長モニターの幅を明細列に使う。
+   上部の情報欄や合計欄は従来幅のままにして、視線移動を増やさない。 */
+.main-container.estimate-wide { max-width: none; }
+.main-container.catalog-wide { max-width: none; }
+.main-container.estimate-wide .tabs,
+.main-container.estimate-wide .estimate-manager,
+.main-container.estimate-wide .project-info,
+.main-container.estimate-wide #unit-tabs-container,
+.main-container.estimate-wide .totals-section,
+.main-container.estimate-wide .notes-section {
+  max-width: 1268px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* === タブ === */
 .tabs { display: flex; gap: 4px; margin-bottom: 0; position: sticky; top: 0; z-index: 110; background: #f7fafc; padding-top: 4px; }
 .tab-btn {
@@ -263,6 +278,126 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .master-header h2 { font-size: 1rem; color: #1a365d; }
 .master-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .master-content { padding: 12px 16px; }
+
+/* 管理表: 省スペース目次 / 品目表 / 選択中の見積項目 */
+.catalog-workspace {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 3fr) minmax(300px, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+}
+.catalog-main {
+  min-width: 0;
+  overflow-x: auto;
+  padding: 2px 4px 12px;
+}
+.catalog-toc {
+  position: sticky;
+  top: 94px;
+  max-height: calc(100vh - 108px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+}
+.catalog-toc-title {
+  color: #718096;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.catalog-toc button {
+  width: 100%;
+  border: 1px solid #d8e0ea;
+  border-radius: 4px;
+  padding: 4px 3px;
+  background: #f7fafc;
+  color: #2d3748;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.15;
+}
+.catalog-toc button:hover { background: #ebf8ff; border-color: #4299e1; }
+.catalog-toc-code { display: block; color: #1a365d; font-size: 12px; font-weight: 800; }
+.catalog-toc-label { display: block; margin-top: 2px; font-size: 9px; overflow-wrap: anywhere; }
+.cat-block { scroll-margin-top: 96px; }
+
+.catalog-estimate-panel {
+  position: sticky;
+  top: 94px;
+  height: calc(100vh - 108px);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+  border: 2px solid #1a365d;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+.catalog-est-header { padding: 8px 10px; background: #1a365d; color: #fff; }
+.catalog-est-title { font-weight: 800; font-size: 13px; }
+.catalog-est-help { margin-top: 2px; color: #cbd5e0; font-size: 10px; }
+.catalog-unit-switcher {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 6px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f7fafc;
+}
+.catalog-unit-chip {
+  flex: 0 0 auto;
+  border: 1px solid #cbd5e0;
+  border-radius: 12px;
+  padding: 3px 8px;
+  background: #fff;
+  color: #4a5568;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+}
+.catalog-unit-chip.active { border-color: #3182ce; background: #ebf8ff; color: #1a365d; font-weight: 700; }
+.catalog-unit-add { border-color: #38a169; color: #276749; font-weight: 700; }
+.catalog-est-lines { flex: 1; min-height: 0; overflow-y: auto; padding: 6px; }
+.catalog-est-empty { padding: 18px 8px; color: #718096; font-size: 11px; text-align: center; }
+.catalog-line {
+  margin-bottom: 6px;
+  padding: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #fff;
+}
+.catalog-line-main { display: flex; align-items: flex-start; gap: 5px; }
+.catalog-line-no { flex: 0 0 18px; color: #a0aec0; font-size: 10px; text-align: right; }
+.catalog-line-desc { flex: 1; min-width: 0; }
+.catalog-line-name { font-size: 11px; font-weight: 700; overflow-wrap: anywhere; }
+.catalog-line-spec { color: #718096; font-size: 9px; overflow-wrap: anywhere; }
+.catalog-line-fields { display: grid; grid-template-columns: 1fr 54px 1fr; gap: 4px; align-items: end; margin-top: 5px; }
+.catalog-line-fields label { color: #718096; font-size: 9px; }
+.catalog-line-fields input { width: 100%; padding: 3px 4px; border: 1px solid #cbd5e0; border-radius: 3px; text-align: right; font-size: 11px; }
+.catalog-line-amount { text-align: right; font-family: "Menlo", monospace; font-size: 11px; font-weight: 700; }
+.catalog-line-actions { display: flex; justify-content: flex-end; gap: 3px; margin-top: 5px; }
+.catalog-line-actions button { min-width: 24px; border: 1px solid #cbd5e0; border-radius: 3px; background: #f7fafc; cursor: pointer; }
+.catalog-line-actions .catalog-line-delete { border-color: #feb2b2; color: #c53030; }
+.catalog-line-special { color: #4a5568; font-size: 10px; }
+.catalog-line-comment { width: 100%; margin-top: 4px; padding: 4px; border: 1px solid #cbd5e0; border-radius: 3px; font-family: inherit; font-size: 10px; }
+.catalog-est-totals { border-top: 2px solid #1a365d; background: #f7fafc; font-size: 11px; }
+.catalog-est-total-row { display: flex; justify-content: space-between; padding: 4px 8px; border-bottom: 1px solid #e2e8f0; }
+.catalog-est-total-row:last-child { border-bottom: 0; background: #e8f5e9; color: #276749; font-weight: 800; }
+
+@media (max-width: 1000px) {
+  .catalog-workspace { grid-template-columns: 64px minmax(0, 1fr); }
+  .catalog-estimate-panel { grid-column: 1 / -1; position: static; height: auto; max-height: 70vh; }
+  .catalog-toc-label { display: none; }
+}
 
 /* カテゴリブロック */
 .cat-block { margin-bottom: 20px; }

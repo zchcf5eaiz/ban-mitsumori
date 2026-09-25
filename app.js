@@ -451,6 +451,10 @@ let currentEstimate = createNewEstimate();
 let activeUnitIndex = 0;
 function activeUnit() { return currentEstimate.units[activeUnitIndex]; }
 
+// 複数項目表示の横位置。再描画してもユーザーが見ていた位置を維持する。
+let _estimateHorizontalScroll = 0;
+let _revealActiveUnitAfterRender = false;
+
 let savedEstimates = loadSavedEstimates();
 
 // ============================================================
@@ -489,6 +493,7 @@ function loadEstimate(id) {
   if (!e) return;
   currentEstimate = migrateEstimate(JSON.parse(JSON.stringify(e)));
   activeUnitIndex = 0;
+  _estimateHorizontalScroll = 0;
   rebuildClickCounts();
   renderEstimateTab();
   showToast("読み込みました: " + currentEstimate.name);
@@ -510,6 +515,9 @@ function deleteEstimateById(id) {
 function switchTab(name) {
   document.querySelectorAll(".tab-btn").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
   document.querySelectorAll(".tab-content").forEach(t => t.classList.toggle("active", t.id === "tab-" + name));
+  const main = document.querySelector(".main-container");
+  main?.classList.toggle("estimate-wide", name === "estimate");
+  main?.classList.toggle("catalog-wide", name === "master" || name === "cubicle");
   if (name === "master") renderMasterTable();
   if (name === "cubicle") renderCubicleTable();
   if (name === "estimate") renderEstimateTab();
@@ -520,6 +528,24 @@ function switchTab(name) {
 function toggleCat(headingEl) {
   const block = headingEl.parentElement;
   block.classList.toggle("collapsed");
+}
+
+function renderCatalogToc(containerId, groups, prefix) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = `<div class="catalog-toc-title">目次</div>` + groups.map(cg =>
+    `<button type="button" onclick="jumpToCatalogCategory('${prefix}-cat-${escAttr(cg.id)}')" title="${escAttr(cg.id + '. ' + cg.label)}">` +
+      `<span class="catalog-toc-code">${esc(cg.id)}</span>` +
+      `<span class="catalog-toc-label">${esc(cg.label)}</span>` +
+    `</button>`
+  ).join("");
+}
+
+function jumpToCatalogCategory(id) {
+  const block = document.getElementById(id);
+  if (!block) return;
+  block.classList.remove("collapsed");
+  block.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 // 管理表（盤）レンダリング — PDFマトリクス形式
@@ -545,7 +571,7 @@ function renderMasterTable() {
   let html = "";
   for (const cg of catGroups) {
     const collapsed = COLLAPSED_CATS_MASTER.has(cg.id) ? " collapsed" : "";
-    html += `<div class="cat-block${collapsed}">`;
+    html += `<div class="cat-block${collapsed}" id="master-cat-${escAttr(cg.id)}">`;
     html += `<div class="cat-heading" onclick="toggleCat(this)"><span class="cat-toggle">▼</span> ${esc(cg.id)}. ${esc(cg.label)}</div>`;
 
     // カテゴリ内を品名でさらにグループ化
@@ -815,7 +841,9 @@ function renderMasterTable() {
   }
   container.innerHTML = html;
   applySavedOptionPrices();
+  renderCatalogToc("master-toc", catGroups, "master");
   updateAddedCount();
+  renderCatalogEstimatePanels();
 }
 
 // ============================================================
@@ -1598,7 +1626,7 @@ function renderCubicleTable() {
   let html = "";
   for (const cg of catGroups) {
     const collapsed = COLLAPSED_CATS_CUBICLE.has(cg.id) ? " collapsed" : "";
-    html += `<div class="cat-block${collapsed}">`;
+    html += `<div class="cat-block${collapsed}" id="cubicle-cat-${escAttr(cg.id)}">`;
     html += `<div class="cat-heading cat-heading-cubicle" onclick="toggleCat(this)"><span class="cat-toggle">▼</span> ${esc(cg.id)}. ${esc(cg.label)}</div>`;
 
     // カテゴリ内を品名でさらにグループ化
@@ -1715,6 +1743,7 @@ function renderCubicleTable() {
     html += `</div></div>`;
   }
   container.innerHTML = html;
+  renderCatalogToc("cubicle-toc", catGroups, "cubicle");
   updateCubicleAddedCount();
   setupCrosshair();
 }
@@ -2825,6 +2854,111 @@ function updateAddedCount() {
 function updateCubicleAddedCount() {
   const el = document.getElementById("cubicle-added-count");
   if (el) el.textContent = activeUnit().lines.filter(l => l.type === "item" || l.type === "custom").length;
+  renderCatalogEstimatePanels();
+}
+
+function renderCatalogEstimatePanels() {
+  ["master-estimate-panel", "cubicle-estimate-panel"].forEach(id => {
+    const panel = document.getElementById(id);
+    if (panel) panel.innerHTML = buildCatalogEstimatePanel();
+  });
+}
+
+function buildCatalogEstimatePanel() {
+  const unit = activeUnit();
+  const unitButtons = currentEstimate.units.map((u, i) =>
+    `<button type="button" class="catalog-unit-chip${i === activeUnitIndex ? " active" : ""}" onclick="activateUnit(${i})" title="${escAttr(u.unitName)}">${esc(u.unitName)}</button>`
+  ).join("");
+
+  let itemNo = 0;
+  const linesHtml = unit.lines.map((line, index) => {
+    const moveButtons = `<div class="catalog-line-actions">` +
+      `<button type="button" onclick="moveCatalogLine('${line.lineId}',-1)" title="上へ移動"${index === 0 ? " disabled" : ""}>↑</button>` +
+      `<button type="button" onclick="moveCatalogLine('${line.lineId}',1)" title="下へ移動"${index === unit.lines.length - 1 ? " disabled" : ""}>↓</button>` +
+      `<button type="button" class="catalog-line-delete" onclick="removeLine('${line.lineId}')" title="削除">×</button>` +
+    `</div>`;
+
+    if (line.type === "sep") {
+      return `<div class="catalog-line catalog-line-special">区切り線${moveButtons}</div>`;
+    }
+    if (line.type === "comment") {
+      return `<div class="catalog-line catalog-line-special">コメント` +
+        `<input class="catalog-line-comment" type="text" value="${escAttr(line.text || "")}" onchange="onCatalogComment('${line.lineId}',this.value)">` +
+        moveButtons + `</div>`;
+    }
+    if (line.type === "subtotal") {
+      const subtotal = calcSubtotal(unit.lines, index);
+      const result = Math.ceil(subtotal * line.rate);
+      return `<div class="catalog-line catalog-line-special"><div class="catalog-line-main"><div class="catalog-line-desc"><div class="catalog-line-name">小計</div></div>` +
+        `<div class="catalog-line-amount">${fmtNum(result)}</div></div>` +
+        `<div class="catalog-line-fields"><label>掛率<input type="text" inputmode="decimal" data-numeric-input value="${line.rate}" onchange="onCatalogSubtotalRate('${line.lineId}',this.value)"></label></div>` +
+        moveButtons + `</div>`;
+    }
+
+    itemNo++;
+    let name = line.name || "(カスタム)";
+    let spec = line.spec || "";
+    if (line.type === "item") {
+      const master = getMasterItem(line.masterItemId);
+      name = master ? master.name : "(不明)";
+      spec = master ? (master.spec || "") : "";
+    }
+    const amount = line.qty * line.unitPrice;
+    return `<div class="catalog-line">` +
+      `<div class="catalog-line-main"><span class="catalog-line-no">${itemNo}</span><div class="catalog-line-desc">` +
+        `<div class="catalog-line-name">${esc(name)}</div><div class="catalog-line-spec">${esc(spec)}</div>` +
+      `</div><div class="catalog-line-amount">${fmtNum(amount)}</div></div>` +
+      `<div class="catalog-line-fields">` +
+        `<label>単価<input type="text" inputmode="decimal" data-numeric-input value="${line.unitPrice}" onchange="onCatalogLinePrice('${line.lineId}',this.value)"></label>` +
+        `<label>数量<input type="text" inputmode="numeric" data-numeric-input value="${line.qty}" onchange="onCatalogLineQty('${line.lineId}',this.value)"></label>` +
+        `<div><div style="color:#718096;font-size:9px">金額</div><div class="catalog-line-amount">${fmtNum(amount)}</div></div>` +
+      `</div>` + moveButtons + `</div>`;
+  }).join("");
+
+  const raw = calcLinesGrandTotal(unit.lines);
+  const list = Math.ceil(raw * unit.listRate) * 1000;
+  const net = Math.ceil(list * unit.netRate / 10000) * 10000;
+  return `<div class="catalog-est-header"><div class="catalog-est-title">選択中: ${esc(unit.unitName)}</div>` +
+    `<div class="catalog-est-help">ここでの編集は見積作成にも反映されます</div></div>` +
+    `<div class="catalog-unit-switcher">${unitButtons}<button type="button" class="catalog-unit-chip catalog-unit-add" onclick="addUnit()">＋</button></div>` +
+    `<div class="catalog-est-lines">${linesHtml || `<div class="catalog-est-empty">管理表の品目をクリックすると、ここへ追加されます。</div>`}</div>` +
+    `<div class="catalog-est-totals">` +
+      `<div class="catalog-est-total-row"><span>積算合計</span><strong>${fmtNum(raw)}</strong></div>` +
+      `<div class="catalog-est-total-row"><span>定価 ×${unit.listRate}</span><strong>${fmtNum(list)}</strong></div>` +
+      `<div class="catalog-est-total-row"><span>NET ×${unit.netRate}</span><strong>${fmtNum(net)}</strong></div>` +
+    `</div>`;
+}
+
+function onCatalogLineQty(lineId, value) {
+  onLineQty(lineId, value);
+  renderCatalogEstimatePanels();
+}
+
+function onCatalogLinePrice(lineId, value) {
+  onLinePrice(lineId, value);
+  renderCatalogEstimatePanels();
+}
+
+function onCatalogComment(lineId, value) {
+  onCommentText(lineId, value);
+  renderCatalogEstimatePanels();
+}
+
+function onCatalogSubtotalRate(lineId, value) {
+  onSubtotalRate(lineId, value);
+  renderCatalogEstimatePanels();
+}
+
+function moveCatalogLine(lineId, delta) {
+  const lines = activeUnit().lines;
+  const index = lines.findIndex(line => line.lineId === lineId);
+  const target = index + delta;
+  if (index < 0 || target < 0 || target >= lines.length) return;
+  const [line] = lines.splice(index, 1);
+  lines.splice(target, 0, line);
+  if (document.getElementById("tab-estimate")?.classList.contains("active")) renderEstimateLines();
+  renderTotals();
+  renderCatalogEstimatePanels();
 }
 
 // ============================================================
@@ -2838,6 +2972,7 @@ function renderEstimateTab() {
   renderTotals();
   renderNotes();
   renderEstimateSelector();
+  renderCatalogEstimatePanels();
 }
 
 /** ユニット操作バーを描画（追加先表示 + ＋ボタン） */
@@ -2868,6 +3003,8 @@ function activateUnit(idx) {
     if (badge) badge.textContent = i === activeUnitIndex ? "← 追加先" : "";
   });
   renderTotals();
+  updateAddedCount();
+  updateCubicleAddedCount();
 }
 
 function addUnit() {
@@ -2880,7 +3017,13 @@ function addUnit() {
     netRate: prev ? prev.netRate : DEFAULT_RATES.netRate,
   });
   activeUnitIndex = currentEstimate.units.length - 1;
-  renderEstimateTab();
+  _revealActiveUnitAfterRender = true;
+  if (document.getElementById("tab-estimate")?.classList.contains("active")) {
+    renderEstimateTab();
+  } else {
+    updateAddedCount();
+    updateCubicleAddedCount();
+  }
   showToast("「項目" + currentEstimate.units.length + "」を追加しました");
 }
 
@@ -2936,12 +3079,17 @@ function renderEstimateLines() {
   const section = document.getElementById("est-section");
   const empty = document.getElementById("est-empty");
 
+  const previousContainer = section.querySelector(".multi-unit-container");
+  if (previousContainer) _estimateHorizontalScroll = previousContainer.scrollLeft;
+
   section.querySelectorAll(".est-col-table, .est-print-page, .multi-unit-container, .single-unit-header, .multi-unit-scroll-top").forEach(el => el.remove());
 
   const units = currentEstimate.units;
 
   // 1ユニット: 項目名ヘッダー + 全幅テーブル
   if (units.length === 1) {
+    _estimateHorizontalScroll = 0;
+    _revealActiveUnitAfterRender = false;
     const hdr = document.createElement("div");
     hdr.className = "single-unit-header unit-col-header no-print";
     hdr.innerHTML = `<span class="unit-col-name">${esc(units[0].unitName)}</span><button class="unit-col-btn" onclick="renameUnit(event,0)" title="項目名を変更">✏ 名前変更</button>`;
@@ -2958,6 +3106,13 @@ function renderEstimateLines() {
   empty.style.display = "none";
   const container = document.createElement("div");
   container.className = "multi-unit-container no-print";
+  container.addEventListener("dragover", _updateLineDragAutoScroll);
+  container.addEventListener("dragleave", e => {
+    const rect = container.getBoundingClientRect();
+    if (e.clientX <= rect.left || e.clientX >= rect.right || e.clientY <= rect.top || e.clientY >= rect.bottom) {
+      _lineDragScrollSpeed = 0;
+    }
+  });
 
   for (let i = 0; i < units.length; i++) {
     const unit = units[i];
@@ -2990,6 +3145,7 @@ function renderEstimateLines() {
       emptyMsg.addEventListener("dragover", e => {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
+        _updateLineDragAutoScroll(e);
         emptyMsg.classList.add("drop-target");
       });
       emptyMsg.addEventListener("dragleave", () => emptyMsg.classList.remove("drop-target"));
@@ -3027,23 +3183,32 @@ function renderEstimateLines() {
   scrollTop.addEventListener("scroll", () => {
     if (syncing) return; syncing = true;
     container.scrollLeft = scrollTop.scrollLeft;
+    _estimateHorizontalScroll = scrollTop.scrollLeft;
     syncing = false;
   });
   container.addEventListener("scroll", () => {
     if (syncing) return; syncing = true;
     scrollTop.scrollLeft = container.scrollLeft;
+    _estimateHorizontalScroll = container.scrollLeft;
     syncing = false;
   });
 
-  // アクティブ列を即時中央表示（アニメーションなし）
+  // 通常の再描画では現在位置を保つ。新しい項目を追加した時だけ追加先を表示する。
   requestAnimationFrame(() => {
     scrollTopInner.style.width = container.scrollWidth + "px";
-    const activeCol = container.querySelector(".unit-col-active");
-    if (!activeCol) return;
-    const cw = container.offsetWidth;
-    const target = Math.max(0, activeCol.offsetLeft - (cw - activeCol.offsetWidth) / 2);
+    let target = _estimateHorizontalScroll;
+    if (_revealActiveUnitAfterRender) {
+      const activeCol = container.querySelector(".unit-col-active");
+      if (activeCol) {
+        const cw = container.offsetWidth;
+        target = Math.max(0, activeCol.offsetLeft - (cw - activeCol.offsetWidth) / 2);
+      }
+      _revealActiveUnitAfterRender = false;
+    }
+    target = Math.min(target, Math.max(0, container.scrollWidth - container.clientWidth));
     container.scrollLeft = target;
     scrollTop.scrollLeft = target;
+    _estimateHorizontalScroll = target;
   });
 }
 
@@ -3072,7 +3237,7 @@ function _buildLineRows(lines) {
         <td class="ec-sep no-print"></td>
         <td class="subtotal-label">小計</td>
         <td class="subtotal-sum" colspan="2">${fmtNum(sub)}</td>
-        <td class="subtotal-rate-cell"><span class="subtotal-rate-input">&times;<input type="number" step="0.01" value="${line.rate}"
+        <td class="subtotal-rate-cell"><span class="subtotal-rate-input">&times;<input type="text" inputmode="decimal" data-numeric-input value="${line.rate}"
           onchange="onSubtotalRate('${line.lineId}',this.value)"></span><span class="subtotal-rate-text" style="display:none">&times; ${line.rate}</span></td>
         <td class="subtotal-eq">=</td>
         <td class="subtotal-value">${fmtNum(result)}</td>
@@ -3118,9 +3283,9 @@ function _buildLineRows(lines) {
       <td class="ec-no">${itemNo}</td>
       <td class="ec-name">${srcBadge}${esc(name)}</td>
       <td class="ec-spec">${esc(spec)}</td>
-      <td class="ec-price"><input type="number" min="0" step="0.1" value="${line.unitPrice}"
+      <td class="ec-price"><input type="text" inputmode="decimal" data-numeric-input value="${line.unitPrice}"
            onchange="onLinePrice('${line.lineId}',this.value)" onfocus="this.select()"></td>
-      <td class="ec-qty"><input type="number" min="0" value="${line.qty}"
+      <td class="ec-qty"><input type="text" inputmode="numeric" data-numeric-input value="${line.qty}"
            onchange="onLineQty('${line.lineId}',this.value)" onfocus="this.select()"></td>
       <td class="ec-subtotal" id="sub-${line.lineId}">${fmtNum(sub)}</td>
       <td class="ec-del no-print">
@@ -3499,8 +3664,9 @@ function removeLine(lineId) {
     if (idx >= 0) { u.lines.splice(idx, 1); break; }
   }
   rebuildClickCounts();
-  renderMasterTable();
-  renderEstimateLines();
+  updateAddedCount();
+  updateCubicleAddedCount();
+  if (document.getElementById("tab-estimate")?.classList.contains("active")) renderEstimateLines();
   renderTotals();
 }
 
@@ -3562,7 +3728,7 @@ function calcSubtotal(lines, subtotalIndex) {
 function onSubtotalRate(lineId, val) {
   const line = _findLineAnyUnit(lineId);
   if (line) line.rate = parseFloat(val) || 1.0;
-  renderEstimateLines();
+  if (document.getElementById("tab-estimate")?.classList.contains("active")) renderEstimateLines();
   renderTotals();
 }
 
@@ -3571,6 +3737,9 @@ function onSubtotalRate(lineId, val) {
 // ============================================================
 
 let _dragLineId = null;
+let _lineDragScrollContainer = null;
+let _lineDragScrollSpeed = 0;
+let _lineDragScrollFrame = null;
 
 // 集計表用ドラッグ＆ドロップ
 let _summaryDragIdx = null;
@@ -3591,6 +3760,7 @@ function onLineDragStart(e, lineId) {
 function onLineDragOver(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = "move";
+  _updateLineDragAutoScroll(e);
   const row = e.target.closest("tr");
   if (!row || !row.dataset.lineId) return;
   // 挿入位置を上半分/下半分で判定
@@ -3602,6 +3772,33 @@ function onLineDragOver(e) {
   } else {
     row.classList.add("drag-over-bottom");
   }
+}
+
+/** 横長の項目間をドラッグする時、端へ近づくほど速く横スクロールする */
+function _updateLineDragAutoScroll(e) {
+  const container = e.target.closest(".multi-unit-container");
+  if (!container) return;
+  const rect = container.getBoundingClientRect();
+  const edge = Math.min(140, rect.width * 0.18);
+  const maxSpeed = 28;
+  let speed = 0;
+  if (e.clientX < rect.left + edge) {
+    speed = -Math.ceil(maxSpeed * (rect.left + edge - e.clientX) / edge);
+  } else if (e.clientX > rect.right - edge) {
+    speed = Math.ceil(maxSpeed * (e.clientX - (rect.right - edge)) / edge);
+  }
+  _lineDragScrollContainer = container;
+  _lineDragScrollSpeed = speed;
+  if (speed && !_lineDragScrollFrame) {
+    _lineDragScrollFrame = requestAnimationFrame(_stepLineDragAutoScroll);
+  }
+}
+
+function _stepLineDragAutoScroll() {
+  _lineDragScrollFrame = null;
+  if (!_dragLineId || !_lineDragScrollContainer || !_lineDragScrollSpeed) return;
+  _lineDragScrollContainer.scrollLeft += _lineDragScrollSpeed;
+  _lineDragScrollFrame = requestAnimationFrame(_stepLineDragAutoScroll);
 }
 
 function onLineDragLeave(e) {
@@ -3625,7 +3822,8 @@ function onLineDropToUnit(e, unitIdx) {
   copy.lineId = genId();
   currentEstimate.units[unitIdx].lines.push(copy);
   rebuildClickCounts();
-  renderMasterTable();
+  updateAddedCount();
+  updateCubicleAddedCount();
   _clearDragStyles();
   renderEstimateLines();
   renderTotals();
@@ -3672,9 +3870,10 @@ function onLineDrop(e, targetLineId) {
 
   _clearDragStyles();
   if (srcUnitIdx !== tgtUnitIdx) {
-    // コピーで行が増えたので管理表の追加済件数・色を更新
+    // コピーで行が増えたので件数だけ更新。管理表本体は表示時に再生成する。
     rebuildClickCounts();
-    renderMasterTable();
+    updateAddedCount();
+    updateCubicleAddedCount();
   }
   renderEstimateLines();
   renderTotals();
@@ -3688,6 +3887,10 @@ function onLineDragEnd(e) {
 
 function _clearDragStyles() {
   _dragLineId = null;
+  _lineDragScrollContainer = null;
+  _lineDragScrollSpeed = 0;
+  if (_lineDragScrollFrame) cancelAnimationFrame(_lineDragScrollFrame);
+  _lineDragScrollFrame = null;
   document.querySelectorAll(".drag-over-top, .drag-over-bottom, .dragging").forEach(el => {
     el.classList.remove("drag-over-top", "drag-over-bottom", "dragging");
   });
@@ -3869,6 +4072,7 @@ function newEstimate() {
   if (hasLines && !confirm("現在の見積もりを破棄して新規作成しますか？")) return;
   currentEstimate = createNewEstimate();
   activeUnitIndex = 0;
+  _estimateHorizontalScroll = 0;
   rebuildClickCounts();
   renderEstimateTab();
   showToast("新規見積もりを作成しました");
@@ -3889,6 +4093,7 @@ function deleteCurrentEstimate() {
   deleteEstimateById(currentEstimate.id);
   currentEstimate = createNewEstimate();
   activeUnitIndex = 0;
+  _estimateHorizontalScroll = 0;
   rebuildClickCounts();
   renderEstimateTab();
 }
@@ -4255,6 +4460,21 @@ function genId() { return Date.now().toString(36) + Math.random().toString(36).s
 function fmtNum(n) { if (!n && n !== 0) return ""; return Number(n).toLocaleString("ja-JP"); }
 function esc(s) { if (!s) return ""; const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
 function escAttr(s) { return (s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+function normalizeNumericInput(input) {
+  const clean = value => {
+    let normalized = value.normalize("NFKC").replace(/[,，\s]/g, "").replace(/[^0-9.]/g, "");
+    const dot = normalized.indexOf(".");
+    if (dot >= 0) normalized = normalized.slice(0, dot + 1) + normalized.slice(dot + 1).replace(/\./g, "");
+    return normalized;
+  };
+  const before = input.value;
+  const after = clean(before);
+  if (after === before) return;
+  const caret = input.selectionStart;
+  const nextCaret = caret === null ? null : clean(before.slice(0, caret)).length;
+  input.value = after;
+  if (nextCaret !== null) input.setSelectionRange(nextCaret, nextCaret);
+}
 function showToast(msg) {
   document.querySelectorAll(".toast").forEach(t => t.remove());
   const el = document.createElement("div"); el.className = "toast"; el.textContent = msg;
@@ -4265,6 +4485,14 @@ function showToast(msg) {
 // 初期化
 // ============================================================
 document.addEventListener("DOMContentLoaded", () => {
+  // Windows IMEが全角英数字になっていても、数値欄では半角へ揃える。
+  document.addEventListener("input", e => {
+    if (!e.isComposing && e.target.matches?.("[data-numeric-input]")) normalizeNumericInput(e.target);
+  });
+  document.addEventListener("compositionend", e => {
+    if (e.target.matches?.("[data-numeric-input]")) normalizeNumericInput(e.target);
+  });
+
   // ユニットタブ・全体合計のスタイルを動的注入
   const style = document.createElement("style");
   style.textContent = `

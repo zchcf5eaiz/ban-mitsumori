@@ -7,7 +7,8 @@
   --app-header-height: 0px;
   --tabs-height: 0px;
   --master-header-height: 0px;
-  --catalog-sticky-gap: 8px;
+  --master-hint-height: 0px;
+  --catalog-sticky-gap: 10px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -41,20 +42,9 @@ body {
 /* === コンテナ === */
 .main-container { max-width: 1300px; margin: 0 auto; padding: 16px; }
 
-/* 見積作成だけは横長モニターの幅を明細列に使う。
-   上部の情報欄や合計欄は従来幅のままにして、視線移動を増やさない。 */
-.main-container.estimate-wide { max-width: none; }
-.main-container.catalog-wide { max-width: none; }
-.main-container.estimate-wide .tabs,
-.main-container.estimate-wide .estimate-manager,
-.main-container.estimate-wide .project-info,
-.main-container.estimate-wide #unit-tabs-container,
-.main-container.estimate-wide .totals-section,
-.main-container.estimate-wide .notes-section {
-  max-width: 1268px;
-  margin-left: auto;
-  margin-right: auto;
-}
+/* 管理表・見積作成とも横長モニターの幅を全体で使う。 */
+.main-container.estimate-wide,
+.main-container.catalog-wide { max-width: none; padding-top: 0; }
 
 /* === タブ === */
 .tabs { display: flex; gap: 4px; margin-bottom: 0; position: sticky; top: var(--app-header-height); z-index: 290; background: #f7fafc; padding-top: 4px; }
@@ -300,8 +290,8 @@ tr[draggable="true"]:active { cursor: grabbing; }
 }
 .catalog-toc {
   position: sticky;
-  top: calc(var(--app-header-height) + var(--tabs-height) + var(--master-header-height) + var(--catalog-sticky-gap));
-  max-height: calc(100vh - var(--app-header-height) - var(--tabs-height) - var(--master-header-height) - 16px);
+  top: calc(var(--app-header-height) + var(--tabs-height) + var(--master-header-height) + var(--master-hint-height) + var(--catalog-sticky-gap));
+  max-height: calc(100vh - var(--app-header-height) - var(--tabs-height) - var(--master-header-height) - var(--master-hint-height) - 18px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -333,12 +323,12 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .catalog-toc button:hover { background: #ebf8ff; border-color: #4299e1; }
 .catalog-toc-code { display: block; color: #1a365d; font-size: 12px; font-weight: 800; }
 .catalog-toc-label { display: block; margin-top: 2px; font-size: 9px; overflow-wrap: anywhere; }
-.cat-block { scroll-margin-top: calc(var(--app-header-height) + var(--tabs-height) + var(--master-header-height) + 12px); }
+.cat-block { scroll-margin-top: calc(var(--app-header-height) + var(--tabs-height) + var(--master-header-height) + var(--master-hint-height) + 14px); }
 
 .catalog-estimate-panel {
   position: sticky;
-  top: calc(var(--app-header-height) + var(--tabs-height) + var(--master-header-height) + var(--catalog-sticky-gap));
-  height: calc(100vh - var(--app-header-height) - var(--tabs-height) - var(--master-header-height) - 16px);
+  top: calc(var(--app-header-height) + var(--tabs-height) + var(--master-header-height) + var(--master-hint-height) + var(--catalog-sticky-gap));
+  height: calc(100vh - var(--app-header-height) - var(--tabs-height) - var(--master-header-height) - var(--master-hint-height) - 18px);
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -916,6 +906,9 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .master-hint {
   padding: 6px 16px; font-size: 0.78rem; color: #718096;
   background: #f7fafc; border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: calc(var(--app-header-height) + var(--tabs-height) + var(--master-header-height));
+  z-index: 270;
 }
 
 /* キュービクルタブ カテゴリ見出し色 */

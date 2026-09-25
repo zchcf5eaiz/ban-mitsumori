@@ -3087,23 +3087,7 @@ function renderEstimateLines() {
 
   const units = currentEstimate.units;
 
-  // 1ユニット: 項目名ヘッダー + 全幅テーブル
-  if (units.length === 1) {
-    _estimateHorizontalScroll = 0;
-    _revealActiveUnitAfterRender = false;
-    const hdr = document.createElement("div");
-    hdr.className = "single-unit-header unit-col-header no-print";
-    hdr.innerHTML = `<span class="unit-col-name">${esc(units[0].unitName)}</span><button class="unit-col-btn" onclick="renameUnit(event,0)" title="項目名を変更">✏ 名前変更</button>`;
-    empty.insertAdjacentElement("beforebegin", hdr);
-    const lines = units[0].lines;
-    if (lines.length === 0) { empty.style.display = ""; return; }
-    empty.style.display = "none";
-    const html = `<table class="estimate-table est-col-table">${_estTheadHtml()}<tbody>${_buildLineRows(lines).join("")}</tbody></table>`;
-    empty.insertAdjacentHTML("beforebegin", html);
-    return;
-  }
-
-  // 複数ユニット: 全ユニットを横並びで常時表示
+  // 項目数にかかわらず同じ列幅で表示し、複数なら横並びにする。
   empty.style.display = "none";
   const container = document.createElement("div");
   container.className = "multi-unit-container no-print";
@@ -3128,7 +3112,7 @@ function renderEstimateLines() {
       <span class="unit-col-name" onclick="activateUnit(${i})">${esc(unit.unitName)}</span>
       <span class="unit-active-badge">${isActive ? "← 追加先" : ""}</span>
       <button class="unit-col-btn" onclick="renameUnit(event,${i})" title="名前変更">✏</button>
-      <button class="unit-col-btn unit-col-del" onclick="deleteUnit(event,${i})" title="削除">&times;</button>
+      ${units.length > 1 ? `<button class="unit-col-btn unit-col-del" onclick="deleteUnit(event,${i})" title="削除">&times;</button>` : ""}
     `;
     col.appendChild(hdr);
 
@@ -4480,10 +4464,12 @@ function updateStickyOffsets() {
   const header = document.querySelector(".app-header");
   const tabs = document.querySelector(".tabs");
   const masterHeader = document.querySelector(".tab-content.active .master-header");
+  const masterHint = document.querySelector(".tab-content.active .master-hint");
   const root = document.documentElement.style;
   root.setProperty("--app-header-height", (header?.getBoundingClientRect().height || 0) + "px");
   root.setProperty("--tabs-height", (tabs?.getBoundingClientRect().height || 0) + "px");
   root.setProperty("--master-header-height", (masterHeader?.getBoundingClientRect().height || 0) + "px");
+  root.setProperty("--master-hint-height", (masterHint?.getBoundingClientRect().height || 0) + "px");
 }
 function showToast(msg) {
   document.querySelectorAll(".toast").forEach(t => t.remove());
@@ -4560,7 +4546,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("resize", updateStickyOffsets);
   if (window.ResizeObserver) {
     const stickyObserver = new ResizeObserver(updateStickyOffsets);
-    [document.querySelector(".app-header"), document.querySelector(".tabs"), ...document.querySelectorAll(".master-header")]
+    [document.querySelector(".app-header"), document.querySelector(".tabs"), ...document.querySelectorAll(".master-header, .master-hint")]
       .filter(Boolean)
       .forEach(el => stickyObserver.observe(el));
   }

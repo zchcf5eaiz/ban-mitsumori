@@ -3095,7 +3095,8 @@ function renderEstimateLines() {
   container.addEventListener("dragleave", e => {
     const rect = container.getBoundingClientRect();
     if (e.clientX <= rect.left || e.clientX >= rect.right || e.clientY <= rect.top || e.clientY >= rect.bottom) {
-      _lineDragScrollSpeed = 0;
+      _lineDragScrollX = 0;
+      _lineDragScrollY = 0;
     }
   });
 
@@ -3724,8 +3725,12 @@ function onSubtotalRate(lineId, val) {
 
 let _dragLineId = null;
 let _lineDragScrollContainer = null;
-let _lineDragScrollSpeed = 0;
+let _lineDragScrollX = 0;
+let _lineDragScrollY = 0;
 let _lineDragScrollFrame = null;
+let _lineDragHoverRow = null;
+let _lineDragHoverSide = "";
+let _lineDragPreview = null;
 
 // 集計表用ドラッグ＆ドロップ
 let _summaryDragIdx = null;
@@ -3735,10 +3740,20 @@ let _summaryNotes = "";
 
 function onLineDragStart(e, lineId) {
   _dragLineId = lineId;
-  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.effectAllowed = "copyMove";
   e.dataTransfer.setData("text/plain", lineId);
+  const row = e.target.closest("tr");
+  if (row) {
+    const label = row.querySelector(".ec-name")?.textContent?.trim()
+      || (row.classList.contains("subtotal-row") ? "小計" : "行を移動");
+    const preview = document.createElement("div");
+    preview.className = "line-drag-preview";
+    preview.textContent = label;
+    document.body.appendChild(preview);
+    _lineDragPreview = preview;
+    e.dataTransfer.setDragImage(preview, 14, 14);
+  }
   requestAnimationFrame(() => {
-    const row = e.target.closest("tr");
     if (row) row.classList.add("dragging");
   });
 }
@@ -3752,44 +3767,65 @@ function onLineDragOver(e) {
   // 挿入位置を上半分/下半分で判定
   const rect = row.getBoundingClientRect();
   const midY = rect.top + rect.height / 2;
-  row.classList.remove("drag-over-top", "drag-over-bottom");
-  if (e.clientY < midY) {
-    row.classList.add("drag-over-top");
-  } else {
-    row.classList.add("drag-over-bottom");
-  }
+  const side = e.clientY < midY ? "top" : "bottom";
+  if (row === _lineDragHoverRow && side === _lineDragHoverSide) return;
+  if (_lineDragHoverRow) _lineDragHoverRow.classList.remove("drag-over-top", "drag-over-bottom");
+  row.classList.add(side === "top" ? "drag-over-top" : "drag-over-bottom");
+  _lineDragHoverRow = row;
+  _lineDragHoverSide = side;
 }
 
-/** 横長の項目間をドラッグする時、端へ近づくほど速く横スクロールする */
+/** 画面端へドラッグした時、項目間は左右・ページは上下へ自動スクロールする */
 function _updateLineDragAutoScroll(e) {
   const container = e.target.closest(".multi-unit-container");
-  if (!container) return;
+  if (!container) {
+    _lineDragScrollX = 0;
+    _lineDragScrollY = 0;
+    return;
+  }
   const rect = container.getBoundingClientRect();
-  const edge = Math.min(140, rect.width * 0.18);
-  const maxSpeed = 28;
-  let speed = 0;
-  if (e.clientX < rect.left + edge) {
-    speed = -Math.ceil(maxSpeed * (rect.left + edge - e.clientX) / edge);
-  } else if (e.clientX > rect.right - edge) {
-    speed = Math.ceil(maxSpeed * (e.clientX - (rect.right - edge)) / edge);
+  const edgeX = Math.min(150, rect.width * 0.2);
+  const edgeY = Math.min(130, window.innerHeight * 0.18);
+  const maxX = 42;
+  const maxY = 34;
+  let speedX = 0;
+  let speedY = 0;
+  if (e.clientX < rect.left + edgeX) {
+    speedX = -Math.ceil(maxX * (rect.left + edgeX - e.clientX) / edgeX);
+  } else if (e.clientX > rect.right - edgeX) {
+    speedX = Math.ceil(maxX * (e.clientX - (rect.right - edgeX)) / edgeX);
+  }
+  if (e.clientY < edgeY) {
+    speedY = -Math.ceil(maxY * (edgeY - e.clientY) / edgeY);
+  } else if (e.clientY > window.innerHeight - edgeY) {
+    speedY = Math.ceil(maxY * (e.clientY - (window.innerHeight - edgeY)) / edgeY);
   }
   _lineDragScrollContainer = container;
-  _lineDragScrollSpeed = speed;
-  if (speed && !_lineDragScrollFrame) {
+  _lineDragScrollX = speedX;
+  _lineDragScrollY = speedY;
+  if ((speedX || speedY) && !_lineDragScrollFrame) {
     _lineDragScrollFrame = requestAnimationFrame(_stepLineDragAutoScroll);
   }
 }
 
 function _stepLineDragAutoScroll() {
   _lineDragScrollFrame = null;
-  if (!_dragLineId || !_lineDragScrollContainer || !_lineDragScrollSpeed) return;
-  _lineDragScrollContainer.scrollLeft += _lineDragScrollSpeed;
-  _lineDragScrollFrame = requestAnimationFrame(_stepLineDragAutoScroll);
+  if (!_dragLineId || !_lineDragScrollContainer || (!_lineDragScrollX && !_lineDragScrollY)) return;
+  if (_lineDragScrollX) _lineDragScrollContainer.scrollLeft += _lineDragScrollX;
+  if (_lineDragScrollY) window.scrollBy(0, _lineDragScrollY);
+  if (_lineDragScrollX || _lineDragScrollY) {
+    _lineDragScrollFrame = requestAnimationFrame(_stepLineDragAutoScroll);
+  }
 }
 
 function onLineDragLeave(e) {
   const row = e.target.closest("tr");
-  if (row) row.classList.remove("drag-over-top", "drag-over-bottom");
+  if (!row || (e.relatedTarget instanceof Node && row.contains(e.relatedTarget))) return;
+  if (row === _lineDragHoverRow) {
+    row.classList.remove("drag-over-top", "drag-over-bottom");
+    _lineDragHoverRow = null;
+    _lineDragHoverSide = "";
+  }
 }
 
 /** 空ユニットへのドロップ: 行が1つも無いユニットにもコピーできるようにする */
@@ -3874,9 +3910,14 @@ function onLineDragEnd(e) {
 function _clearDragStyles() {
   _dragLineId = null;
   _lineDragScrollContainer = null;
-  _lineDragScrollSpeed = 0;
+  _lineDragScrollX = 0;
+  _lineDragScrollY = 0;
   if (_lineDragScrollFrame) cancelAnimationFrame(_lineDragScrollFrame);
   _lineDragScrollFrame = null;
+  _lineDragHoverRow = null;
+  _lineDragHoverSide = "";
+  if (_lineDragPreview) _lineDragPreview.remove();
+  _lineDragPreview = null;
   document.querySelectorAll(".drag-over-top, .drag-over-bottom, .dragging").forEach(el => {
     el.classList.remove("drag-over-top", "drag-over-bottom", "dragging");
   });

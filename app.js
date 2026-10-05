@@ -336,6 +336,47 @@ saveSr1Comments(); // デフォルト補完した値を即保存
 
 // クリック回数トラッキング（選択色の濃さ管理）
 let masterClickCounts = {};
+let customClickCounts = {};
+
+function selectionColor(count) {
+  return `rgba(202,138,4,${Math.min(count * 0.25, 0.85)})`;
+}
+
+function selectionClass(count) {
+  return count > 0 ? " mg-selected" : "";
+}
+
+function selectionStyle(count, fallback) {
+  if (count > 0) return `style="--selection-bg:${selectionColor(count)}"`;
+  return fallback ? `style="background:${fallback}"` : "";
+}
+
+function setSelectionState(el, count) {
+  if (!el) return;
+  el.classList.toggle("mg-selected", count > 0);
+  if (count > 0) el.style.setProperty("--selection-bg", selectionColor(count));
+  else el.style.removeProperty("--selection-bg");
+}
+
+function refreshCatalogSelectionStyles() {
+  document.querySelectorAll("[data-item-id]").forEach(el => {
+    setSelectionState(el, masterClickCounts[el.dataset.itemId] || 0);
+  });
+  document.querySelectorAll("[data-custom-selection-key]").forEach(el => {
+    setSelectionState(el, customClickCounts[el.dataset.customSelectionKey] || 0);
+  });
+}
+
+function recordCustomSelection(key) {
+  customClickCounts[key] = (customClickCounts[key] || 0) + 1;
+  refreshCatalogSelectionStyles();
+  const el = Array.from(document.querySelectorAll("[data-custom-selection-key]"))
+    .find(node => node.dataset.customSelectionKey === key);
+  if (el) {
+    el.classList.add("mg-flash");
+    setTimeout(() => el.classList.remove("mg-flash"), 400);
+  }
+}
 
 /** 盤 + キュービクル両方から品目を検索 */
 function getMasterItem(id) {
@@ -425,26 +466,68 @@ function createNewEstimate() {
   };
 }
 
-/** 旧形式（lines直下）→新形式（units配列）へ変換。新形式はそのまま返す。 */
-function migrateEstimate(e) {
-  if (e.units) return e;
-  const unitName = (e.project && e.project.panelName) || "項目1";
-  const migrated = Object.assign({}, e);
-  if (migrated.project) {
-    migrated.project = Object.assign({}, migrated.project);
-    delete migrated.project.panelName;
+// 過去に別商品で使われていたIDのうち、当時の単価で一意に判定できるものだけ移行する。
+const LEGACY_ESTIMATE_ITEM_MIGRATIONS = {
+  B060: { "35": "B06u" },
+  K3070: { "4500": "K10DT0" },
+  K3071: { "4626": "K10DT1" },
+  K3072: { "5802": "K10DT2" },
+  K3073: { "5826": "K10DT3" },
+  K3074: { "1704": "K10DT4" },
+};
+
+function migrateEstimateLines(lines) {
+  if (!Array.isArray(lines)) return [];
+  for (const line of lines) {
+    if (!line || line.type !== "item") continue;
+    const byPrice = LEGACY_ESTIMATE_ITEM_MIGRATIONS[line.masterItemId];
+    const migratedId = byPrice && byPrice[String(Number(line.unitPrice))];
+    if (!migratedId) continue;
+    line.masterItemId = migratedId;
+    const master = getMasterItem(migratedId);
+    if (master) {
+      line.sourceName = master.name;
+      line.sourceSpec = master.spec || "";
+      line.sourceCatalog = isCubicleItem(migratedId) ? "cubicle" : "master";
+    }
   }
-  migrated.units = [{
-    unitId: genId(),
-    unitName: unitName,
-    lines: e.lines || [],
-    listRate: e.listRate != null ? e.listRate : DEFAULT_RATES.listRate,
-    netRate: e.netRate != null ? e.netRate : DEFAULT_RATES.netRate,
-  }];
-  delete migrated.lines;
-  delete migrated.listRate;
-  delete migrated.netRate;
+  return lines;
+}
+
+/** 旧形式（lines直下）→新形式（units配列）へ変換し、旧IDも安全な範囲で更新する。 */
+function migrateEstimate(e) {
+  let migrated = e;
+  if (!migrated.units) {
+    const unitName = (migrated.project && migrated.project.panelName) || "項目1";
+    migrated = Object.assign({}, migrated);
+    if (migrated.project) {
+      migrated.project = Object.assign({}, migrated.project);
+      delete migrated.project.panelName;
+    }
+    migrated.units = [{
+      unitId: genId(),
+      unitName: unitName,
+      lines: migrated.lines || [],
+      listRate: migrated.listRate != null ? migrated.listRate : DEFAULT_RATES.listRate,
+      netRate: migrated.netRate != null ? migrated.netRate : DEFAULT_RATES.netRate,
+    }];
+    delete migrated.lines;
+    delete migrated.listRate;
+    delete migrated.netRate;
+  }
+  for (const unit of migrated.units) unit.lines = migrateEstimateLines(unit.lines);
   return migrated;
+}
+
+/** 見積行は追加時の名称・仕様を優先し、マスタ更新による別商品表示を防ぐ。 */
+function getEstimateLineDisplay(line) {
+  const master = getMasterItem(line.masterItemId);
+  return {
+    name: typeof line.sourceName === "string" ? line.sourceName : (master ? master.name : "(不明)"),
+    spec: typeof line.sourceSpec === "string" ? line.sourceSpec : (master ? (master.spec || "") : ""),
+    isCubicle: line.sourceCatalog === "cubicle" ||
+      (line.sourceCatalog == null && isCubicleItem(line.masterItemId)),
+  };
 }
 
 let currentEstimate = createNewEstimate();
@@ -805,8 +888,9 @@ function renderMasterTable() {
                 let fh = `<table class="mg-table mg-footer-table"><tbody><tr><td class="mg-row-group-header" colspan="2">${esc(ngFooter.label)}</td></tr>`;
                 for (const fi of fng.items) {
                   const cnt = masterClickCounts[fi.id] || 0;
-                  const bgStyle = cnt > 0 ? `background:rgba(202,138,4,${Math.min(cnt * 0.25, 0.85)})` : "";
-                  fh += `<tr class="mg-clickable" style="${bgStyle}" onclick="addFromMaster(event,'${fi.id}')">`;
+                  const selectedClass = selectionClass(cnt);
+                  const selectedStyle = selectionStyle(cnt);
+                  fh += `<tr class="mg-clickable${selectedClass}" data-item-id="${fi.id}" ${selectedStyle} onclick="addFromMaster(event,'${fi.id}')">`;
                   fh += `<td class="mg-row-label">${esc(fi.spec)}</td>`;
                   fh += `<td class="mg-price mg-matrix-cell">`;
                   fh += `<input type="number" min="0" step="0.1" value="${fi.basePrice}"
@@ -842,6 +926,7 @@ function renderMasterTable() {
   }
   container.innerHTML = html;
   applySavedOptionPrices();
+  refreshCatalogSelectionStyles();
   renderCatalogToc("master-toc", catGroups, "master");
   updateAddedCount();
   renderCatalogEstimatePanels();
@@ -860,12 +945,12 @@ function renderPBoxCalculator() {
       <label>D<input type="number" id="pbox-d" min="0" placeholder="mm" oninput="calcPBox()"></label>
     </div>
     <div class="pbox-results" id="pbox-results">
-      <div class="pbox-result-cell" id="pbox-r-indoor" onclick="addPBoxToEstimate('屋内')">屋内<br><span>—</span></div>
-      <div class="pbox-result-cell" id="pbox-r-outdoor" onclick="addPBoxToEstimate('屋外')">屋外<br><span>—</span></div>
-      <div class="pbox-result-cell" id="pbox-r-sus" onclick="addPBoxToEstimate('屋外(SUS)')">屋外(SUS)<br><span>—</span></div>
-      <div class="pbox-result-cell" id="pbox-r-indoor-door" onclick="addPBoxToEstimate('屋内(扉付)')">屋内(扉付)<br><span>—</span></div>
-      <div class="pbox-result-cell" id="pbox-r-outdoor-door" onclick="addPBoxToEstimate('屋外(扉付)')">屋外(扉付)<br><span>—</span></div>
-      <div class="pbox-result-cell" id="pbox-r-sus-door" onclick="addPBoxToEstimate('屋外(SUS,扉付)')">屋外(SUS,扉付)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="pbox:屋内" id="pbox-r-indoor" onclick="addPBoxToEstimate('屋内')">屋内<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="pbox:屋外" id="pbox-r-outdoor" onclick="addPBoxToEstimate('屋外')">屋外<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="pbox:屋外(SUS)" id="pbox-r-sus" onclick="addPBoxToEstimate('屋外(SUS)')">屋外(SUS)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="pbox:屋内(扉付)" id="pbox-r-indoor-door" onclick="addPBoxToEstimate('屋内(扉付)')">屋内(扉付)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="pbox:屋外(扉付)" id="pbox-r-outdoor-door" onclick="addPBoxToEstimate('屋外(扉付)')">屋外(扉付)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="pbox:屋外(SUS,扉付)" id="pbox-r-sus-door" onclick="addPBoxToEstimate('屋外(SUS,扉付)')">屋外(SUS,扉付)<br><span>—</span></div>
     </div>
     <div class="pbox-rates">
       <div class="pbox-rate-row">
@@ -984,8 +1069,10 @@ function addPBoxToEstimate(type) {
     qty: qty,
     unitPrice: price,
     lineNote: "",
+    customSelectionKey: "pbox:" + type,
   });
 
+  recordCustomSelection("pbox:" + type);
   updateAddedCount();
   updateCubicleAddedCount();
   showToast("追加: P-BOX " + spec + " × " + qty);
@@ -1004,12 +1091,12 @@ function renderDuctCalculator() {
       <label>高さ<input type="number" id="duct-d" min="0" placeholder="mm" oninput="calcDuct()"></label>
     </div>
     <div class="pbox-results" id="duct-results">
-      <div class="pbox-result-cell" id="duct-r-indoor" onclick="addDuctToEstimate('屋内')">屋内<br><span>—</span></div>
-      <div class="pbox-result-cell" id="duct-r-outdoor" onclick="addDuctToEstimate('屋外')">屋外<br><span>—</span></div>
-      <div class="pbox-result-cell" id="duct-r-sus" onclick="addDuctToEstimate('屋外(SUS)')">屋外(SUS)<br><span>—</span></div>
-      <div class="pbox-result-cell" id="duct-r-indoor-door" onclick="addDuctToEstimate('屋内(蓋付)')">屋内(蓋付)<br><span>—</span></div>
-      <div class="pbox-result-cell" id="duct-r-outdoor-door" onclick="addDuctToEstimate('屋外(蓋付)')">屋外(蓋付)<br><span>—</span></div>
-      <div class="pbox-result-cell" id="duct-r-sus-door" onclick="addDuctToEstimate('屋外(SUS,蓋付)')">屋外(SUS,蓋付)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="duct:屋内" id="duct-r-indoor" onclick="addDuctToEstimate('屋内')">屋内<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="duct:屋外" id="duct-r-outdoor" onclick="addDuctToEstimate('屋外')">屋外<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="duct:屋外(SUS)" id="duct-r-sus" onclick="addDuctToEstimate('屋外(SUS)')">屋外(SUS)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="duct:屋内(蓋付)" id="duct-r-indoor-door" onclick="addDuctToEstimate('屋内(蓋付)')">屋内(蓋付)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="duct:屋外(蓋付)" id="duct-r-outdoor-door" onclick="addDuctToEstimate('屋外(蓋付)')">屋外(蓋付)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="duct:屋外(SUS,蓋付)" id="duct-r-sus-door" onclick="addDuctToEstimate('屋外(SUS,蓋付)')">屋外(SUS,蓋付)<br><span>—</span></div>
     </div>
     <div class="pbox-rates">
       <div class="pbox-rate-row">
@@ -1128,8 +1215,10 @@ function addDuctToEstimate(type) {
     qty: qty,
     unitPrice: price,
     lineNote: "",
+    customSelectionKey: "duct:" + type,
   });
 
+  recordCustomSelection("duct:" + type);
   updateAddedCount();
   updateCubicleAddedCount();
   showToast("追加: ダクト " + spec + " × " + qty);
@@ -1148,14 +1237,14 @@ function renderFrameCalculator() {
       <label>D<input type="number" id="frame-d" min="0" placeholder="mm" oninput="calcFrame()"></label>
     </div>
     <div class="pbox-results pbox-results-2col" id="frame-results">
-      <div class="pbox-result-cell" id="frame-r-l" onclick="addFrameToEstimate('架台(L枠のみ)')">架台(L枠のみ)<br><span>—</span></div>
-      <div class="pbox-result-cell" id="frame-r-l-sus" onclick="addFrameToEstimate('架台(L枠のみ,SUS)')">架台(L枠のみ,SUS)<br><span>—</span></div>
-      <div class="pbox-result-cell" id="frame-r-lp" onclick="addFrameToEstimate('架台(L枠+プレート)')">架台(L枠+プレート)<br><span>—</span></div>
-      <div class="pbox-result-cell" id="frame-r-lp-sus" onclick="addFrameToEstimate('架台(L枠+プレート,SUS)')">架台(L枠+プレート,SUS)<br><span>—</span></div>
-      <div class="pbox-result-cell" id="frame-r-b50" onclick="addFrameToEstimate('ベース(H50)')">ベース(H50)<br><span>—</span></div>
-      <div class="pbox-result-cell" id="frame-r-b50-sus" onclick="addFrameToEstimate('ベース(H50,SUS)')">ベース(H50,SUS)<br><span>—</span></div>
-      <div class="pbox-result-cell" id="frame-r-b100" onclick="addFrameToEstimate('ベース(H100)')">ベース(H100)<br><span>—</span></div>
-      <div class="pbox-result-cell" id="frame-r-b100-sus" onclick="addFrameToEstimate('ベース(H100,SUS)')">ベース(H100,SUS)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="frame:架台(L枠のみ)" id="frame-r-l" onclick="addFrameToEstimate('架台(L枠のみ)')">架台(L枠のみ)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="frame:架台(L枠のみ,SUS)" id="frame-r-l-sus" onclick="addFrameToEstimate('架台(L枠のみ,SUS)')">架台(L枠のみ,SUS)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="frame:架台(L枠+プレート)" id="frame-r-lp" onclick="addFrameToEstimate('架台(L枠+プレート)')">架台(L枠+プレート)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="frame:架台(L枠+プレート,SUS)" id="frame-r-lp-sus" onclick="addFrameToEstimate('架台(L枠+プレート,SUS)')">架台(L枠+プレート,SUS)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="frame:ベース(H50)" id="frame-r-b50" onclick="addFrameToEstimate('ベース(H50)')">ベース(H50)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="frame:ベース(H50,SUS)" id="frame-r-b50-sus" onclick="addFrameToEstimate('ベース(H50,SUS)')">ベース(H50,SUS)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="frame:ベース(H100)" id="frame-r-b100" onclick="addFrameToEstimate('ベース(H100)')">ベース(H100)<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="frame:ベース(H100,SUS)" id="frame-r-b100-sus" onclick="addFrameToEstimate('ベース(H100,SUS)')">ベース(H100,SUS)<br><span>—</span></div>
     </div>
     <div class="pbox-rates">
       <div class="pbox-rate-row">
@@ -1264,8 +1353,10 @@ function addFrameToEstimate(type) {
     qty: qty,
     unitPrice: price,
     lineNote: "",
+    customSelectionKey: "frame:" + type,
   });
 
+  recordCustomSelection("frame:" + type);
   updateAddedCount();
   updateCubicleAddedCount();
   showToast("追加: " + type + " " + spec + " × " + qty);
@@ -1284,7 +1375,7 @@ function renderTrayCalculator() {
       <label>D<input type="number" id="tray-d" min="0" placeholder="mm" oninput="calcTray()"></label>
     </div>
     <div class="pbox-results pbox-results-1col" id="tray-results">
-      <div class="pbox-result-cell" id="tray-r-price" onclick="addTrayToEstimate()">防油トレー<br><span>—</span></div>
+      <div class="pbox-result-cell" data-custom-selection-key="tray:防油トレー" id="tray-r-price" onclick="addTrayToEstimate()">防油トレー<br><span>—</span></div>
     </div>
     <div class="pbox-rates">
       <div class="pbox-rate-row">
@@ -1369,8 +1460,10 @@ function addTrayToEstimate() {
     qty: qty,
     unitPrice: price,
     lineNote: "",
+    customSelectionKey: "tray:防油トレー",
   });
 
+  recordCustomSelection("tray:防油トレー");
   updateAddedCount();
   updateCubicleAddedCount();
   showToast("追加: 防油トレー " + spec + " × " + qty);
@@ -1386,17 +1479,17 @@ function renderOptionTable() {
     <table class="mg-table option-table">
       <thead><tr><th>品名</th><th>単価</th></tr></thead>
       <tbody>
-        <tr class="mg-row" onclick="addOptionToEstimate(event, '片扉')">
+        <tr class="mg-row" data-custom-selection-key="option:片扉" onclick="addOptionToEstimate(event, '片扉')">
           <td class="mg-spec">片扉</td>
           <td class="mg-price"><input type="number" id="opt-price-single" min="0" step="0.1" value="25"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
-        <tr class="mg-row" onclick="addOptionToEstimate(event, '両扉')">
+        <tr class="mg-row" data-custom-selection-key="option:両扉" onclick="addOptionToEstimate(event, '両扉')">
           <td class="mg-spec">両扉</td>
           <td class="mg-price"><input type="number" id="opt-price-double" min="0" step="0.1" value="41"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
-        <tr class="mg-row" onclick="addOptionToEstimate(event, '窓')">
+        <tr class="mg-row" data-custom-selection-key="option:窓" onclick="addOptionToEstimate(event, '窓')">
           <td class="mg-spec">窓</td>
           <td class="mg-price"><input type="number" id="opt-price-window" min="0" step="0.1" value="25"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
@@ -1425,8 +1518,10 @@ function addOptionToEstimate(event, type) {
     qty: qty,
     unitPrice: price,
     lineNote: "",
+    customSelectionKey: "option:" + type,
   });
 
+  recordCustomSelection("option:" + type);
   updateAddedCount();
   updateCubicleAddedCount();
   showToast("追加: " + type + " × " + qty);
@@ -1442,17 +1537,17 @@ function renderOption2Table() {
     <table class="mg-table option-table">
       <thead><tr><th>品名</th><th>単価</th></tr></thead>
       <tbody>
-        <tr class="mg-row" onclick="addOption2ToEstimate(event, 'ポール取付')">
+        <tr class="mg-row" data-custom-selection-key="option2:ポール取付" onclick="addOption2ToEstimate(event, 'ポール取付')">
           <td class="mg-spec">ポール取付</td>
           <td class="mg-price"><input type="number" id="opt2-price-pole" min="0" step="0.1" value="100"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
-        <tr class="mg-row" onclick="addOption2ToEstimate(event, 'コン柱取付')">
+        <tr class="mg-row" data-custom-selection-key="option2:コン柱取付" onclick="addOption2ToEstimate(event, 'コン柱取付')">
           <td class="mg-spec">コン柱取付</td>
           <td class="mg-price"><input type="number" id="opt2-price-conchu" min="0" step="0.1" value="100"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
-        <tr class="mg-row" onclick="addOption2ToEstimate(event, 'スタンド')">
+        <tr class="mg-row" data-custom-selection-key="option2:スタンド" onclick="addOption2ToEstimate(event, 'スタンド')">
           <td class="mg-spec">スタンド</td>
           <td class="mg-price"><input type="number" id="opt2-price-stand" min="0" step="0.1" value="150"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
@@ -1481,8 +1576,10 @@ function addOption2ToEstimate(event, type) {
     qty: qty,
     unitPrice: price,
     lineNote: "",
+    customSelectionKey: "option2:" + type,
   });
 
+  recordCustomSelection("option2:" + type);
   updateAddedCount();
   updateCubicleAddedCount();
   showToast("追加: " + type + " × " + qty);
@@ -1498,17 +1595,17 @@ function renderQuickItemsTable() {
     <table class="mg-table option-table">
       <thead><tr><th>品名</th><th>単価</th></tr></thead>
       <tbody>
-        <tr class="mg-row" onclick="addQuickItemToEstimate(event, '上部ダクト')">
+        <tr class="mg-row" data-custom-selection-key="quick:上部ダクト" onclick="addQuickItemToEstimate(event, '上部ダクト')">
           <td class="mg-spec">上部ダクト</td>
           <td class="mg-price"><input type="number" id="quick-price-duct-top" min="0" step="0.1" value="88"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
-        <tr class="mg-row" onclick="addQuickItemToEstimate(event, '下部ダクト')">
+        <tr class="mg-row" data-custom-selection-key="quick:下部ダクト" onclick="addQuickItemToEstimate(event, '下部ダクト')">
           <td class="mg-spec">下部ダクト</td>
           <td class="mg-price"><input type="number" id="quick-price-duct-btm" min="0" step="0.1" value="88"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
-        <tr class="mg-row" onclick="addQuickItemToEstimate(event, '自立')">
+        <tr class="mg-row" data-custom-selection-key="quick:自立" onclick="addQuickItemToEstimate(event, '自立')">
           <td class="mg-spec">自立</td>
           <td class="mg-price"><input type="number" id="quick-price-standalone" min="0" step="0.1" value="225"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
@@ -1543,8 +1640,10 @@ function addQuickItemToEstimate(event, type) {
     qty: qty,
     unitPrice: price,
     lineNote: "",
+    customSelectionKey: "quick:" + type,
   });
 
+  recordCustomSelection("quick:" + type);
   updateAddedCount();
   updateCubicleAddedCount();
   showToast("追加: " + type + " × " + qty);
@@ -1560,12 +1659,12 @@ function renderSusDiffTable() {
     <table class="mg-table option-table">
       <thead><tr><th>品名</th><th>単価</th></tr></thead>
       <tbody>
-        <tr class="mg-row" onclick="addSusDiffToEstimate(event, '400×300×120程度')">
+        <tr class="mg-row" data-custom-selection-key="sus-diff:400×300×120程度" onclick="addSusDiffToEstimate(event, '400×300×120程度')">
           <td class="mg-spec">400×300×120程度</td>
           <td class="mg-price"><input type="number" id="sus-diff-small" min="0" step="0.1" value="65"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
         </tr>
-        <tr class="mg-row" onclick="addSusDiffToEstimate(event, '600×400×120程度')">
+        <tr class="mg-row" data-custom-selection-key="sus-diff:600×400×120程度" onclick="addSusDiffToEstimate(event, '600×400×120程度')">
           <td class="mg-spec">600×400×120程度</td>
           <td class="mg-price"><input type="number" id="sus-diff-large" min="0" step="0.1" value="105"
                onclick="event.stopPropagation()" onfocus="this.select()"></td>
@@ -1594,8 +1693,10 @@ function addSusDiffToEstimate(event, type) {
     qty: qty,
     unitPrice: price,
     lineNote: "",
+    customSelectionKey: "sus-diff:" + type,
   });
 
+  recordCustomSelection("sus-diff:" + type);
   updateAddedCount();
   updateCubicleAddedCount();
   showToast("追加: SUS差額 " + type + " × " + qty);
@@ -1744,6 +1845,7 @@ function renderCubicleTable() {
     html += `</div></div>`;
   }
   container.innerHTML = html;
+  refreshCatalogSelectionStyles();
   renderCatalogToc("cubicle-toc", catGroups, "cubicle");
   updateCubicleAddedCount();
   setupCrosshair();
@@ -1797,7 +1899,7 @@ function renderCubicleCustomInputTable() {
   h += `<th>品名</th><th>仕様</th><th>単価</th>`;
   h += `</tr></thead><tbody>`;
   for (let i = 1; i <= 5; i++) {
-    h += `<tr onclick="addCubicleCustomToEstimate(${i})" style="cursor:pointer">`;
+    h += `<tr data-custom-selection-key="cubicle-custom:${i}" onclick="addCubicleCustomToEstimate(${i})" style="cursor:pointer">`;
     h += `<td><input type="text" id="cub-custom-name-${i}" placeholder="品名"></td>`;
     h += `<td><input type="text" id="cub-custom-spec-${i}" placeholder="仕様"></td>`;
     h += `<td><input type="number" id="cub-custom-price-${i}" value="0"></td>`;
@@ -1825,7 +1927,9 @@ function addCubicleCustomToEstimate(row) {
     qty: qty,
     unitPrice: price,
     lineNote: "",
+    customSelectionKey: "cubicle-custom:" + row,
   });
+  recordCustomSelection("cubicle-custom:" + row);
   updateAddedCount();
   updateCubicleAddedCount();
   const tr = document.querySelector(`#cub-custom-name-${row}`).closest("tr");
@@ -1842,7 +1946,7 @@ function renderCustomInputTable() {
   h += `<th>品名</th><th>仕様</th><th>単価</th>`;
   h += `</tr></thead><tbody>`;
   for (let i = 1; i <= 5; i++) {
-    h += `<tr onclick="addCustomToEstimate(${i})" style="cursor:pointer">`;
+    h += `<tr data-custom-selection-key="master-custom:${i}" onclick="addCustomToEstimate(${i})" style="cursor:pointer">`;
     h += `<td><input type="text" id="custom-name-${i}" placeholder="品名"></td>`;
     h += `<td><input type="text" id="custom-spec-${i}" placeholder="仕様"></td>`;
     h += `<td><input type="number" id="custom-price-${i}" value="0"></td>`;
@@ -1870,7 +1974,9 @@ function addCustomToEstimate(row) {
     qty: qty,
     unitPrice: price,
     lineNote: "",
+    customSelectionKey: "master-custom:" + row,
   });
+  recordCustomSelection("master-custom:" + row);
   updateAddedCount();
   updateCubicleAddedCount();
   const tr = document.querySelector(`#custom-name-${row}`).closest("tr");
@@ -2234,8 +2340,9 @@ function renderNameGroup(ng, matrixDefs, blockNum) {
     }
     const cnt = masterClickCounts[item.id] || 0;
     const isHL = HIGHLIGHT_ITEMS.has(item.id);
-    const bgStyle = cnt > 0 ? `style="background:rgba(202,138,4,${Math.min(cnt * 0.25, 0.85)})"` : isHL ? `style="background:rgba(66,153,225,0.15)"` : "";
-    h += `<tr class="mg-row" data-item-id="${item.id}" ${bgStyle} onclick="addFromMaster(event,'${item.id}')">`;
+    const selectedClass = selectionClass(cnt);
+    const selectedStyle = selectionStyle(cnt, isHL ? "rgba(66,153,225,0.15)" : "");
+    h += `<tr class="mg-row${selectedClass}" data-item-id="${item.id}" ${selectedStyle} onclick="addFromMaster(event,'${item.id}')">`;
     if (!single) {
       h += `<td class="mg-row-label">${esc(item.spec || "")}</td>`;
     }
@@ -2288,8 +2395,9 @@ function renderTrSpaceGroup(ng, blockNum) {
     const extra = item._extraPrice || 0;
     const minus = calcTrSpaceBasePrice(lp, extra);
     const cnt = masterClickCounts[item.id] || 0;
-    const bgStyle = cnt > 0 ? `style="background:rgba(202,138,4,${Math.min(cnt * 0.25, 0.85)})"` : "";
-    h += `<tr class="mg-row" data-item-id="${item.id}" ${bgStyle} onclick="addFromMaster(event,'${item.id}')">`;
+    const selectedClass = selectionClass(cnt);
+    const selectedStyle = selectionStyle(cnt);
+    h += `<tr class="mg-row${selectedClass}" data-item-id="${item.id}" ${selectedStyle} onclick="addFromMaster(event,'${item.id}')">`;
     h += `<td class="mg-row-label">${esc(item.spec || "")}</td>`;
     h += `<td class="mg-price mg-trsp-input"><input type="number" min="0" step="1" value="${lp}"
          oninput="onTrSpaceListPriceChange('${item.id}',this)" onclick="event.stopPropagation()"></td>`;
@@ -2530,8 +2638,9 @@ function renderMergedMatrix(md, nameGroups, blockNum) {
         if (item) {
           const cnt = masterClickCounts[item.id] || 0;
           const isHL = (md.highlightCols && md.highlightCols.includes(col)) || (md.highlightRows && md.highlightRows.includes(row));
-          const bgStyle = cnt > 0 ? `background:rgba(202,138,4,${Math.min(cnt * 0.25, 0.85)})` : isHL ? `background:rgba(66,153,225,0.15)` : "";
-          h += `<td class="mg-price mg-clickable mg-matrix-cell${sep}" data-item-id="${item.id}" style="${bgStyle}" onclick="addFromMaster(event,'${item.id}')">`;
+          const selectedClass = selectionClass(cnt);
+          const selectedStyle = selectionStyle(cnt, isHL ? "rgba(66,153,225,0.15)" : "");
+          h += `<td class="mg-price mg-clickable mg-matrix-cell${sep}${selectedClass}" data-item-id="${item.id}" ${selectedStyle} onclick="addFromMaster(event,'${item.id}')">`;
           h += `<input type="number" min="0" step="0.1" value="${item.basePrice}"
                 oninput="onMasterPriceChange('${item.id}','basePrice',this.value)"
                 onchange="onMasterPriceChange('${item.id}','basePrice',this.value)" onclick="event.stopPropagation()">`;
@@ -2714,8 +2823,9 @@ function renderMatrixGroup(ng, def, blockNum) {
         } else {
           const cnt = masterClickCounts[item.id] || 0;
           const isHL = (def.highlightCols && def.highlightCols.includes(flatCols[ci])) || (def.highlightRows && def.highlightRows.includes(row)) || HIGHLIGHT_ITEMS.has(item.id);
-          const bgStyle = cnt > 0 ? `background:rgba(202,138,4,${Math.min(cnt * 0.25, 0.85)})` : isHL ? `background:rgba(66,153,225,0.15)` : "";
-          h += `<td class="mg-price mg-clickable mg-matrix-cell" data-item-id="${item.id}" style="${bgStyle}" onclick="addFromMaster(event,'${item.id}')">`;
+          const selectedClass = selectionClass(cnt);
+          const selectedStyle = selectionStyle(cnt, isHL ? "rgba(66,153,225,0.15)" : "");
+          h += `<td class="mg-price mg-clickable mg-matrix-cell${selectedClass}" data-item-id="${item.id}" ${selectedStyle} onclick="addFromMaster(event,'${item.id}')">`;
           h += `<input type="number" min="0" step="0.1" value="${item.basePrice}"
                 oninput="onMasterPriceChange('${item.id}','basePrice',this.value)"
                 onchange="onMasterPriceChange('${item.id}','basePrice',this.value)" onclick="event.stopPropagation()">`;
@@ -2750,8 +2860,9 @@ function renderMatrixGroup(ng, def, blockNum) {
         h += `<tbody><tr><td class="mg-row-group-header" colspan="2">${esc(fg.label)}</td></tr>`;
         for (const fi of footerItems) {
           const cnt = masterClickCounts[fi.id] || 0;
-          const bgStyle = cnt > 0 ? `background:rgba(202,138,4,${Math.min(cnt * 0.25, 0.85)})` : "";
-          h += `<tr class="mg-clickable" style="${bgStyle}" onclick="addFromMaster(event,'${fi.id}')">`;
+          const selectedClass = selectionClass(cnt);
+          const selectedStyle = selectionStyle(cnt);
+          h += `<tr class="mg-clickable${selectedClass}" data-item-id="${fi.id}" ${selectedStyle} onclick="addFromMaster(event,'${fi.id}')">`;
           h += `<td class="mg-row-label">${esc(fi.spec)}</td>`;
           h += `<td class="mg-price mg-matrix-cell">`;
           h += `<input type="number" min="0" step="0.1" value="${fi.basePrice}"
@@ -2793,6 +2904,9 @@ function addFromMaster(event, id) {
     type: "item",
     lineId: genId(),
     masterItemId: id,
+    sourceName: master.name,
+    sourceSpec: master.spec || "",
+    sourceCatalog: isCubicleItem(id) ? "cubicle" : "master",
     qty: qty,
     unitPrice: master.category === "K2" ? (groupTotals[master.name] || 0) : master.basePrice,
     lineNote: "",
@@ -2812,31 +2926,14 @@ function addFromMaster(event, id) {
 
   // クリック回数を記録
   masterClickCounts[id] = (masterClickCounts[id] || 0) + 1;
-  const cnt = masterClickCounts[id];
 
   // 追加件数バッジ更新
   updateAddedCount();
   updateCubicleAddedCount();
-
-  // 色の更新（クリック回数に応じて濃くなる）
-  const alpha = Math.min(cnt * 0.25, 0.85);
-  const bgColor = `rgba(202,138,4,${alpha})`;
-
-  // マトリクスセルの場合はtdに直接、通常行の場合はtrに適用
-  const cell = event.target.closest("td.mg-matrix-cell");
-  const tr = event.target.closest("tr");
-  if (cell) {
-    cell.style.background = bgColor;
-    if (tr && tr.classList.contains("mg-clickable")) {
-      tr.style.background = bgColor;
-      tr.querySelectorAll("td").forEach(td => td.style.background = bgColor);
-    }
-  } else if (tr) {
-    tr.style.background = bgColor;
-    tr.querySelectorAll("td").forEach(td => td.style.background = bgColor);
-  }
+  refreshCatalogSelectionStyles();
 
   // 行フラッシュ（視覚フィードバック）
+  const tr = event.target.closest("tr");
   if (tr) {
     tr.classList.add("mg-flash");
     setTimeout(() => tr.classList.remove("mg-flash"), 400);
@@ -2917,10 +3014,10 @@ function buildCatalogEstimateRows(unit) {
     let spec = line.spec || "";
     let srcBadge = "";
     if (line.type === "item") {
-      const master = getMasterItem(line.masterItemId);
-      name = master ? master.name : "(不明)";
-      spec = master ? (master.spec || "") : "";
-      srcBadge = isCubicleItem(line.masterItemId) ? '<span class="src-cubicle">Q</span>' : '';
+      const display = getEstimateLineDisplay(line);
+      name = display.name;
+      spec = display.spec;
+      srcBadge = display.isCubicle ? '<span class="src-cubicle">Q</span>' : '';
     }
     return `<tr><td class="ec-sep"></td><td class="ec-no">${itemNo}</td><td class="ec-name">${srcBadge}${esc(name)}</td>` +
       `<td class="ec-spec">${esc(spec)}</td>` +
@@ -3253,10 +3350,10 @@ function _buildLineRows(lines) {
       spec = line.spec || "";
       srcBadge = "";
     } else {
-      const m = getMasterItem(line.masterItemId);
-      name = m ? m.name : "(不明)";
-      spec = m ? (m.spec || "") : "";
-      srcBadge = isCubicleItem(line.masterItemId) ? '<span class="src-cubicle">Q</span>' : '';
+      const display = getEstimateLineDisplay(line);
+      name = display.name;
+      spec = display.spec;
+      srcBadge = display.isCubicle ? '<span class="src-cubicle">Q</span>' : '';
     }
     const sub = line.qty * line.unitPrice;
 
@@ -3653,19 +3750,53 @@ function removeLine(lineId) {
   rebuildClickCounts();
   updateAddedCount();
   updateCubicleAddedCount();
+  refreshCatalogSelectionStyles();
   if (document.getElementById("tab-estimate")?.classList.contains("active")) renderEstimateLines();
   renderTotals();
 }
 
 function rebuildClickCounts() {
   masterClickCounts = {};
+  customClickCounts = {};
   for (const unit of currentEstimate.units) {
     for (const line of unit.lines) {
       if (line.type === "item" && line.masterItemId) {
         masterClickCounts[line.masterItemId] = (masterClickCounts[line.masterItemId] || 0) + 1;
       }
+      if (line.type === "custom") {
+        const key = line.customSelectionKey || inferCustomSelectionKey(line);
+        if (key) {
+          line.customSelectionKey = key;
+          customClickCounts[key] = (customClickCounts[key] || 0) + 1;
+        }
+      }
     }
   }
+  refreshCatalogSelectionStyles();
+}
+
+function inferCustomSelectionKey(line) {
+  const spec = line.spec || "";
+  if (line.name === "P-BOX") {
+    const type = ["屋外(SUS,扉付)", "屋内(扉付)", "屋外(扉付)", "屋外(SUS)", "屋内", "屋外"]
+      .find(value => spec.endsWith(" " + value));
+    return type ? "pbox:" + type : "";
+  }
+  if (line.name === "ダクト") {
+    const type = ["屋外(SUS,蓋付)", "屋内(蓋付)", "屋外(蓋付)", "屋外(SUS)", "屋内", "屋外"]
+      .find(value => spec.endsWith(" " + value));
+    return type ? "duct:" + type : "";
+  }
+  if (["架台(L枠のみ)", "架台(L枠のみ,SUS)", "架台(L枠+プレート)", "架台(L枠+プレート,SUS)",
+       "ベース(H50)", "ベース(H50,SUS)", "ベース(H100)", "ベース(H100,SUS)"].includes(line.name)) {
+    return "frame:" + line.name;
+  }
+  if (line.name === "防油トレー") return "tray:防油トレー";
+  if (["片扉", "両扉", "窓"].includes(line.name)) return "option:" + line.name;
+  if (["ポール取付", "コン柱取付", "スタンド"].includes(line.name)) return "option2:" + line.name;
+  if (["上部ダクト", "下部ダクト", "自立"].includes(line.name)) return "quick:" + line.name;
+  if (line.name === "SUS差額" && spec) return "sus-diff:" + spec;
+  return "";
 }
 
 function insertSep(afterLineId) {

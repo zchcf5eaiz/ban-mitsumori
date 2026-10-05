@@ -1020,6 +1020,23 @@ tr[draggable="true"]:active { cursor: grabbing; }
 }
 .pbox-option-row:hover { background: #f0fff4 !important; }
 .pbox-option-row:active { background: #c6f6d5 !important; }
+
+/* 見積へ追加済みの色は、ホバー／クロスヘア中も維持する */
+.mg-selected,
+.mg-clickable.mg-selected:hover,
+.pbox-result-cell.mg-selected:hover,
+.pbox-option-row.mg-selected:hover,
+.mg-matrix tbody tr.crosshair-row > td.mg-selected,
+.mg-matrix tbody td.crosshair-col.mg-selected,
+.mg-matrix tbody tr.crosshair-row > td.crosshair-col.mg-selected {
+  background: var(--selection-bg) !important;
+}
+.mg-row.mg-selected > td,
+.mg-clickable.mg-selected > td,
+.pbox-option-row.mg-selected > td,
+.custom-input-table tr.mg-selected > td {
+  background: var(--selection-bg) !important;
+}
 .pbox-option-price {
   background: #fff; padding: 4px 6px;
   display: flex; align-items: center;

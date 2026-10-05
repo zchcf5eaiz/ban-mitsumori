@@ -2925,7 +2925,7 @@ function buildCatalogEstimateRows(unit) {
     return `<tr><td class="ec-sep"></td><td class="ec-no">${itemNo}</td><td class="ec-name">${srcBadge}${esc(name)}</td>` +
       `<td class="ec-spec">${esc(spec)}</td>` +
       `<td class="ec-price"><input type="text" inputmode="decimal" data-numeric-input value="${line.unitPrice}" onchange="onCatalogLinePrice('${line.lineId}',this.value)" onfocus="this.select()"></td>` +
-      `<td class="ec-qty"><input type="text" inputmode="numeric" data-numeric-input value="${line.qty}" onchange="onCatalogLineQty('${line.lineId}',this.value)" onfocus="this.select()"></td>` +
+      `<td class="ec-qty"><input type="number" min="0" step="1" value="${line.qty}" onchange="onCatalogLineQty('${line.lineId}',this.value)" onfocus="this.select()"></td>` +
       `<td class="ec-subtotal">${fmtNum(line.qty * line.unitPrice)}</td><td class="ec-del">${actions}</td></tr>`;
   }).join("");
 }
@@ -3270,7 +3270,7 @@ function _buildLineRows(lines) {
       <td class="ec-spec">${esc(spec)}</td>
       <td class="ec-price"><input type="text" inputmode="decimal" data-numeric-input value="${line.unitPrice}"
            onchange="onLinePrice('${line.lineId}',this.value)" onfocus="this.select()"></td>
-      <td class="ec-qty"><input type="text" inputmode="numeric" data-numeric-input value="${line.qty}"
+      <td class="ec-qty"><input type="number" min="0" step="1" value="${line.qty}"
            onchange="onLineQty('${line.lineId}',this.value)" onfocus="this.select()"></td>
       <td class="ec-subtotal" id="sub-${line.lineId}">${fmtNum(sub)}</td>
       <td class="ec-del no-print">
@@ -3297,7 +3297,8 @@ function _estTheadHtml() {
 // 印刷用 段組みレイアウト
 // ============================================================
 
-const EST_PRINT_ROW_LIMIT = 35; // 1列あたりの最大行数（A4高さ基準）
+const EST_PRINT_SINGLE_ROW_LIMIT = 30; // 単一項目: 1列あたりの表示高さ換算上限
+const EST_PRINT_MULTI_ROW_LIMIT = 35;  // 複数項目: 従来の1列上限を維持
 
 // 品名・仕様セルの縮小判定。beforeprint時は画面CSS・画面幅のままなので、
 // 紙面幅と印刷用列幅を一時適用してから測定しないと判定がずれる
@@ -3338,7 +3339,7 @@ function renderEstimateLinesForPrint() {
     const SEP_WEIGHT = 0.2;
     const unitHdrHtml = `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${esc(units[0].unitName)}</td></tr>`;
     const rowWeights = rowsHtml.map(h => (h.includes('sep-row') || h.includes('comment-row')) ? SEP_WEIGHT : 1.0);
-    const perCol = EST_PRINT_ROW_LIMIT;
+    const perCol = EST_PRINT_SINGLE_ROW_LIMIT;
     const perPage = perCol * 2;
     section.style.cssText = "display:block; overflow:visible;";
     const pages = [];
@@ -3399,7 +3400,7 @@ function renderEstimateLinesForPrint() {
   section.style.cssText = "display:block; overflow:visible;";
   const theadHtml = _estTheadHtml();
   const SEP_WEIGHT = 0.2;
-  const perCol = EST_PRINT_ROW_LIMIT;
+  const perCol = EST_PRINT_MULTI_ROW_LIMIT;
   const numCols = units.length <= 2 ? 2 : 4;
   const colW = `calc(${(100 / numCols).toFixed(4)}% - 2px)`;
 

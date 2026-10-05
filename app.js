@@ -3125,6 +3125,21 @@ function addUnit() {
   showToast("「項目" + currentEstimate.units.length + "」を追加しました");
 }
 
+function moveUnit(event, idx, delta) {
+  event.stopPropagation();
+  const units = currentEstimate.units;
+  const target = idx + delta;
+  if (idx < 0 || target < 0 || target >= units.length) return;
+
+  // 並べ替える列と「追加先」は別の概念なので、現在の追加先を維持する。
+  const active = activeUnit();
+  const [moved] = units.splice(idx, 1);
+  units.splice(target, 0, moved);
+  activeUnitIndex = Math.max(0, units.indexOf(active));
+  renderEstimateTab();
+  showToast(`「${moved.unitName}」を${delta < 0 ? "左" : "右"}へ移動しました`);
+}
+
 function deleteUnit(event, idx) {
   event.stopPropagation();
   if (currentEstimate.units.length <= 1) return;
@@ -3209,6 +3224,10 @@ function renderEstimateLines() {
     hdr.innerHTML = `
       <span class="unit-col-name" onclick="activateUnit(${i})">${esc(unit.unitName)}</span>
       <span class="unit-active-badge">${isActive ? "← 追加先" : ""}</span>
+      ${units.length > 1 ? `
+        <button class="unit-col-btn unit-col-move" onclick="moveUnit(event,${i},-1)" title="左へ移動" aria-label="${escAttr(unit.unitName)}を左へ移動"${i === 0 ? " disabled" : ""}>◀</button>
+        <button class="unit-col-btn unit-col-move" onclick="moveUnit(event,${i},1)" title="右へ移動" aria-label="${escAttr(unit.unitName)}を右へ移動"${i === units.length - 1 ? " disabled" : ""}>▶</button>
+      ` : ""}
       <button class="unit-col-btn" onclick="renameUnit(event,${i})" title="名前変更">✏</button>
       ${units.length > 1 ? `<button class="unit-col-btn unit-col-del" onclick="deleteUnit(event,${i})" title="削除">&times;</button>` : ""}
     `;
@@ -4681,6 +4700,8 @@ document.addEventListener("DOMContentLoaded", () => {
 .unit-active-badge{font-size:11px;color:#4299e1;white-space:nowrap;}
 .unit-col-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:1px 3px;color:#718096;}
 .unit-col-btn:hover{color:#2d3748;}
+.unit-col-btn:disabled{cursor:default;opacity:.25;color:#a0aec0;}
+.unit-col-move{font-size:11px;line-height:1;padding:4px;}
 .unit-col-del{color:#e53e3e!important;}
 .unit-col-del:hover{color:#c53030!important;}
 .unit-col-empty{padding:12px;color:#999;font-size:12px;}

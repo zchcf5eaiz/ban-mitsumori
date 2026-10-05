@@ -2955,10 +2955,49 @@ function updateCubicleAddedCount() {
   renderCatalogEstimatePanels();
 }
 
+const _catalogPanelScrollPositions = {};
+let _catalogPanelRenderedUnitKey = null;
+let _catalogPanelRenderedLineCount = 0;
+let _catalogPanelRenderGeneration = 0;
+
 function renderCatalogEstimatePanels() {
-  ["master-estimate-panel", "cubicle-estimate-panel"].forEach(id => {
+  const panelIds = ["master-estimate-panel", "cubicle-estimate-panel"];
+  const unit = activeUnit();
+  const nextUnitKey = unit.unitId || `${currentEstimate.id}:${activeUnitIndex}`;
+
+  // 再描画前の位置を項目ごとに保存する。
+  if (_catalogPanelRenderedUnitKey !== null) {
+    panelIds.forEach(id => {
+      const lines = document.querySelector(`#${id} .catalog-est-lines`);
+      if (lines) {
+        _catalogPanelScrollPositions[`${_catalogPanelRenderedUnitKey}:${id}`] = {
+          top: lines.scrollTop,
+          left: lines.scrollLeft,
+        };
+      }
+    });
+  }
+
+  const scrollToBottom = _catalogPanelRenderedUnitKey === nextUnitKey &&
+    unit.lines.length > _catalogPanelRenderedLineCount;
+  _catalogPanelRenderedUnitKey = nextUnitKey;
+  _catalogPanelRenderedLineCount = unit.lines.length;
+
+  panelIds.forEach(id => {
     const panel = document.getElementById(id);
     if (panel) panel.innerHTML = buildCatalogEstimatePanel();
+  });
+
+  const generation = ++_catalogPanelRenderGeneration;
+  requestAnimationFrame(() => {
+    if (generation !== _catalogPanelRenderGeneration) return;
+    panelIds.forEach(id => {
+      const lines = document.querySelector(`#${id} .catalog-est-lines`);
+      if (!lines) return;
+      const saved = _catalogPanelScrollPositions[`${nextUnitKey}:${id}`] || { top: 0, left: 0 };
+      lines.scrollLeft = saved.left;
+      lines.scrollTop = scrollToBottom ? lines.scrollHeight : saved.top;
+    });
   });
 }
 

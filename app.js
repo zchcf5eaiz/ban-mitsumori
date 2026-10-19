@@ -563,6 +563,7 @@ function saveCurrentEstimate() {
   currentEstimate.updatedAt = new Date().toISOString();
   currentEstimate.project.date = new Date().toISOString().split("T")[0]; // 見積日を保存日に更新
   const i = savedEstimates.findIndex(e => e.id === currentEstimate.id);
+  if (typeof syncAllRenovationQuoteLines === "function") syncAllRenovationQuoteLines();
   const copy = JSON.parse(JSON.stringify(currentEstimate));
   if (i >= 0) savedEstimates[i] = copy; else savedEstimates.push(copy);
   persistEstimates();
@@ -600,9 +601,10 @@ function switchTab(name) {
   document.querySelectorAll(".tab-content").forEach(t => t.classList.toggle("active", t.id === "tab-" + name));
   const main = document.querySelector(".main-container");
   main?.classList.toggle("estimate-wide", name === "estimate");
-  main?.classList.toggle("catalog-wide", name === "master" || name === "cubicle");
+  main?.classList.toggle("catalog-wide", name === "master" || name === "cubicle" || name === "renovation");
   if (name === "master") renderMasterTable();
   if (name === "cubicle") renderCubicleTable();
+  if (name === "renovation" && typeof renderRenovationTab === "function") renderRenovationTab();
   if (name === "estimate") renderEstimateTab();
   requestAnimationFrame(updateStickyOffsets);
 }
@@ -3008,17 +3010,18 @@ function buildCatalogEstimatePanel() {
   ).join("");
   const linesHtml = buildCatalogEstimateRows(unit);
 
-  const raw = calcLinesGrandTotal(unit.lines);
-  const list = Math.ceil(raw * unit.listRate) * 1000;
-  const net = Math.ceil(list * unit.netRate / 10000) * 10000;
+  const pricing = calcUnitPricing(unit);
+  const { raw, list, net } = pricing;
+  const rateListLabel = pricing.isRenovation ? pricing.rateLabel : `×${unit.listRate}`;
+  const rateNetLabel = pricing.isRenovation ? "自動" : `×${unit.netRate}`;
   return `<div class="catalog-est-header"><div class="catalog-est-title">選択中: ${esc(unit.unitName)}</div>` +
     `<div class="catalog-est-help">ここでの編集は見積作成にも反映されます</div></div>` +
     `<div class="catalog-unit-switcher">${unitButtons}<button type="button" class="catalog-unit-chip catalog-unit-add" onclick="addUnit()">＋</button></div>` +
     `<div class="catalog-est-lines">${linesHtml ? `<table class="estimate-table catalog-estimate-table">${_estTheadHtml()}<tbody>${linesHtml}</tbody></table>` : `<div class="catalog-est-empty">管理表の品目をクリックすると、ここへ追加されます。</div>`}</div>` +
     `<div class="catalog-est-totals">` +
       `<div class="catalog-est-total-row"><span>積算合計</span><strong>${fmtNum(raw)}</strong></div>` +
-      `<div class="catalog-est-total-row"><span>定価 ×${unit.listRate}</span><strong>${fmtNum(list)}</strong></div>` +
-      `<div class="catalog-est-total-row"><span>NET ×${unit.netRate}</span><strong>${fmtNum(net)}</strong></div>` +
+      `<div class="catalog-est-total-row"><span>定価 ${esc(rateListLabel)}</span><strong>${fmtNum(list)}</strong></div>` +
+      `<div class="catalog-est-total-row"><span>NET ${esc(rateNetLabel)}</span><strong>${fmtNum(net)}</strong></div>` +
     `</div>`;
 }
 
@@ -3049,6 +3052,12 @@ function buildCatalogEstimateRows(unit) {
     }
 
     itemNo++;
+    if (line.renovationGenerated) {
+      return `<tr class="renovation-generated-row"><td class="ec-sep"></td><td class="ec-no">${itemNo}</td>` +
+        `<td class="ec-name">${esc(line.name || "改修工事")}</td><td class="ec-spec">${esc(line.spec || "")}</td>` +
+        `<td class="ec-price">${fmtNum(line.unitPrice)}</td><td class="ec-qty">${line.qty}</td>` +
+        `<td class="ec-subtotal">${fmtNum(line.qty * line.unitPrice)}</td><td class="ec-del"><small>改修タブで編集</small></td></tr>`;
+    }
     let name = line.name || "(カスタム)";
     let spec = line.spec || "";
     let srcBadge = "";
@@ -3142,6 +3151,9 @@ function activateUnit(idx) {
   renderTotals();
   updateAddedCount();
   updateCubicleAddedCount();
+  if (document.getElementById("tab-renovation")?.classList.contains("active") && typeof renderRenovationTab === "function") {
+    renderRenovationTab();
+  }
 }
 
 function addUnit() {
@@ -3157,6 +3169,8 @@ function addUnit() {
   _revealActiveUnitAfterRender = true;
   if (document.getElementById("tab-estimate")?.classList.contains("active")) {
     renderEstimateTab();
+  } else if (document.getElementById("tab-renovation")?.classList.contains("active") && typeof renderRenovationTab === "function") {
+    renderRenovationTab();
   } else {
     updateAddedCount();
     updateCubicleAddedCount();
@@ -3236,6 +3250,7 @@ function renderEstimateLines() {
 
   section.querySelectorAll(".est-col-table, .est-print-page, .multi-unit-container, .single-unit-header, .multi-unit-scroll-top").forEach(el => el.remove());
 
+  if (typeof syncAllRenovationQuoteLines === "function") syncAllRenovationQuoteLines();
   const units = currentEstimate.units;
 
   // 項目数にかかわらず同じ列幅で表示し、複数なら横並びにする。
@@ -3294,16 +3309,19 @@ function renderEstimateLines() {
       col.appendChild(emptyMsg);
     }
     // ユニット合計フッター
-    const ufRaw = calcLinesGrandTotal(unit.lines);
-    const ufList = Math.ceil(ufRaw * unit.listRate) * 1000;
-    const ufNet  = Math.ceil(ufList * unit.netRate / 10000) * 10000;
+    const unitPricing = calcUnitPricing(unit);
+    const ufRaw = unitPricing.raw;
+    const ufList = unitPricing.list;
+    const ufNet = unitPricing.net;
+    const ufListRate = unitPricing.isRenovation ? unitPricing.rateLabel : `×${unit.listRate}`;
+    const ufNetRate = unitPricing.isRenovation ? "自動" : `×${unit.netRate}`;
     const uf = document.createElement("div");
     uf.className = "unit-col-footer";
     uf.dataset.unit = i;
     uf.innerHTML =
       `<div class="ucf-row"><span class="ucf-label">積算合計</span><span class="ucf-v ucf-v-raw">${fmtNum(ufRaw)}</span></div>` +
-      `<div class="ucf-row ucf-list"><span class="ucf-label">定価 <small class="ucf-r-list">×${unit.listRate}</small></span><span class="ucf-v ucf-v-list">${fmtNum(ufList)}</span></div>` +
-      `<div class="ucf-row ucf-net"><span class="ucf-label">NET <small class="ucf-r-net">×${unit.netRate}</small></span><span class="ucf-v ucf-v-net">${fmtNum(ufNet)}</span></div>`;
+      `<div class="ucf-row ucf-list"><span class="ucf-label">定価 <small class="ucf-r-list">${esc(ufListRate)}</small></span><span class="ucf-v ucf-v-list">${fmtNum(ufList)}</span></div>` +
+      `<div class="ucf-row ucf-net"><span class="ucf-label">NET <small class="ucf-r-net">${esc(ufNetRate)}</small></span><span class="ucf-v ucf-v-net">${fmtNum(ufNet)}</span></div>`;
     col.appendChild(uf);
     container.appendChild(col);
   }
@@ -3402,6 +3420,15 @@ function _buildLineRows(lines) {
       </tr>`;
     }
     itemNo++;
+    if (line.renovationGenerated) {
+      const sub = line.qty * line.unitPrice;
+      return `<tr class="renovation-generated-row">
+        <td class="ec-sep no-print"></td><td class="ec-no">${itemNo}</td>
+        <td class="ec-name">${esc(line.name || "改修工事")}</td><td class="ec-spec">${esc(line.spec || "")}</td>
+        <td class="ec-price">${fmtNum(line.unitPrice)}</td><td class="ec-qty">${line.qty}</td>
+        <td class="ec-subtotal">${fmtNum(sub)}</td><td class="ec-del no-print"><small>改修タブで編集</small></td>
+      </tr>`;
+    }
     let name, spec, srcBadge;
     if (line.type === "custom") {
       name = line.name || "(カスタム)";
@@ -3483,6 +3510,7 @@ function renderEstimateLinesForPrint() {
   const empty = document.getElementById("est-empty");
   section.querySelectorAll(".est-col-table, .est-print-page").forEach(el => el.remove());
 
+  if (typeof syncAllRenovationQuoteLines === "function") syncAllRenovationQuoteLines();
   const units = currentEstimate.units;
 
   // 1ユニット: 従来の1/2列レイアウト + 盤名称ヘッダー追加
@@ -3563,10 +3591,8 @@ function renderEstimateLinesForPrint() {
   // 全体合計を計算
   let gList = 0, gNet = 0;
   for (const u of units) {
-    const raw = calcLinesGrandTotal(u.lines);
-    const ul = Math.ceil(raw * u.listRate) * 1000;
-    const un = Math.ceil(ul * u.netRate / 10000) * 10000;
-    gList += ul; gNet += un;
+    const unitPricing = calcUnitPricing(u);
+    gList += unitPricing.list; gNet += unitPricing.net;
   }
 
   // ハイブリッド方式: 各ユニットは必ず列の先頭から開始（1ユニット=1列）
@@ -3595,9 +3621,10 @@ function renderEstimateLinesForPrint() {
   for (let ui = 0; ui < units.length; ui++) {
     const u = units[ui];
     const rowsHtml = _buildLineRows(u.lines);
-    const raw = calcLinesGrandTotal(u.lines);
-    const listP = Math.ceil(raw * u.listRate) * 1000;
-    const netP = Math.ceil(listP * u.netRate / 10000) * 10000;
+    const unitPricing = calcUnitPricing(u);
+    const raw = unitPricing.raw;
+    const listP = unitPricing.list;
+    const netP = unitPricing.net;
 
     // ユニットヘッダー
     addSlot({
@@ -3615,7 +3642,11 @@ function renderEstimateLinesForPrint() {
     // フッターは独立divとして保存（テーブル行にしない）
     const fw = 3.5;
     if (colWeights[ci] + fw > perCol + 0.01 && colWeights[ci] > 0) advanceCol();
-    curCols[ci].push({ type: 'footer', raw, listP, netP, listRate: u.listRate, netRate: u.netRate });
+    curCols[ci].push({
+      type: 'footer', raw, listP, netP,
+      listRate: unitPricing.isRenovation ? unitPricing.rateLabel : `×${u.listRate}`,
+      netRate: unitPricing.isRenovation ? "自動" : `×${u.netRate}`,
+    });
     colWeights[ci] += fw;
 
     // 次のユニットは必ず次の列の先頭から始める
@@ -3673,11 +3704,11 @@ function renderEstimateLinesForPrint() {
               `<span style="font-weight:700;color:#1a365d;">${fmtNum(slot.raw)}</span>` +
             `</div>` +
             `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 5px;background:#f7fafc;border-bottom:1px solid #e2e8f0;">` +
-              `<span style="font-weight:700;color:#2d3748;">定価<small style="font-weight:normal;color:#888;"> ×${slot.listRate}</small></span>` +
+              `<span style="font-weight:700;color:#2d3748;">定価<small style="font-weight:normal;color:#888;"> ${esc(slot.listRate)}</small></span>` +
               `<span style="font-weight:700;color:#1a365d;">${fmtNum(slot.listP)}</span>` +
             `</div>` +
             `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 5px;background:#e8f5e9;">` +
-              `<span style="font-weight:700;color:#276749;">NET<small style="font-weight:normal;color:#276749;"> ×${slot.netRate}</small></span>` +
+              `<span style="font-weight:700;color:#276749;">NET<small style="font-weight:normal;color:#276749;"> ${esc(slot.netRate)}</small></span>` +
               `<span style="font-weight:700;font-size:9px;color:#276749;">${fmtNum(slot.netP)}</span>` +
             `</div>`;
           colContainer.appendChild(fd);
@@ -3780,6 +3811,7 @@ function _findLineAnyUnit(lineId) {
 function onLineQty(lineId, val) {
   const l = _findLineAnyUnit(lineId);
   if (!l) return;
+  if (l.renovationGenerated) { showToast("改修タブで数量を編集してください"); return; }
   l.qty = Math.max(0, parseInt(val) || 0);
   const el = document.getElementById("sub-" + lineId);
   if (el) el.textContent = fmtNum(l.qty * l.unitPrice);
@@ -3789,6 +3821,7 @@ function onLineQty(lineId, val) {
 function onLinePrice(lineId, val) {
   const l = _findLineAnyUnit(lineId);
   if (!l) return;
+  if (l.renovationGenerated) { showToast("改修タブで金額を編集してください"); return; }
   l.unitPrice = parseFloat(val) || 0;
   const el = document.getElementById("sub-" + lineId);
   if (el) el.textContent = fmtNum(l.qty * l.unitPrice);
@@ -3803,7 +3836,10 @@ function onLineNote(lineId, val) {
 function removeLine(lineId) {
   for (const u of currentEstimate.units) {
     const idx = u.lines.findIndex(x => x.lineId === lineId);
-    if (idx >= 0) { u.lines.splice(idx, 1); break; }
+    if (idx >= 0) {
+      if (u.lines[idx].renovationGenerated) { showToast("改修明細は改修タブで編集してください"); return; }
+      u.lines.splice(idx, 1); break;
+    }
   }
   rebuildClickCounts();
   updateAddedCount();
@@ -4132,18 +4168,34 @@ function calcLinesGrandTotal(lines) {
   return total;
 }
 
+/** 盤・キュービクルと改修で、見積作成・印刷・集計が同じ金額を見るための共通計算。 */
+function calcUnitPricing(unit) {
+  if (unit?.renovation?.enabled && typeof window.calcRenovationPricing === "function") {
+    const renovation = window.calcRenovationPricing(unit);
+    if (renovation) return Object.assign({ isRenovation: true }, renovation);
+  }
+  const raw = calcLinesGrandTotal(unit.lines);
+  const list = Math.ceil(raw * unit.listRate) * 1000;
+  const net = Math.ceil(list * unit.netRate / 10000) * 10000;
+  return { raw, list, net, isRenovation: false, rateLabel: `×${unit.listRate}` };
+}
+
 function calcGrandTotal() { return calcLinesGrandTotal(activeUnit().lines); }
-function calcListPrice() { return calcGrandTotal() * activeUnit().listRate; }
+function calcListPrice() { return calcUnitPricing(activeUnit()).list; }
 
 function renderTotals() {
   const unit = activeUnit();
-  document.getElementById("total-grand").textContent = fmtNum(calcGrandTotal());
-  const listPrice = Math.ceil(calcListPrice()) * 1000;
-  const netPrice = Math.ceil(listPrice * unit.netRate / 10000) * 10000;
+  const pricing = calcUnitPricing(unit);
+  document.getElementById("total-grand").textContent = fmtNum(pricing.raw);
+  const listPrice = pricing.list;
+  const netPrice = pricing.net;
   document.getElementById("total-list").textContent  = fmtNum(listPrice);
   document.getElementById("total-net").textContent    = fmtNum(netPrice);
   document.getElementById("rate-list-input").value = unit.listRate;
   document.getElementById("rate-net-input").value  = unit.netRate;
+  document.getElementById("rate-list-input").disabled = pricing.isRenovation;
+  document.getElementById("rate-net-input").disabled = pricing.isRenovation;
+  document.querySelector(".rate-preset-buttons")?.classList.toggle("rates-disabled", pricing.isRenovation);
 
   // 複数ユニット: 全体合計を totals-table に追加行として表示
   const units = currentEstimate.units;
@@ -4153,10 +4205,8 @@ function renderTotals() {
   if (units.length > 1) {
     let gList = 0, gNet = 0;
     for (const u of units) {
-      const raw = calcLinesGrandTotal(u.lines);
-      const ul = Math.ceil(raw * u.listRate) * 1000;
-      const un = Math.ceil(ul * u.netRate / 10000) * 10000;
-      gList += ul; gNet += un;
+      const unitPricing = calcUnitPricing(u);
+      gList += unitPricing.list; gNet += unitPricing.net;
     }
     table.insertAdjacentHTML("beforeend", `
       <tr class="global-total-row" style="border-top:2px solid #999;">
@@ -4175,14 +4225,15 @@ function renderTotals() {
   document.querySelectorAll(".unit-col-footer[data-unit]").forEach(uf => {
     const u = currentEstimate.units[parseInt(uf.dataset.unit)];
     if (!u) return;
-    const raw  = calcLinesGrandTotal(u.lines);
-    const listP = Math.ceil(raw * u.listRate) * 1000;
-    const netP  = Math.ceil(listP * u.netRate / 10000) * 10000;
+    const unitPricing = calcUnitPricing(u);
+    const raw = unitPricing.raw;
+    const listP = unitPricing.list;
+    const netP = unitPricing.net;
     uf.querySelector(".ucf-v-raw").textContent  = fmtNum(raw);
     uf.querySelector(".ucf-v-list").textContent = fmtNum(listP);
     uf.querySelector(".ucf-v-net").textContent  = fmtNum(netP);
-    uf.querySelector(".ucf-r-list").textContent = `×${u.listRate}`;
-    uf.querySelector(".ucf-r-net").textContent  = `×${u.netRate}`;
+    uf.querySelector(".ucf-r-list").textContent = unitPricing.isRenovation ? unitPricing.rateLabel : `×${u.listRate}`;
+    uf.querySelector(".ucf-r-net").textContent  = unitPricing.isRenovation ? "自動" : `×${u.netRate}`;
   });
 }
 
@@ -4477,11 +4528,9 @@ function renderSummary(ids) {
     let listPrice = 0, netRaw = 0;
     if (est.units) {
       for (const u of est.units) {
-        const uRaw = calcLinesGrandTotal(u.lines);
-        const uList = Math.ceil(uRaw * u.listRate) * 1000;
-        const uNet = Math.ceil(uList * u.netRate / 10000) * 10000;
-        listPrice += uList;
-        netRaw += uNet;
+        const unitPricing = calcUnitPricing(u);
+        listPrice += unitPricing.list;
+        netRaw += unitPricing.net;
       }
     } else {
       const raw = calcGrandTotalFor(est);
@@ -4696,11 +4745,13 @@ function updateStickyOffsets() {
   const tabs = document.querySelector(".tabs");
   const masterHeader = document.querySelector(".tab-content.active .master-header");
   const masterHint = document.querySelector(".tab-content.active .master-hint");
+  const renovationControls = document.querySelector(".tab-content.active .renovation-sticky-controls");
   const root = document.documentElement.style;
   root.setProperty("--app-header-height", (header?.getBoundingClientRect().height || 0) + "px");
   root.setProperty("--tabs-height", (tabs?.getBoundingClientRect().height || 0) + "px");
   root.setProperty("--master-header-height", (masterHeader?.getBoundingClientRect().height || 0) + "px");
   root.setProperty("--master-hint-height", (masterHint?.getBoundingClientRect().height || 0) + "px");
+  root.setProperty("--renovation-controls-height", (renovationControls?.getBoundingClientRect().height || 0) + "px");
 }
 function showToast(msg) {
   document.querySelectorAll(".toast").forEach(t => t.remove());

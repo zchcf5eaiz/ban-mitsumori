@@ -1215,13 +1215,14 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-catalog-list { flex:1; height:auto; min-height:0; overflow:auto; border-top:1px solid #e2e8f0; }
 .renovation-catalog-item { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px; align-items:center; padding:7px; border-bottom:1px solid #edf2f7; font-size:11px; }
 .renovation-catalog-item:hover { background:#f4f9ff; }
+.renovation-catalog-select { display:block; width:100%; min-width:0; padding:0; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.renovation-catalog-select:focus-visible { outline:2px solid #3182ce; outline-offset:2px; border-radius:3px; }
 .renovation-catalog-item strong, .renovation-catalog-item small, .renovation-catalog-item span { display:block; overflow-wrap:anywhere; }
 .renovation-catalog-item small { color:#64748b; margin-top:2px; }
 .renovation-catalog-item span { color:#59697c; margin-top:3px; font-size:9px; }
 .renovation-catalog-item.price-missing { background:#fff9f0; }
 .renovation-catalog-actions { display:flex; gap:3px; }
 .renovation-catalog-actions button { border:1px solid #cbd5e1; background:#fff; border-radius:3px; padding:4px 5px; font-size:9px; cursor:pointer; white-space:nowrap; }
-.renovation-catalog-actions button.primary { color:#fff; background:#23824d; border-color:#23824d; }
 .renovation-table-wrap { overflow:auto; max-height:260px; }
 .renovation-table-wrap table, .renovation-modal table { width:100%; border-collapse:collapse; font-size:10px; }
 .renovation-table-wrap th, .renovation-table-wrap td, .renovation-modal th, .renovation-modal td { border:1px solid #e2e8f0; padding:5px; text-align:right; }
@@ -1239,15 +1240,13 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-material-catalog-scroll { flex:1; min-height:0; overflow:auto; }
 .renovation-material-catalog .renovation-material-buttons { display:grid; grid-template-columns:1fr; max-height:none; overflow:visible; }
 .renovation-material-catalog .renovation-material-card { width:100%; box-sizing:border-box; }
-.renovation-material-catalog .renovation-material-add { min-width:0; }
+.renovation-material-catalog .renovation-material-add { flex:1; min-width:0; }
 .renovation-selection-subtitle { padding:6px 9px; border-bottom:1px solid #dbe4ee; background:#edf4fb; color:#24496f; font-size:11px; font-weight:700; }
 .renovation-material-card { display:flex; align-items:stretch; border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; }
 .renovation-material-buttons .renovation-material-add { display:flex; flex-direction:column; align-items:flex-start; gap:1px; border:0; border-radius:0; min-width:128px; text-align:left; }
 .renovation-material-buttons .renovation-material-add small { color:#475569; font-size:8px; }
 .renovation-material-buttons .renovation-material-add.price-missing { background:#fff8e8; }
-.renovation-material-card-actions { display:flex; flex-direction:column; border-left:1px solid #e2e8f0; }
-.renovation-material-card-actions button { flex:1; border:0; border-radius:0; padding:2px 5px; font-size:8px; background:#fff; color:#475569; }
-.renovation-material-card-actions button + button { border-top:1px solid #e2e8f0; }
+.renovation-material-card-actions { align-items:center; flex:0 0 auto; padding:4px; border-left:1px solid #e2e8f0; }
 .renovation-capacity { color:#0f766e !important; font-weight:600; white-space:normal; }
 .renovation-source-notes { margin:0 7px 7px; padding:7px 9px; background:#fff9e8; border:1px solid #ead9a8; border-radius:5px; color:#665323; font-size:9px; line-height:1.45; }
 .renovation-source-notes strong { display:block; margin-bottom:3px; color:#594817; }

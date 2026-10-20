@@ -1254,8 +1254,12 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-cost-inputs input { display:block; width:100%; box-sizing:border-box; padding:6px; margin-top:3px; border:1px solid #cbd5e1; text-align:right; }
 .renovation-cost-inputs .renovation-factor { grid-column:span 2; background:#fff7db; padding:6px; border-radius:5px; }
 .renovation-cost-inputs small { display:block; margin-top:3px; color:#806b2a; }
-.renovation-cost-inputs-small { grid-template-columns:1fr 1fr; }
-.renovation-factor-inputs { grid-template-columns:1fr 1fr; }
+.renovation-cost-inputs-small { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.renovation-factor-inputs { grid-template-columns:repeat(6,minmax(0,1fr)); gap:5px; padding:6px; }
+.renovation-factor-inputs label { grid-column:span 2; }
+.renovation-factor-inputs .renovation-factor { grid-column:span 3; padding:4px 6px; }
+.renovation-factor-inputs input { padding:4px 5px; margin-top:2px; }
+.renovation-factor-inputs small { margin-top:2px; font-size:8px; line-height:1.25; }
 .renovation-calculated-cost { display:grid; grid-template-columns:1fr auto 1fr auto; gap:8px; align-items:center; padding:7px 10px; border-top:1px solid #e2e8f0; background:#f8fafc; font-size:10px; }
 .renovation-calculated-cost b { color:#173f69; font-size:12px; }
 .renovation-overhead-box { background:#fff8e5; }
@@ -1326,6 +1330,8 @@ tr[draggable="true"]:active { cursor: grabbing; }
   .renovation-layout > * { margin-bottom:8px; }
   .renovation-catalog-list { height:340px; }
   .renovation-cost-inputs { grid-template-columns:1fr 1fr; }
+  .renovation-cost-inputs-small { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .renovation-factor-inputs { grid-template-columns:repeat(6,minmax(0,1fr)); }
 }
 
 @media print {

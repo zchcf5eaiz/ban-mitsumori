@@ -15,7 +15,7 @@ const RENOVATION_QUOTE_METHODS = {
 };
 const RENOVATION_PRESENTATIONS = {
   lump: { label: "一式", description: "採用した方式定価を1行で表示" },
-  detail: { label: "実定価内訳", description: "機器・材料・調査・改修・差額を表示" },
+  detail: { label: "実定価内訳", description: "機器・材料・調査・改修を実定価で表示" },
   allocation: { label: "差額振分", description: "役所3.8／民間2.28の残額を4項目へ振分" },
   matsuoka: { label: "松岡Jr.", description: "松岡市役所向けの社内振分方式" },
 };
@@ -176,7 +176,7 @@ function createRenovationState() {
     materials: [],
     siteSurveyList: 60000,
     siteSurveyNet: 50000,
-    siteSurveyCost: 50000,
+    siteSurveyCost: 0,
     labor: { hourlyRate: 5000, factor: 1.25, hours: 8, people: 1 },
     matsuokaRatios: { ...RENOVATION_MATSUOKA_RATIOS },
   };
@@ -196,13 +196,16 @@ function getRenovationState(unit = activeUnit()) {
   if (!RENOVATION_PRESENTATIONS[state.presentationMethod]) {
     state.presentationMethod = state.quoteMethod === "bara" ? "detail" : "lump";
   }
+  if (state.presentationMethod === "detail") state.quoteMethod = "bara";
   if (state.presentationMethod === "matsuoka") state.quoteMethod = "govt";
-  if (state.presentationMethod === "allocation" && state.quoteMethod === "bara") state.quoteMethod = "govt";
+  if ((state.presentationMethod === "lump" || state.presentationMethod === "allocation") && state.quoteMethod === "bara") {
+    state.quoteMethod = "govt";
+  }
   if (state.transformerFactor == null) state.transformerFactor = 1.1;
   if (state.materialNetFactor == null) state.materialNetFactor = 1.2;
   if (state.materialListFactor == null) state.materialListFactor = 1.2;
   if (state.renovationListFactor == null) state.renovationListFactor = 1.5;
-  if (state.siteSurveyCost == null) state.siteSurveyCost = Number(state.siteSurveyNet) || 0;
+  if (state.siteSurveyCost == null) state.siteSurveyCost = 0;
   state.matsuokaRatios = { ...RENOVATION_MATSUOKA_RATIOS };
   if ((Number(state.pricingVersion) || 0) < 2) {
     state.materials.forEach(row => {
@@ -460,12 +463,16 @@ function setRenovationMethod(method) {
 function setRenovationQuoteMethod(method) {
   const state = getRenovationState();
   if (!state || !RENOVATION_QUOTE_METHODS[method]) return;
+  if (state.presentationMethod === "detail" && method !== "bara") {
+    showToast("実定価内訳は実定価ベース（バラ）で固定されます");
+    return;
+  }
   if (state.presentationMethod === "matsuoka" && method !== "govt") {
     showToast("松岡Jr.は役所3.8方式で固定されます");
     return;
   }
-  if (state.presentationMethod === "allocation" && method === "bara") {
-    showToast("差額振分は役所3.8方式または民間2.28方式を選択してください");
+  if ((state.presentationMethod === "lump" || state.presentationMethod === "allocation") && method === "bara") {
+    showToast(`${RENOVATION_PRESENTATIONS[state.presentationMethod].label}は役所3.8方式または民間2.28方式を選択してください`);
     return;
   }
   state.quoteMethod = method;
@@ -476,8 +483,9 @@ function setRenovationPresentation(method) {
   const state = getRenovationState();
   if (!state || !RENOVATION_PRESENTATIONS[method]) return;
   state.presentationMethod = method;
+  if (method === "detail") state.quoteMethod = "bara";
   if (method === "matsuoka") state.quoteMethod = "govt";
-  if (method === "allocation" && state.quoteMethod === "bara") state.quoteMethod = "govt";
+  if ((method === "lump" || method === "allocation") && state.quoteMethod === "bara") state.quoteMethod = "govt";
   refreshRenovation();
   const pricing = calcRenovationPricing();
   if ((method === "allocation" || method === "matsuoka") && !pricing.distributionFeasible) {
@@ -766,8 +774,9 @@ function renderRenovationTab() {
     : "";
   const candidateCards = Object.entries(RENOVATION_QUOTE_METHODS).map(([key, method]) => {
     const result = pricing.candidates[key];
-    const locked = (state.presentationMethod === "matsuoka" && key !== "govt") ||
-      (state.presentationMethod === "allocation" && key === "bara");
+    const locked = (state.presentationMethod === "detail" && key !== "bara") ||
+      (state.presentationMethod === "matsuoka" && key !== "govt") ||
+      ((state.presentationMethod === "lump" || state.presentationMethod === "allocation") && key === "bara");
     return `<button class="renovation-price-card${state.quoteMethod === key ? " active" : ""}" ${locked ? "disabled title=\"この表示方法では選択できません\"" : `onclick="setRenovationQuoteMethod('${key}')"`}>` +
       `<span class="renovation-price-card-title">${esc(method.label)}${state.quoteMethod === key ? "（見積採用中）" : ""}</span>` +
       `<span><small>方式定価</small><strong>${fmtNum(result.list)}</strong></span>` +

@@ -456,13 +456,28 @@ function renovationInternalCardHtml(unit) {
     const list = item.listPrice == null ? net * state.materialListFactor : Number(item.listPrice) || 0;
     return detailRow(item, list, net, cost);
   }).join("") || `<tr><td colspan="5" class="renovation-internal-empty">選択なし</td></tr>`;
+  const detailSectionRow = (title, note, rows) => `<tr class="renovation-internal-detail-row"><td colspan="4">` +
+    `<div class="renovation-internal-details"><h4>${esc(title)} <small>${esc(note)}</small></h4>` +
+    `<table><thead><tr><th>品名・仕様</th><th>数量</th><th>定価</th><th>NET</th><th>仕入</th></tr></thead>` +
+    `<tbody>${rows}</tbody></table></div></td></tr>`;
+  const candidateRows = Object.entries(RENOVATION_QUOTE_METHODS).map(([key, option]) => {
+    const candidate = pricing.candidates[key];
+    if (!candidate) return "";
+    const current = key === state.quoteMethod;
+    return `<tr${current ? ` class="renovation-pattern-current"` : ""}>` +
+      `<td>${esc(option.label)}${current ? `<span class="renovation-pattern-badge">採用中</span>` : ""}</td>` +
+      `<td>${fmtNum(candidate.list)}</td><td>${fmtNum(candidate.net)}</td>` +
+      `<td>${Number.isFinite(candidate.netToListRate) ? `${candidate.netToListRate.toFixed(1)}%` : "—"}</td></tr>`;
+  }).join("");
 
   return `<section class="renovation-internal-card">` +
     `<div class="renovation-internal-card-heading"><strong>${esc(unit.unitName || "改修工事")}</strong>` +
     `<span>${esc(method)}・${esc(quote)}・${esc(presentation)}</span></div>` +
     `<table class="renovation-internal-total-table"><thead><tr><th>計算項目</th><th>定価</th><th>NET</th><th>仕入・社内原価</th></tr></thead><tbody>` +
     row("機器", pricing.equipmentList, pricing.equipmentNet, pricing.equipmentCost) +
+    detailSectionRow("機器内訳", "各単価", equipmentRows) +
     row("材料費", pricing.materialList, pricing.materialNet, pricing.materialCost) +
+    detailSectionRow("材料内訳", "各単価／空欄登録は係数計算", materialRows) +
     row("現地調査費", state.siteSurveyList, state.siteSurveyNet, state.siteSurveyCost) +
     row("改修費", pricing.renovationList, pricing.labor, pricing.laborCost) +
     row("方式差額・諸経費", pricing.list - pricing.directList, pricing.net - pricing.directNet, null) +
@@ -474,11 +489,11 @@ function renovationInternalCardHtml(unit) {
     `<span>総原価率<b>${percent(totalCost, pricing.net)}</b></span>` +
     `<span>NET／定価<b>${percent(pricing.net, pricing.list)}</b></span>` +
     `</div>` +
-    `<div class="renovation-internal-details">` +
-    `<h4>機器内訳 <small>各単価</small></h4>` +
-    `<table><thead><tr><th>品名・仕様</th><th>数量</th><th>定価</th><th>NET</th><th>仕入</th></tr></thead><tbody>${equipmentRows}</tbody></table>` +
-    `<h4>材料内訳 <small>各単価／空欄登録は係数計算</small></h4>` +
-    `<table><thead><tr><th>品名・仕様</th><th>数量</th><th>定価</th><th>NET</th><th>仕入</th></tr></thead><tbody>${materialRows}</tbody></table>` +
+    `<div class="renovation-internal-patterns">` +
+    `<h4>定価・NET算出方式 3パターン <small>提出NET比較用</small></h4>` +
+    `<table><thead><tr><th>算出方式</th><th>定価</th><th>NET</th><th>NET／定価</th></tr></thead>` +
+    `<tbody>${candidateRows}</tbody></table>` +
+    `<p>現在の見積には「採用中」の方式を反映。ほか2方式は提出NETの比較用です。</p>` +
     `</div></section>`;
 }
 

@@ -4747,11 +4747,26 @@ function updateStickyOffsets() {
   const masterHint = document.querySelector(".tab-content.active .master-hint");
   const renovationControls = document.querySelector(".tab-content.active .renovation-sticky-controls");
   const root = document.documentElement.style;
-  root.setProperty("--app-header-height", (header?.getBoundingClientRect().height || 0) + "px");
-  root.setProperty("--tabs-height", (tabs?.getBoundingClientRect().height || 0) + "px");
-  root.setProperty("--master-header-height", (masterHeader?.getBoundingClientRect().height || 0) + "px");
-  root.setProperty("--master-hint-height", (masterHint?.getBoundingClientRect().height || 0) + "px");
-  root.setProperty("--renovation-controls-height", (renovationControls?.getBoundingClientRect().height || 0) + "px");
+  const headerHeight = Math.ceil(header?.getBoundingClientRect().height || 0);
+  const tabsHeight = Math.ceil(tabs?.getBoundingClientRect().height || 0);
+  const masterHeaderHeight = Math.ceil(masterHeader?.getBoundingClientRect().height || 0);
+  const masterHintHeight = Math.ceil(masterHint?.getBoundingClientRect().height || 0);
+  const renovationControlsHeight = Math.ceil(renovationControls?.getBoundingClientRect().height || 0);
+  root.setProperty("--app-header-height", headerHeight + "px");
+  root.setProperty("--tabs-height", tabsHeight + "px");
+  root.setProperty("--master-header-height", masterHeaderHeight + "px");
+  root.setProperty("--master-hint-height", masterHintHeight + "px");
+  root.setProperty("--renovation-controls-height", renovationControlsHeight + "px");
+  root.setProperty("--renovation-sticky-top", (headerHeight + tabsHeight + renovationControlsHeight) + "px");
+}
+
+let stickyOffsetObserver = null;
+function observeStickyOffsetElement(element) {
+  if (!element || !window.ResizeObserver) return;
+  if (!stickyOffsetObserver) {
+    stickyOffsetObserver = new ResizeObserver(() => requestAnimationFrame(updateStickyOffsets));
+  }
+  stickyOffsetObserver.observe(element);
 }
 function showToast(msg) {
   document.querySelectorAll(".toast").forEach(t => t.remove());
@@ -4828,12 +4843,9 @@ document.addEventListener("DOMContentLoaded", () => {
   renderMasterTable();
   updateStickyOffsets();
   window.addEventListener("resize", updateStickyOffsets);
-  if (window.ResizeObserver) {
-    const stickyObserver = new ResizeObserver(updateStickyOffsets);
-    [document.querySelector(".app-header"), document.querySelector(".tabs"), ...document.querySelectorAll(".master-header, .master-hint")]
-      .filter(Boolean)
-      .forEach(el => stickyObserver.observe(el));
-  }
+  [document.querySelector(".app-header"), document.querySelector(".tabs"), ...document.querySelectorAll(".master-header, .master-hint")]
+    .filter(Boolean)
+    .forEach(observeStickyOffsetElement);
 });
 
 // ページ離脱時にDOM上の価格をメモリに反映して保存

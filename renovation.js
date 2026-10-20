@@ -121,6 +121,16 @@ function renovationEquipmentDisplayCategoryId(item) {
   return item?.categoryId || "";
 }
 
+function renovationEquipmentManufacturer(item) {
+  if (item?.categoryId !== "cat-4") return "";
+  const row = Number(String(item.id || "").match(/^REN-05-(\d+)$/)?.[1] || 0);
+  if (row === 5 || (row >= 8 && row <= 21)) return "三菱";
+  if ((row >= 24 && row <= 31) || (row >= 35 && row <= 42)) return "オムロン";
+  if (row >= 45 && row <= 46) return "光商工";
+  if (row === 50 || row === 55) return "音羽電機工業";
+  return "";
+}
+
 function nullableRenovationPrice(value) {
   const cleaned = String(value ?? "").trim().replace(/,/g, "");
   return cleaned === "" ? null : Math.max(0, Number(cleaned) || 0);
@@ -613,15 +623,16 @@ function renderRenovationCatalog() {
   if (!container) return;
   let items = RENOVATION_ITEMS.filter(item => renovationEquipmentDisplayCategoryId(item) === renovationCategoryId);
   if (renovationSearchText) {
-    items = RENOVATION_ITEMS.filter(item => `${item.name} ${item.spec} ${item.category}`.toLowerCase().includes(renovationSearchText));
+    items = RENOVATION_ITEMS.filter(item => `${renovationEquipmentManufacturer(item)} ${item.name} ${item.spec} ${item.category}`.toLowerCase().includes(renovationSearchText));
   }
   const category = RENOVATION_CATEGORIES.find(row => row.id === renovationCategoryId);
   const categoryNotes = renovationSearchText ? [] : (RENOVATION_REFERENCE_NOTES?.categories?.[category?.label] || []);
   container.innerHTML = items.map(source => {
     const item = getRenovationMasterItem(source.id);
+    const manufacturer = renovationEquipmentManufacturer(item);
     const unavailable = item.listPrice == null && item.netPrice == null && item.costPrice == null;
     return `<div class="renovation-catalog-item${unavailable ? " price-missing" : ""}">` +
-      `<div><strong>${esc(item.name)}</strong>${item.spec ? `<small>${esc(item.spec)}</small>` : ""}` +
+      `<div><strong>${manufacturer ? `${esc(manufacturer)}｜` : ""}${esc(item.name)}</strong>${item.spec ? `<small>${esc(item.spec)}</small>` : ""}` +
       `<span>定価 ${item.listPrice == null ? "未登録" : fmtNum(item.listPrice)} ／ NET ${item.netPrice == null ? "未登録" : fmtNum(item.netPrice)} ／ 仕入 ${item.costPrice == null ? "未登録" : fmtNum(item.costPrice)}</span>` +
       `${item.note ? `<small class="renovation-item-note">備考：${esc(item.note)}</small>` : ""}</div>` +
       `<div class="renovation-catalog-actions"><button onclick="showRenovationPriceHistory('${item.id}')">履歴</button>` +
@@ -683,11 +694,7 @@ function renderRenovationTab() {
 
   root.innerHTML = `<div class="renovation-sticky-controls">` + renovationUnitSwitcherHtml() +
     `<div class="renovation-heading"><div><h2>改修見積 — ${esc(unit.unitName)}</h2><p>計算内容は同じ項目の「見積作成」に自動反映されます。</p></div>` +
-    `<button class="btn btn-success" onclick="switchTab('estimate')">見積作成で確認</button></div>` +
-    `<div class="renovation-pattern-panel"><div class="renovation-pattern-heading"><strong>積算パターンを選択</strong><span>TRの有無では自動切替しません。お客様に合わせて選択してください。</span></div>` +
-      `<div class="renovation-methods">${Object.entries(RENOVATION_METHODS).map(([key, method]) =>
-        `<button class="${state.method === key ? "active" : ""}" aria-pressed="${state.method === key}" onclick="setRenovationMethod('${key}')"><strong>${method.label}</strong><span>${method.description}</span></button>`
-      ).join("")}</div></div></div>` +
+    `<button class="btn btn-success" onclick="switchTab('estimate')">見積作成で確認</button></div></div>` +
     `<div class="renovation-layout"><section class="renovation-catalog"><div class="renovation-section-title">1. 機器を選択</div>` +
       `<input class="renovation-search" type="search" placeholder="全価格表から検索" value="${escAttr(renovationSearchText)}" oninput="setRenovationSearch(this.value)">` +
       `<div class="renovation-categories">${RENOVATION_CATEGORIES.map(cat => `<button data-category-id="${escAttr(cat.id)}" class="${cat.id === renovationCategoryId && !renovationSearchText ? "active" : ""}" aria-pressed="${cat.id === renovationCategoryId && !renovationSearchText}" onclick="setRenovationCategory('${cat.id}')">${esc(cat.label)}</button>`).join("")}</div>` +
@@ -723,6 +730,10 @@ function renderRenovationTab() {
       `<label>材料 定価係数<input type="number" min="0" step="0.01" value="${state.materialListFactor}" onchange="updateRenovationNumber('materialListFactor',this.value)"></label>` +
       `<label>改修費 定価係数<input type="number" min="0" step="0.01" value="${state.renovationListFactor}" onchange="updateRenovationNumber('renovationListFactor',this.value)"></label>` +
       `</div><div class="renovation-calculated-cost renovation-overhead-box"><span>採用方式の諸経費 定価</span><b>${fmtNum(selected.overhead)}</b><span>採用方式の諸経費 NET</span><b>${fmtNum(overheadNet)}</b></div></section></div>` +
+    `<div class="renovation-side"><div class="renovation-pattern-panel"><div class="renovation-pattern-heading"><strong>積算パターンを選択</strong><span>お客様に合わせて選択</span></div>` +
+      `<div class="renovation-methods">${Object.entries(RENOVATION_METHODS).map(([key, method]) =>
+        `<button class="${state.method === key ? "active" : ""}" aria-pressed="${state.method === key}" onclick="setRenovationMethod('${key}')"><strong>${method.label}</strong><span>${method.description}</span></button>`
+      ).join("")}</div></div>` +
     `<aside class="renovation-summary"><div class="renovation-section-title">計算結果</div>` +
       `<div class="renovation-result-breakdown"><table><thead><tr><th>項目</th><th>定価</th><th>NET</th><th>原価</th></tr></thead><tbody>` +
       `<tr><td>機器</td><td>${fmtNum(pricing.equipmentList)}</td><td>${fmtNum(pricing.equipmentNet)}</td><td>${fmtNum(pricing.equipmentCost)}</td></tr>` +
@@ -733,6 +744,11 @@ function renderRenovationTab() {
       `</tbody></table></div><div class="renovation-price-cards">${candidateCards}</div>${allocation}` +
       renovationNotesHtml(estimateNotes) +
       `<p>機器原価率は元Excelと同じく機器仕入＋材料原価で算出。総原価率・粗利率は現地調査と改修費も含めて算出しています。</p>` +
-    `</aside></div>`;
+    `</aside></div></div>`;
   renderRenovationCatalog();
+  const stickyControls = root.querySelector(".renovation-sticky-controls");
+  if (typeof observeStickyOffsetElement === "function") observeStickyOffsetElement(stickyControls);
+  requestAnimationFrame(() => {
+    if (typeof updateStickyOffsets === "function") updateStickyOffsets();
+  });
 }

@@ -1285,6 +1285,25 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-result-breakdown th:first-child, .renovation-result-breakdown td:first-child { text-align:left; }
 .renovation-result-breakdown th { background:#f1f5f9; color:#475569; }
 .renovation-result-breakdown tr.overhead td { background:#fff8e5; font-weight:700; }
+.renovation-estimate-preview { border-bottom:2px solid #1d406b; background:#fff; }
+.renovation-estimate-preview-head { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:6px 7px; background:#eef5fc; color:#173f69; font-size:10px; }
+.renovation-estimate-preview-head button { border:1px solid #2f6ea8; border-radius:4px; padding:3px 6px; background:#fff; color:#205c91; font-size:9px; cursor:pointer; }
+.renovation-estimate-preview-table { overflow-x:auto; }
+.renovation-estimate-preview table { width:100%; min-width:390px; border-collapse:collapse; table-layout:fixed; font-size:8px; }
+.renovation-estimate-preview th, .renovation-estimate-preview td { padding:4px 3px; border:1px solid #dbe4ee; overflow-wrap:anywhere; }
+.renovation-estimate-preview th { background:#27364a; color:#fff; text-align:center; }
+.renovation-estimate-preview th:nth-child(1) { width:22px; }
+.renovation-estimate-preview th:nth-child(2), .renovation-estimate-preview th:nth-child(3) { width:auto; }
+.renovation-estimate-preview th:nth-child(4), .renovation-estimate-preview th:nth-child(6) { width:58px; }
+.renovation-estimate-preview th:nth-child(5) { width:34px; }
+.renovation-estimate-preview td:nth-child(1), .renovation-estimate-preview td:nth-child(n+4) { text-align:right; white-space:nowrap; }
+.renovation-estimate-preview-totals { display:grid; grid-template-columns:1fr 1fr; background:#eef8f2; border-top:1px solid #b9dbc5; }
+.renovation-estimate-preview-totals span { display:flex; justify-content:space-between; gap:5px; padding:5px 7px; color:#24623d; font-size:9px; }
+.renovation-estimate-preview-totals span + span { border-left:1px solid #b9dbc5; }
+.renovation-estimate-preview-totals b { font-size:11px; }
+.renovation-estimate-preview-notes { max-height:105px; overflow:auto; padding:6px 7px; background:#fff9e8; color:#665323; font-size:8px; line-height:1.4; }
+.renovation-estimate-preview-notes strong, .renovation-estimate-preview-notes span { display:block; }
+.renovation-estimate-preview-notes strong { margin-bottom:3px; }
 .renovation-price-comparison { display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:7px; background:#f8fafc; border-bottom:1px solid #e2e8f0; }
 .renovation-price-comparison span { display:flex; justify-content:space-between; gap:7px; padding:5px 6px; border:1px solid #e2e8f0; border-radius:4px; background:#fff; color:#526477; font-size:9px; }
 .renovation-price-comparison b { color:#173f69; font-size:11px; }
@@ -1317,6 +1336,38 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-modal-close { position:absolute; right:10px; top:8px; border:0; background:transparent; font-size:25px; cursor:pointer; }
 .renovation-modal p { color:#64748b; font-size:10px; }
 .rates-disabled { opacity:.45; pointer-events:none; }
+.renovation-internal-summary { margin:8px 0; border:2px solid #274c77; border-radius:7px; overflow:hidden; background:#f8fbff; }
+.renovation-internal-heading { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:7px 10px; background:#274c77; color:#fff; }
+.renovation-internal-heading strong { font-size:13px; }
+.renovation-internal-heading span { font-size:9px; opacity:.88; }
+.renovation-internal-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(480px,1fr)); gap:8px; padding:8px; }
+.renovation-internal-card { min-width:0; border:1px solid #b7c9db; border-radius:5px; overflow:hidden; background:#fff; }
+.renovation-internal-card-heading { display:flex; justify-content:space-between; gap:8px; padding:6px 8px; background:#e8f1fa; color:#173f69; }
+.renovation-internal-card-heading strong { font-size:11px; }
+.renovation-internal-card-heading span { font-size:9px; color:#526477; }
+.renovation-internal-card table { width:100%; border-collapse:collapse; font-size:9px; }
+.renovation-internal-card th, .renovation-internal-card td { padding:4px 6px; border:1px solid #dbe4ee; text-align:right; }
+.renovation-internal-card th { background:#f1f5f9; color:#475569; }
+.renovation-internal-card th:first-child, .renovation-internal-card td:first-child { text-align:left; }
+.renovation-internal-total td { background:#eaf3ff; color:#173f69; font-weight:700; }
+.renovation-internal-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; padding:6px; background:#f8fafc; }
+.renovation-internal-metrics span { display:flex; justify-content:space-between; gap:5px; padding:4px 6px; border:1px solid #dbe4ee; border-radius:3px; background:#fff; color:#526477; font-size:9px; }
+.renovation-internal-metrics b { color:#174f34; font-size:10px; }
+.renovation-internal-details { padding:0 6px 6px; }
+.renovation-internal-details h4 { display:flex; align-items:baseline; justify-content:space-between; margin:7px 0 3px; padding-left:6px; border-left:3px solid #3973a9; color:#173f69; font-size:10px; }
+.renovation-internal-details h4 small { color:#64748b; font-size:8px; font-weight:400; }
+.renovation-internal-details td:first-child strong, .renovation-internal-details td:first-child small { display:block; }
+.renovation-internal-details td:first-child small { margin-top:1px; color:#64748b; font-size:8px; font-weight:400; }
+.renovation-internal-empty { color:#94a3b8; text-align:center !important; }
+:root { --estimate-unit-column-width:520px; }
+.multi-unit-container > .unit-col { width:var(--estimate-unit-column-width); box-sizing:border-box; }
+.renovation-screen-pair { flex:0 0 auto; display:grid; grid-template-columns:var(--estimate-unit-column-width) var(--estimate-unit-column-width); gap:8px; align-items:start; }
+.renovation-screen-pair > .unit-col { width:auto; min-width:0; }
+.renovation-screen-internal-col { min-width:0; border:2px solid #274c77; border-radius:6px; overflow:hidden; background:#f8fbff; }
+.renovation-screen-internal-col .renovation-internal-card { border:0; border-radius:0; }
+.renovation-screen-internal-col .renovation-internal-print-title { font-size:11px; padding:6px 8px; }
+.renovation-internal-print-column { flex:0 0 calc(50% - 2px); min-width:0; max-width:calc(50% - 2px); }
+.renovation-internal-print-title { padding:4px 6px; background:#274c77; color:#fff; font-size:9px; font-weight:700; text-align:center; }
 
 @media (max-width: 1100px) {
   .renovation-layout { grid-template-columns:minmax(280px,.8fr) minmax(280px,.8fr) minmax(560px,1.55fr) minmax(300px,.85fr); }
@@ -1397,6 +1448,29 @@ tr[draggable="true"]:active { cursor: grabbing; }
   .totals-table td { padding: 3px 8px; font-size: 9px; }
   .notes-section { padding: 6px 10px; }
   .notes-section textarea { min-height: 30px; font-size: 8px; }
+  /* 画面下の社内情報は印刷せず、改修明細の隣接列にだけ配置する。 */
+  .renovation-internal-summary { display:none !important; }
+  .renovation-internal-print-column { flex:0 0 calc(50% - 2px); min-width:0; max-width:calc(50% - 2px); break-inside:avoid; page-break-inside:avoid; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .est-print-page > div .renovation-internal-print-column { flex:0 0 100%; max-width:100%; }
+  .renovation-internal-print-title { padding:3px 5px; font-size:8px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .renovation-internal-heading { padding:4px 7px; }
+  .renovation-internal-heading strong { font-size:10px; }
+  .renovation-internal-heading span { font-size:7px; }
+  .renovation-internal-grid { display:block; padding:4px; }
+  .renovation-internal-card { break-inside:avoid; page-break-inside:avoid; margin-bottom:4px; }
+  .renovation-internal-card:last-child { margin-bottom:0; }
+  .renovation-internal-card-heading { padding:3px 5px; }
+  .renovation-internal-card-heading strong { font-size:8px; }
+  .renovation-internal-card-heading span { font-size:7px; }
+  .renovation-internal-card table { font-size:7px; }
+  .renovation-internal-card th, .renovation-internal-card td { padding:2px 4px; }
+  .renovation-internal-metrics { padding:3px; gap:3px; }
+  .renovation-internal-metrics span { padding:2px 4px; font-size:7px; }
+  .renovation-internal-metrics b { font-size:8px; }
+  .renovation-internal-details { padding:0 3px 3px; }
+  .renovation-internal-details h4 { margin:4px 0 2px; padding-left:4px; font-size:7px; }
+  .renovation-internal-details h4 small { font-size:6px; }
+  .renovation-internal-details td:first-child small { font-size:6px; }
   /* サマリー印刷 */
   .summary-grand-totals {
     -webkit-print-color-adjust: exact; print-color-adjust: exact;

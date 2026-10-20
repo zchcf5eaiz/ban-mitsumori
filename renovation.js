@@ -39,6 +39,49 @@ function renovationNotesHtml(notes, title = "元表の注意事項") {
   return `<div class="renovation-source-notes"><strong>${esc(title)}</strong><ul>${rows.map(note => `<li>${esc(note)}</li>`).join("")}</ul></div>`;
 }
 
+const RENOVATION_AUTO_NOTES_START = "【改修・元表の注意事項】";
+const RENOVATION_AUTO_NOTES_END = "【以上】";
+
+function renovationSourceNotesForUnit(unit) {
+  const state = getRenovationState(unit);
+  if (!state) return [];
+  const notes = new Set(RENOVATION_REFERENCE_NOTES?.general || []);
+  const addNotes = rows => (rows || []).forEach(note => { if (note) notes.add(note); });
+  addNotes(RENOVATION_REFERENCE_NOTES?.patterns?.[state.method]);
+  addNotes(RENOVATION_REFERENCE_NOTES?.patterns?.[state.presentationMethod]);
+  new Set(state.equipment.map(row => row.category).filter(Boolean)).forEach(category => {
+    addNotes(RENOVATION_REFERENCE_NOTES?.categories?.[category]);
+  });
+  new Set(state.materials.map(row => renovationMaterialDisplayGroup(row)).filter(Boolean)).forEach(group => {
+    addNotes(RENOVATION_REFERENCE_NOTES?.materialGroups?.[group]);
+  });
+  return [...notes];
+}
+
+function removeRenovationAutoNotes(value) {
+  const text = String(value || "");
+  const start = text.indexOf(RENOVATION_AUTO_NOTES_START);
+  if (start < 0) return text.trim();
+  const end = text.indexOf(RENOVATION_AUTO_NOTES_END, start);
+  const after = end < 0 ? text.length : end + RENOVATION_AUTO_NOTES_END.length;
+  return `${text.slice(0, start)}\n${text.slice(after)}`.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/** 手入力の備考を残しつつ、選択内容に関係する元表の注意事項だけを自動更新する。 */
+function syncRenovationSourceNotes() {
+  const manualNotes = removeRenovationAutoNotes(currentEstimate.notes);
+  const sourceNotes = new Set();
+  currentEstimate.units.forEach(unit => {
+    renovationSourceNotesForUnit(unit).forEach(note => sourceNotes.add(note));
+  });
+  const automaticNotes = sourceNotes.size
+    ? `${RENOVATION_AUTO_NOTES_START}\n${[...sourceNotes].map(note => `・${note}`).join("\n")}\n${RENOVATION_AUTO_NOTES_END}`
+    : "";
+  currentEstimate.notes = [manualNotes, automaticNotes].filter(Boolean).join("\n\n");
+  const notes = document.getElementById("notes-textarea");
+  if (notes) notes.value = currentEstimate.notes;
+}
+
 function loadRenovationPriceOverrides() {
   try { return JSON.parse(localStorage.getItem(STORAGE_RENOVATION_PRICES) || "{}"); }
   catch { return {}; }
@@ -383,6 +426,60 @@ function calcRenovationPricing(unit) {
   };
 }
 
+/** 改修1項目分の社内計算情報。画面表示と印刷の隣接列で共用する。 */
+function renovationInternalCardHtml(unit) {
+  const state = getRenovationState(unit);
+  const pricing = calcRenovationPricing(unit);
+  if (!state || !pricing) return "";
+  const percent = (value, base) => Number(base) > 0 ? `${(Number(value) / Number(base) * 100).toFixed(1)}%` : "—";
+  const totalCost = Number(pricing.raw) || 0;
+  const profit = (Number(pricing.net) || 0) - totalCost;
+  const method = RENOVATION_METHODS[state.method]?.label || "改修";
+  const quote = RENOVATION_QUOTE_METHODS[state.quoteMethod]?.label || "バラ方式";
+  const presentation = RENOVATION_PRESENTATIONS[state.presentationMethod]?.label || "一式";
+  const row = (label, list, net, cost, className = "") => `<tr${className ? ` class="${className}"` : ""}>` +
+    `<td>${esc(label)}</td><td>${fmtNum(list)}</td><td>${fmtNum(net)}</td><td>${cost == null ? "—" : fmtNum(cost)}</td></tr>`;
+  const detailRow = (item, list, net, cost) => `<tr>` +
+    `<td><strong>${esc(item.name || "未名称")}</strong>${item.spec ? `<small>${esc(item.spec)}</small>` : ""}</td>` +
+    `<td>${fmtNum(item.qty)}</td><td>${fmtNum(list)}</td><td>${fmtNum(net)}</td><td>${fmtNum(cost)}</td></tr>`;
+  const equipmentRows = state.equipment.map(item => detailRow(
+    item,
+    Number(item.listPrice) || 0,
+    Number(item.netPrice) || 0,
+    Number(item.costPrice) || 0
+  )).join("") || `<tr><td colspan="5" class="renovation-internal-empty">選択なし</td></tr>`;
+  const materialRows = state.materials.map(item => {
+    const cost = Number(item.costPrice ?? item.unitPrice) || 0;
+    const net = item.netPrice == null ? cost * state.materialNetFactor : Number(item.netPrice) || 0;
+    const list = item.listPrice == null ? net * state.materialListFactor : Number(item.listPrice) || 0;
+    return detailRow(item, list, net, cost);
+  }).join("") || `<tr><td colspan="5" class="renovation-internal-empty">選択なし</td></tr>`;
+
+  return `<section class="renovation-internal-card">` +
+    `<div class="renovation-internal-card-heading"><strong>${esc(unit.unitName || "改修工事")}</strong>` +
+    `<span>${esc(method)}・${esc(quote)}・${esc(presentation)}</span></div>` +
+    `<table class="renovation-internal-total-table"><thead><tr><th>計算項目</th><th>定価</th><th>NET</th><th>仕入・社内原価</th></tr></thead><tbody>` +
+    row("機器", pricing.equipmentList, pricing.equipmentNet, pricing.equipmentCost) +
+    row("材料費", pricing.materialList, pricing.materialNet, pricing.materialCost) +
+    row("現地調査費", state.siteSurveyList, state.siteSurveyNet, state.siteSurveyCost) +
+    row("改修費", pricing.renovationList, pricing.labor, pricing.labor) +
+    row("方式差額・諸経費", pricing.list - pricing.directList, pricing.net - pricing.directNet, null) +
+    row("採用合計", pricing.list, pricing.net, totalCost, "renovation-internal-total") +
+    `</tbody></table>` +
+    `<div class="renovation-internal-metrics">` +
+    `<span>NET利益額<b>${fmtNum(profit)}</b></span>` +
+    `<span>粗利率<b>${percent(profit, pricing.net)}</b></span>` +
+    `<span>総原価率<b>${percent(totalCost, pricing.net)}</b></span>` +
+    `<span>NET／定価<b>${percent(pricing.net, pricing.list)}</b></span>` +
+    `</div>` +
+    `<div class="renovation-internal-details">` +
+    `<h4>機器内訳 <small>各単価</small></h4>` +
+    `<table><thead><tr><th>品名・仕様</th><th>数量</th><th>定価</th><th>NET</th><th>仕入</th></tr></thead><tbody>${equipmentRows}</tbody></table>` +
+    `<h4>材料内訳 <small>各単価／空欄登録は係数計算</small></h4>` +
+    `<table><thead><tr><th>品名・仕様</th><th>数量</th><th>定価</th><th>NET</th><th>仕入</th></tr></thead><tbody>${materialRows}</tbody></table>` +
+    `</div></section>`;
+}
+
 function syncRenovationQuoteLine(unit = activeUnit()) {
   const state = getRenovationState(unit);
   if (!state) return;
@@ -444,11 +541,13 @@ function syncAllRenovationQuoteLines() {
   currentEstimate.units.forEach(unit => {
     if (unit?.renovation?.enabled) syncRenovationQuoteLine(unit);
   });
+  syncRenovationSourceNotes();
 }
 
 function refreshRenovation() {
   const unit = activeUnit();
   syncRenovationQuoteLine(unit);
+  syncRenovationSourceNotes();
   renderRenovationTab();
   renderCatalogEstimatePanels();
 }
@@ -736,6 +835,33 @@ function renderRenovationCatalog() {
   if (categoryNotes.length) container.insertAdjacentHTML("beforeend", renovationNotesHtml(categoryNotes, `${category.label}の元表メモ`));
 }
 
+function renovationEstimatePreviewHtml(unit, pricing) {
+  let itemNo = 0;
+  const rows = unit.lines.map(line => {
+    if (line.type === "sep") return `<tr class="sep-row"><td colspan="6"></td></tr>`;
+    if (line.type === "comment") return `<tr class="comment-row"><td colspan="6">${esc(line.text || "")}</td></tr>`;
+    if (line.type === "subtotal") return "";
+    itemNo++;
+    let name = line.name || "(カスタム)";
+    let spec = line.spec || "";
+    if (line.type === "item") {
+      const display = getEstimateLineDisplay(line);
+      name = display.name;
+      spec = display.spec;
+    }
+    return `<tr><td>${itemNo}</td><td>${esc(name)}</td><td>${esc(spec)}</td>` +
+      `<td>${fmtNum(line.unitPrice)}</td><td>${fmtNum(line.qty)}</td><td>${fmtNum((Number(line.unitPrice) || 0) * (Number(line.qty) || 0))}</td></tr>`;
+  }).filter(Boolean).join("");
+  const sourceNotes = renovationSourceNotesForUnit(unit);
+  return `<div class="renovation-estimate-preview">` +
+    `<div class="renovation-estimate-preview-head"><strong>見積作成（自動連動）</strong><button onclick="switchTab('estimate')">見積作成を開く</button></div>` +
+    `<div class="renovation-estimate-preview-table"><table><thead><tr><th>No</th><th>品名</th><th>仕様</th><th>単価</th><th>数量</th><th>金額</th></tr></thead>` +
+    `<tbody>${rows || `<tr><td colspan="6" class="renovation-empty">明細がありません。</td></tr>`}</tbody></table></div>` +
+    `<div class="renovation-estimate-preview-totals"><span>定価 <b>${fmtNum(pricing.list)}</b></span><span>NET <b>${fmtNum(pricing.net)}</b></span></div>` +
+    (sourceNotes.length ? `<div class="renovation-estimate-preview-notes"><strong>備考・特記事項へ自動記載</strong>${sourceNotes.map(note => `<span>・${esc(note)}</span>`).join("")}</div>` : "") +
+    `</div>`;
+}
+
 function renderRenovationTab() {
   const root = document.getElementById("renovation-root");
   if (!root) return;
@@ -745,6 +871,8 @@ function renderRenovationTab() {
     startRenovationUnit();
     return;
   }
+  syncRenovationQuoteLine(unit);
+  syncRenovationSourceNotes();
   const pricing = calcRenovationPricing(unit);
   const selected = pricing.candidates[state.quoteMethod];
   const equipmentRows = state.equipment.map(row => `<tr><td><strong>${esc(row.name)}</strong><small>${esc(row.spec || row.category)}</small></td>` +
@@ -853,7 +981,8 @@ function renderRenovationTab() {
       `<div class="renovation-methods">${Object.entries(RENOVATION_PRESENTATIONS).map(([key, method]) =>
         `<button class="${state.presentationMethod === key ? "active" : ""}" aria-pressed="${state.presentationMethod === key}" onclick="setRenovationPresentation('${key}')"><strong>${method.label}</strong><span>${method.description}</span></button>`
       ).join("")}</div></div>` +
-    `<aside class="renovation-summary"><div class="renovation-section-title">計算結果</div>` +
+    `<aside class="renovation-summary"><div class="renovation-section-title">計算結果・見積作成</div>` +
+      renovationEstimatePreviewHtml(unit, pricing) +
       priceComparison +
       `<div class="renovation-result-breakdown"><table><thead><tr><th>項目</th><th>定価</th><th>NET</th><th>原価</th></tr></thead><tbody>` +
       `<tr><td>機器</td><td>${fmtNum(pricing.equipmentList)}</td><td>${fmtNum(pricing.equipmentNet)}</td><td>${fmtNum(pricing.equipmentCost)}</td></tr>` +

@@ -3112,6 +3112,7 @@ function moveCatalogLine(lineId, delta) {
 // ============================================================
 
 function renderEstimateTab() {
+  if (typeof syncRenovationSourceNotes === "function") syncRenovationSourceNotes();
   renderProjectInfo();
   renderUnitTabs();
   renderEstimateLines();
@@ -3323,7 +3324,18 @@ function renderEstimateLines() {
       `<div class="ucf-row ucf-list"><span class="ucf-label">定価 <small class="ucf-r-list">${esc(ufListRate)}</small></span><span class="ucf-v ucf-v-list">${fmtNum(ufList)}</span></div>` +
       `<div class="ucf-row ucf-net"><span class="ucf-label">NET <small class="ucf-r-net">${esc(ufNetRate)}</small></span><span class="ucf-v ucf-v-net">${fmtNum(ufNet)}</span></div>`;
     col.appendChild(uf);
-    container.appendChild(col);
+    if (unit?.renovation?.enabled && typeof renovationInternalCardHtml === "function") {
+      const pair = document.createElement("div");
+      pair.className = "renovation-screen-pair";
+      pair.appendChild(col);
+      const internalCol = document.createElement("aside");
+      internalCol.className = "renovation-screen-internal-col";
+      internalCol.innerHTML = `<div class="renovation-internal-print-title">社内用・改修計算情報</div>${renovationInternalCardHtml(unit)}`;
+      pair.appendChild(internalCol);
+      container.appendChild(pair);
+    } else {
+      container.appendChild(col);
+    }
   }
 
   // 上部スクロールバー（下と同期）
@@ -3359,8 +3371,9 @@ function renderEstimateLines() {
     if (_revealActiveUnitAfterRender) {
       const activeCol = container.querySelector(".unit-col-active");
       if (activeCol) {
+        const activeGroup = activeCol.closest(".renovation-screen-pair") || activeCol;
         const cw = container.offsetWidth;
-        target = Math.max(0, activeCol.offsetLeft - (cw - activeCol.offsetWidth) / 2);
+        target = Math.max(0, activeGroup.offsetLeft - Math.max(0, (cw - activeGroup.offsetWidth) / 2));
       }
       _revealActiveUnitAfterRender = false;
     }
@@ -3550,6 +3563,20 @@ function renderEstimateLinesForPrint() {
       tbl.querySelectorAll(".unit-header-row td[colspan]").forEach(td => td.setAttribute("colspan", "6"));
       return tbl;
     };
+    // 改修は、見積明細と社内計算情報を必ず左右2列で対にして印刷する。
+    if (units[0]?.renovation?.enabled && typeof renovationInternalCardHtml === "function") {
+      const pageDiv = document.createElement("div");
+      pageDiv.className = "est-print-page renovation-print-pair";
+      pageDiv.style.cssText = "display:flex;gap:2px;align-items:flex-start;";
+      pageDiv.appendChild(_makeTable(rowsHtml, false, unitHdrHtml));
+      const internalCol = document.createElement("div");
+      internalCol.className = "renovation-internal-print-column";
+      internalCol.innerHTML = `<div class="renovation-internal-print-title">社内用・改修計算情報</div>${renovationInternalCardHtml(units[0])}`;
+      pageDiv.appendChild(internalCol);
+      section.insertBefore(pageDiv, empty);
+      _shrinkPrintCells(section, 733);
+      return;
+    }
     for (let p = 0; p < pages.length; p++) {
       const rowsSlice = rowsHtml.slice(pages[p].start, pages[p].end);
       const weightsSlice = rowWeights.slice(pages[p].start, pages[p].end);
@@ -3625,6 +3652,34 @@ function renderEstimateLinesForPrint() {
     const raw = unitPricing.raw;
     const listP = unitPricing.list;
     const netP = unitPricing.net;
+
+    // 改修は見積列の直後を社内計算情報専用列として確保する。
+    // 前の項目で右端まで使っている場合は、新しいページの左端から始める。
+    if (u?.renovation?.enabled && typeof renovationInternalCardHtml === "function") {
+      if (ci === numCols - 1 || colWeights[ci] > 0) advanceCol();
+      curCols[ci].push({
+        type: 'row',
+        html: `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${esc(u.unitName)}</td></tr>`,
+        weight: 1.0
+      });
+      colWeights[ci] += 1.0;
+      rowsHtml.forEach(h => {
+        const w = (h.includes('sep-row') || h.includes('comment-row')) ? SEP_WEIGHT : 1.0;
+        curCols[ci].push({ type: 'row', html: h, weight: w });
+        colWeights[ci] += w;
+      });
+      curCols[ci].push({
+        type: 'footer', raw, listP, netP,
+        listRate: unitPricing.rateLabel,
+        netRate: "自動",
+      });
+      colWeights[ci] += 4.5;
+      advanceCol();
+      curCols[ci].push({ type: 'renovation-internal', unit: u, weight: perCol });
+      colWeights[ci] = perCol;
+      if (ui < units.length - 1) advanceCol();
+      continue;
+    }
 
     // ユニットヘッダー
     addSlot({
@@ -3712,6 +3767,12 @@ function renderEstimateLinesForPrint() {
               `<span style="font-weight:700;font-size:9px;color:#276749;">${fmtNum(slot.netP)}</span>` +
             `</div>`;
           colContainer.appendChild(fd);
+        } else if (slot.type === 'renovation-internal') {
+          flushRows();
+          const internal = document.createElement("div");
+          internal.className = "renovation-internal-print-column";
+          internal.innerHTML = `<div class="renovation-internal-print-title">社内用・改修計算情報</div>${renovationInternalCardHtml(slot.unit)}`;
+          colContainer.appendChild(internal);
         } else {
           rowBuf.push(slot.html);
         }

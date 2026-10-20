@@ -1197,7 +1197,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-methods button span { color:#718096; font-size:9px; }
 .renovation-methods button.active { border:2px solid #1d4f86; padding:7px 10px; background:#e6f2ff; color:#123a67; box-shadow:0 0 0 2px rgba(29,79,134,.12); }
 .renovation-methods button.active::after { content:"選択中"; position:absolute; top:5px; right:7px; padding:1px 5px; border-radius:8px; background:#1d4f86; color:#fff; font-size:8px; font-weight:700; }
-.renovation-layout { display:grid; grid-template-columns:minmax(300px, .9fr) minmax(480px, 1.65fr) minmax(280px, .7fr); gap:8px; align-items:start; }
+.renovation-layout { display:grid; grid-template-columns:minmax(280px,.8fr) minmax(280px,.8fr) minmax(560px,1.55fr) minmax(300px,.85fr); gap:8px; align-items:start; min-width:1480px; }
 .renovation-layout section, .renovation-summary { background:#fff; border:1px solid #d8e0ea; border-radius:7px; overflow:hidden; }
 .renovation-work { display:grid; gap:8px; min-width:0; }
 .renovation-section-title { background:#1d406b; color:#fff; padding:7px 10px; font-size:12px; font-weight:700; }
@@ -1212,7 +1212,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
   display:flex;
   flex-direction:column;
 }
-.renovation-catalog-list { height:525px; min-height:0; overflow:auto; border-top:1px solid #e2e8f0; }
+.renovation-catalog-list { flex:1; height:auto; min-height:0; overflow:auto; border-top:1px solid #e2e8f0; }
 .renovation-catalog-item { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px; align-items:center; padding:7px; border-bottom:1px solid #edf2f7; font-size:11px; }
 .renovation-catalog-item:hover { background:#f4f9ff; }
 .renovation-catalog-item strong, .renovation-catalog-item small, .renovation-catalog-item span { display:block; overflow-wrap:anywhere; }
@@ -1236,6 +1236,11 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-material-groups { display:flex; flex-wrap:wrap; gap:4px; padding:7px 7px 0; }
 .renovation-material-groups button.active { background:#2368a2; color:#fff; border-color:#2368a2; }
 .renovation-material-buttons { display:flex; flex-wrap:wrap; align-content:flex-start; gap:5px; padding:7px; max-height:240px; overflow:auto; border-bottom:1px solid #edf2f7; }
+.renovation-material-catalog-scroll { flex:1; min-height:0; overflow:auto; }
+.renovation-material-catalog .renovation-material-buttons { display:grid; grid-template-columns:1fr; max-height:none; overflow:visible; }
+.renovation-material-catalog .renovation-material-card { width:100%; box-sizing:border-box; }
+.renovation-material-catalog .renovation-material-add { min-width:0; }
+.renovation-selection-subtitle { padding:6px 9px; border-bottom:1px solid #dbe4ee; background:#edf4fb; color:#24496f; font-size:11px; font-weight:700; }
 .renovation-material-card { display:flex; align-items:stretch; border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; }
 .renovation-material-buttons .renovation-material-add { display:flex; flex-direction:column; align-items:flex-start; gap:1px; border:0; border-radius:0; min-width:128px; text-align:left; }
 .renovation-material-buttons .renovation-material-add small { color:#475569; font-size:8px; }
@@ -1317,18 +1322,9 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .rates-disabled { opacity:.45; pointer-events:none; }
 
 @media (max-width: 1100px) {
-  .renovation-layout { grid-template-columns:minmax(290px,.8fr) minmax(480px,1.4fr); }
-  .renovation-catalog { position:static; max-height:none; display:block; }
-  .renovation-side { grid-column:1 / -1; position:static; max-height:none; overflow:visible; }
-  .renovation-summary { grid-column:1 / -1; position:static; max-height:none; overflow:visible; display:grid; grid-template-columns:repeat(4,1fr); }
-  .renovation-summary .renovation-section-title { grid-column:1/-1; }
-  .renovation-summary > p, .renovation-allocation, .renovation-result-breakdown, .renovation-price-cards { grid-column:1/-1; }
+  .renovation-layout { grid-template-columns:minmax(280px,.8fr) minmax(280px,.8fr) minmax(560px,1.55fr) minmax(300px,.85fr); }
 }
 @media (max-width: 820px) {
-  .renovation-sticky-controls { position:static; padding-top:0; }
-  .renovation-layout { display:block; }
-  .renovation-layout > * { margin-bottom:8px; }
-  .renovation-catalog-list { height:340px; }
   .renovation-cost-inputs { grid-template-columns:1fr 1fr; }
   .renovation-cost-inputs-small { grid-template-columns:repeat(3,minmax(0,1fr)); }
   .renovation-factor-inputs { grid-template-columns:repeat(6,minmax(0,1fr)); }

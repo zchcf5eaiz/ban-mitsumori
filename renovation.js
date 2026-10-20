@@ -808,9 +808,8 @@ function renderRenovationTab() {
       `<input class="renovation-search" type="search" placeholder="全価格表から検索" value="${escAttr(renovationSearchText)}" oninput="setRenovationSearch(this.value)">` +
       `<div class="renovation-categories">${RENOVATION_CATEGORIES.map(cat => `<button data-category-id="${escAttr(cat.id)}" class="${cat.id === renovationCategoryId && !renovationSearchText ? "active" : ""}" aria-pressed="${cat.id === renovationCategoryId && !renovationSearchText}" onclick="setRenovationCategory('${cat.id}')">${esc(cat.label)}</button>`).join("")}</div>` +
       `<div id="renovation-catalog-list" class="renovation-catalog-list"></div></section>` +
-    `<div class="renovation-work"><section><div class="renovation-section-title">2. 選択した機器</div>` +
-      `<div class="renovation-table-wrap"><table><thead><tr><th>機器</th><th>数量</th><th>定価</th><th>NET</th><th>仕入</th><th>備考</th><th>仕入計</th><th></th></tr></thead><tbody>${equipmentRows || `<tr><td colspan="8" class="renovation-empty">左の価格表から追加してください。</td></tr>`}</tbody></table></div></section>` +
-    `<section><div class="renovation-section-title">3. 材料費</div>` +
+    `<section class="renovation-catalog renovation-material-catalog"><div class="renovation-section-title">2. 材料を選択</div>` +
+      `<div class="renovation-material-catalog-scroll">` +
       `<div class="renovation-material-groups">${RENOVATION_MATERIAL_GROUPS.map(group => `<button class="${group === renovationMaterialGroup ? "active" : ""}" onclick="setRenovationMaterialGroup('${escAttr(group)}')">${esc(group)}</button>`).join("")}</div>` +
       `<div class="renovation-material-buttons">${visibleMaterials.map(item => {
         const capacity = renovationMaterialCapacity(item);
@@ -822,6 +821,11 @@ function renderRenovationTab() {
           `<div class="renovation-material-card-actions"><button onclick="showRenovationMaterialPriceHistory('${item.id}')" title="価格履歴">履歴</button><button onclick="editRenovationMaterialPrice('${item.id}')" title="登録価格と備考を変更">価格・備考</button></div></div>`;
       }).join("")}</div>` +
       renovationNotesHtml(materialNotes, `${renovationMaterialGroup}の元表メモ`) +
+      `</div></section>` +
+    `<div class="renovation-work"><section><div class="renovation-section-title">3. 選択内容・費用調整</div>` +
+      `<div class="renovation-selection-subtitle">選択した機器</div>` +
+      `<div class="renovation-table-wrap"><table><thead><tr><th>機器</th><th>数量</th><th>定価</th><th>NET</th><th>仕入</th><th>備考</th><th>仕入計</th><th></th></tr></thead><tbody>${equipmentRows || `<tr><td colspan="8" class="renovation-empty">左の機器一覧から追加してください。</td></tr>`}</tbody></table></div>` +
+      `<div class="renovation-selection-subtitle">選択した材料</div>` +
       `<div class="renovation-table-wrap"><table><thead><tr><th>材料</th><th>数量</th><th>定価</th><th>NET</th><th>仕入</th><th>備考</th><th>仕入計</th><th></th></tr></thead><tbody>${materialRows || `<tr><td colspan="8" class="renovation-empty">材料を追加してください。</td></tr>`}</tbody></table></div></section>` +
     `<section><div class="renovation-section-title">4. 現地調査費</div><div class="renovation-cost-inputs renovation-cost-inputs-small">` +
       `<label>現地調査 定価<input type="number" min="0" value="${state.siteSurveyList}" onchange="updateRenovationNumber('siteSurveyList',this.value)"></label>` +

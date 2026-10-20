@@ -1181,9 +1181,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-unit-switcher { display:flex; gap:5px; align-items:center; flex-wrap:wrap; margin:8px 0; }
 .renovation-unit-switcher button { border:1px solid #b7c4d6; background:#fff; color:#334155; border-radius:5px; padding:5px 10px; cursor:pointer; font-size:12px; }
 .renovation-unit-switcher button.active { background:#1d4f86; color:#fff; border-color:#1d4f86; }
-.renovation-heading { display:flex; justify-content:space-between; align-items:center; gap:15px; background:#fff; border:1px solid #d9e1eb; border-radius:7px; padding:10px 14px; margin-bottom:8px; }
-.renovation-heading h2 { margin:0; color:#183b64; font-size:18px; }
-.renovation-heading p { margin:3px 0 0; color:#64748b; font-size:11px; }
+.renovation-unit-switcher .renovation-confirm-button { margin-left:auto; background:#217a4a; color:#fff; border-color:#217a4a; }
 .renovation-pattern-panel { box-sizing:border-box; width:100%; margin:0; padding:8px 8px 9px; background:#fff8df; border:2px solid #d69e2e; border-radius:8px; box-shadow:0 3px 10px rgba(91,66,15,.18); }
 .renovation-pattern-heading { display:flex; align-items:baseline; justify-content:space-between; gap:7px; margin:0 2px 7px; color:#744210; }
 .renovation-pattern-heading strong { font-size:15px; letter-spacing:.04em; }

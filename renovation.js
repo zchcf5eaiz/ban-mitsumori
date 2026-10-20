@@ -698,7 +698,8 @@ function showRenovationPriceHistory(id) {
 function renovationUnitSwitcherHtml() {
   return `<div class="renovation-unit-switcher">${currentEstimate.units.map((unit, index) =>
     `<button class="${index === activeUnitIndex ? "active" : ""}" onclick="activateUnit(${index});renderRenovationTab()">${esc(unit.unitName)}</button>`
-  ).join("")}<button onclick="addRenovationUnit()">＋ 改修項目</button></div>`;
+  ).join("")}<button onclick="addRenovationUnit()">＋ 改修項目</button>` +
+    `<button class="renovation-confirm-button" onclick="switchTab('estimate')">見積作成で確認</button></div>`;
 }
 
 function addRenovationUnit() {
@@ -800,9 +801,7 @@ function renderRenovationTab() {
     ...(RENOVATION_REFERENCE_NOTES?.patterns?.[state.presentationMethod] || []),
   ];
 
-  root.innerHTML = `<div class="renovation-sticky-controls">` + renovationUnitSwitcherHtml() +
-    `<div class="renovation-heading"><div><h2>改修見積 — ${esc(unit.unitName)}</h2><p>計算内容は同じ項目の「見積作成」に自動反映されます。</p></div>` +
-    `<button class="btn btn-success" onclick="switchTab('estimate')">見積作成で確認</button></div></div>` +
+  root.innerHTML = `<div class="renovation-sticky-controls">` + renovationUnitSwitcherHtml() + `</div>` +
     `<div class="renovation-layout"><section class="renovation-catalog"><div class="renovation-section-title">1. 機器を選択</div>` +
       `<input class="renovation-search" type="search" placeholder="全価格表から検索" value="${escAttr(renovationSearchText)}" oninput="setRenovationSearch(this.value)">` +
       `<div class="renovation-categories">${RENOVATION_CATEGORIES.map(cat => `<button data-category-id="${escAttr(cat.id)}" class="${cat.id === renovationCategoryId && !renovationSearchText ? "active" : ""}" aria-pressed="${cat.id === renovationCategoryId && !renovationSearchText}" onclick="setRenovationCategory('${cat.id}')">${esc(cat.label)}</button>`).join("")}</div>` +

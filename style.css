@@ -1263,6 +1263,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-factor-inputs input { padding:4px 5px; margin-top:2px; }
 .renovation-factor-inputs small { margin-top:2px; font-size:8px; line-height:1.25; }
 .renovation-calculated-cost { display:grid; grid-template-columns:1fr auto 1fr auto; gap:8px; align-items:center; padding:7px 10px; border-top:1px solid #e2e8f0; background:#f8fafc; font-size:10px; }
+.renovation-calculated-cost-three { grid-template-columns:1fr auto 1fr auto 1fr auto; }
 .renovation-calculated-cost b { color:#173f69; font-size:12px; }
 .renovation-overhead-box { background:#fff8e5; }
 .renovation-side {

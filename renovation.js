@@ -220,7 +220,7 @@ function createRenovationState() {
     siteSurveyList: 60000,
     siteSurveyNet: 50000,
     siteSurveyCost: 0,
-    labor: { hourlyRate: 5000, factor: 1.25, hours: 8, people: 1 },
+    labor: { hourlyRate: 5000, factor: 1.25, hours: 8, people: 1, cost: 0 },
     matsuokaRatios: { ...RENOVATION_MATSUOKA_RATIOS },
   };
 }
@@ -249,6 +249,7 @@ function getRenovationState(unit = activeUnit()) {
   if (state.materialListFactor == null) state.materialListFactor = 1.2;
   if (state.renovationListFactor == null) state.renovationListFactor = 1.5;
   if (state.siteSurveyCost == null) state.siteSurveyCost = 0;
+  if (state.labor.cost == null) state.labor.cost = 0;
   state.matsuokaRatios = { ...RENOVATION_MATSUOKA_RATIOS };
   if ((Number(state.pricingVersion) || 0) < 2) {
     state.materials.forEach(row => {
@@ -306,6 +307,7 @@ function calcRenovationPricing(unit) {
     (Number(state.labor.hourlyRate) || 0) * (Number(state.labor.factor) || 0) *
     (Number(state.labor.hours) || 0) * (Number(state.labor.people) || 0), 1000
   );
+  const laborCost = Number(state.labor.cost) || 0;
   const hasExplicitMaterialList = state.materials.some(row => row.listPrice != null);
   const materialListBase = hasExplicitMaterialList ? state.materials.reduce((total, row) => {
     const qty = Number(row.qty) || 0;
@@ -318,7 +320,7 @@ function calcRenovationPricing(unit) {
   const renovationList = renovationRoundUp(labor * renovationFactor(state.renovationListFactor, 1.5), 1000);
   const directList = equipmentList + materialList + (Number(state.siteSurveyList) || 0) + renovationList;
   const directNet = equipmentNet + materialNet + (Number(state.siteSurveyNet) || 0) + labor;
-  const cost = equipmentCost + materialCost + (Number(state.siteSurveyCost) || 0) + labor;
+  const cost = equipmentCost + materialCost + (Number(state.siteSurveyCost) || 0) + laborCost;
   const factor = renovationFactor(state.pricingFactor, 1.2);
   const trFactor = renovationFactor(state.transformerFactor, 1.1);
   const splitTr = state.method === "transformer";
@@ -419,7 +421,7 @@ function calcRenovationPricing(unit) {
   return {
     raw: cost, list, net, overhead, allocations, candidates,
     equipmentList, equipmentNet, equipmentCost,
-    materialCost, materialNet, materialList, labor, renovationList, directList, directNet,
+    materialCost, materialNet, materialList, labor, laborCost, renovationList, directList, directNet,
     trList, trNet, trCost,
     distributionDifference, distributionFeasible, distributionOverrun,
     rateLabel: `${RENOVATION_METHODS[state.method]?.label || "改修"}・${RENOVATION_QUOTE_METHODS[state.quoteMethod].label}・${RENOVATION_PRESENTATIONS[state.presentationMethod]?.label || "一式"}`,
@@ -462,7 +464,7 @@ function renovationInternalCardHtml(unit) {
     row("機器", pricing.equipmentList, pricing.equipmentNet, pricing.equipmentCost) +
     row("材料費", pricing.materialList, pricing.materialNet, pricing.materialCost) +
     row("現地調査費", state.siteSurveyList, state.siteSurveyNet, state.siteSurveyCost) +
-    row("改修費", pricing.renovationList, pricing.labor, pricing.labor) +
+    row("改修費", pricing.renovationList, pricing.labor, pricing.laborCost) +
     row("方式差額・諸経費", pricing.list - pricing.directList, pricing.net - pricing.directNet, null) +
     row("採用合計", pricing.list, pricing.net, totalCost, "renovation-internal-total") +
     `</tbody></table>` +
@@ -874,7 +876,6 @@ function renderRenovationTab() {
   syncRenovationQuoteLine(unit);
   syncRenovationSourceNotes();
   const pricing = calcRenovationPricing(unit);
-  const selected = pricing.candidates[state.quoteMethod];
   const equipmentRows = state.equipment.map(row => `<tr><td><strong>${esc(row.name)}</strong><small>${esc(row.spec || row.category)}</small></td>` +
     `<td><input type="number" min="0" step="1" value="${row.qty}" onchange="updateRenovationEquipment('${row.lineId}','qty',this.value)"></td>` +
     `<td><input type="number" min="0" step="1" value="${row.listPrice}" onchange="updateRenovationEquipment('${row.lineId}','listPrice',this.value)"></td>` +
@@ -894,12 +895,6 @@ function renderRenovationTab() {
     `<td>${fmtNum(row.qty * (row.costPrice ?? row.unitPrice ?? 0))}</td><td><button class="renovation-delete" onclick="removeRenovationMaterial('${row.lineId}')">×</button></td></tr>`;
   }).join("");
   const isDistribution = state.presentationMethod === "allocation" || state.presentationMethod === "matsuoka";
-  const allocation = isDistribution
-    ? (pricing.distributionFeasible
-      ? `<div class="renovation-allocation"><strong>${state.presentationMethod === "matsuoka" ? "松岡Jr.社内比率" : RENOVATION_QUOTE_METHODS[state.quoteMethod].label} 振分額</strong>` +
-        Object.entries(pricing.allocations).map(([key, value]) => `<span>${esc({material:"材料",survey:"現地調査",renovation:"改修",overhead:"諸経費",design:"設計",transport:"運搬",management:"管理",misc:"雑費"}[key] || key)} <b>${fmtNum(value)}</b></span>`).join("") + `</div>`
-      : `<div class="renovation-distribution-warning"><strong>振分不可</strong><span>機器実定価が方式定価を <b>${fmtNum(pricing.distributionOverrun)}円</b> 上回っています。</span><small>見積作成には、金額を隠さず実定価内訳（${fmtNum(pricing.directList)}円）を自動反映します。方式か選択機器を見直してください。</small></div>`)
-    : "";
   const candidateCards = Object.entries(RENOVATION_QUOTE_METHODS).map(([key, method]) => {
     const result = pricing.candidates[key];
     const locked = (state.presentationMethod === "detail" && key !== "bara") ||
@@ -914,21 +909,10 @@ function renderRenovationTab() {
   }).join("");
   const overheadNet = Math.max(0, pricing.net - pricing.directNet);
   const overheadLabel = isDistribution ? "振分対象差額" : "諸経費（定価差額）";
-  const priceComparison = `<div class="renovation-price-comparison">` +
-    `<span>機器実定価<b>${fmtNum(pricing.equipmentList)}</b></span>` +
-    `<span>実定価合計<b>${fmtNum(pricing.directList)}</b></span>` +
-    `<span>選択方式定価<b>${fmtNum(selected.list)}</b></span>` +
-    `<span class="adopted">見積作成への反映額<b>${fmtNum(pricing.list)}</b></span></div>`;
   const visibleMaterials = RENOVATION_MATERIALS
     .filter(item => renovationMaterialDisplayGroup(item) === renovationMaterialGroup)
     .map(item => getRenovationMaterialItem(item.id) || item);
   const materialNotes = RENOVATION_REFERENCE_NOTES?.materialGroups?.[renovationMaterialGroup] || [];
-  const estimateNotes = [
-    ...(RENOVATION_REFERENCE_NOTES?.general || []),
-    ...(RENOVATION_REFERENCE_NOTES?.patterns?.[state.method] || []),
-    ...(RENOVATION_REFERENCE_NOTES?.patterns?.[state.presentationMethod] || []),
-  ];
-
   root.innerHTML = `<div class="renovation-sticky-controls">` + renovationUnitSwitcherHtml() + `</div>` +
     `<div class="renovation-layout"><section class="renovation-catalog"><div class="renovation-section-title">1. 機器を選択</div>` +
       `<input class="renovation-search" type="search" placeholder="全価格表から検索" value="${escAttr(renovationSearchText)}" oninput="setRenovationSearch(this.value)">` +
@@ -963,7 +947,8 @@ function renderRenovationTab() {
       `<label>工数係数<input type="number" min="0" step="0.05" value="${state.labor.factor}" onchange="updateRenovationNumber('labor.factor',this.value)"></label>` +
       `<label>作業時間<input type="number" min="0" step="0.5" value="${state.labor.hours}" onchange="updateRenovationNumber('labor.hours',this.value)"></label>` +
       `<label>人数<input type="number" min="0" step="1" value="${state.labor.people}" onchange="updateRenovationNumber('labor.people',this.value)"></label>` +
-      `</div><div class="renovation-calculated-cost"><span>改修費 定価</span><b>${fmtNum(pricing.renovationList)}</b><span>改修費 NET</span><b>${fmtNum(pricing.labor)}</b></div></section>` +
+      `<label>改修費 社内原価<input type="number" min="0" value="${state.labor.cost}" onchange="updateRenovationNumber('labor.cost',this.value)"><small>粗利率の計算に使用</small></label>` +
+      `</div><div class="renovation-calculated-cost renovation-calculated-cost-three"><span>改修費 定価</span><b>${fmtNum(pricing.renovationList)}</b><span>改修費 NET</span><b>${fmtNum(pricing.labor)}</b><span>社内原価</span><b>${fmtNum(pricing.laborCost)}</b></div></section>` +
     `<section><div class="renovation-section-title">6. 諸経費・計算係数</div><div class="renovation-cost-inputs renovation-factor-inputs">` +
       `<label class="renovation-factor">標準係数<input type="number" min="0" step="0.01" value="${state.pricingFactor}" onchange="updateRenovationNumber('pricingFactor',this.value)"><small>通常1.20。高額時は1.10、1.05などへ変更</small></label>` +
       `<label class="renovation-factor">TR別計算係数<input type="number" min="0" step="0.01" value="${state.transformerFactor}" onchange="updateRenovationNumber('transformerFactor',this.value)"><small>「TR別計算」を選んだ時だけ使用</small></label>` +
@@ -983,16 +968,6 @@ function renderRenovationTab() {
       ).join("")}</div></div>` +
     `<aside class="renovation-summary"><div class="renovation-section-title">計算結果・見積作成</div>` +
       renovationEstimatePreviewHtml(unit, pricing) +
-      priceComparison +
-      `<div class="renovation-result-breakdown"><table><thead><tr><th>項目</th><th>定価</th><th>NET</th><th>原価</th></tr></thead><tbody>` +
-      `<tr><td>機器</td><td>${fmtNum(pricing.equipmentList)}</td><td>${fmtNum(pricing.equipmentNet)}</td><td>${fmtNum(pricing.equipmentCost)}</td></tr>` +
-      `<tr><td>材料費</td><td>${fmtNum(pricing.materialList)}</td><td>${fmtNum(pricing.materialNet)}</td><td>${fmtNum(pricing.materialCost)}</td></tr>` +
-      `<tr><td>現地調査費</td><td>${fmtNum(state.siteSurveyList)}</td><td>${fmtNum(state.siteSurveyNet)}</td><td>${fmtNum(state.siteSurveyCost)}</td></tr>` +
-      `<tr><td>改修費</td><td>${fmtNum(pricing.renovationList)}</td><td>${fmtNum(pricing.labor)}</td><td>${fmtNum(pricing.labor)}</td></tr>` +
-      `<tr class="overhead"><td>${overheadLabel}</td><td>${fmtNum(pricing.overhead)}</td><td>${fmtNum(overheadNet)}</td><td>—</td></tr>` +
-      `</tbody></table></div>${allocation}` +
-      renovationNotesHtml(estimateNotes) +
-      `<p>機器原価率は元Excelと同じく機器仕入＋材料原価で算出。総原価率・粗利率は現地調査の社内原価と改修費も含めて算出しています。</p>` +
     `</aside></div></div>`;
   renderRenovationCatalog();
   const stickyControls = root.querySelector(".renovation-sticky-controls");

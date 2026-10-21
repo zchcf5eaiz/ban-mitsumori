@@ -329,31 +329,31 @@ function calcRenovationPricing(unit) {
   const buildCandidate = (kind) => {
     let normalList, normalNet, trPartList = 0, trPartNet = 0;
     if (kind === "bara") {
-      normalList = renovationRoundUp(normalListBase * factor, 10000);
+      normalList = renovationRoundUp(normalListBase * factor, 1000);
       normalNet = renovationRoundUp(normalNetBase * factor * 1.15, 10000);
       if (splitTr) {
-        trPartList = renovationRoundUp(trList * trFactor, 10000);
+        trPartList = renovationRoundUp(trList * trFactor, 1000);
         trPartNet = renovationRoundUp(trNet * trFactor * 1.15, 10000);
       }
     } else {
       const multiplier = kind === "govt" ? 3.8 : 2.28;
       const netRate = kind === "govt" ? 0.33 : 0.55;
-      normalList = renovationRoundUp(normalNetBase * factor * multiplier, 10000);
+      normalList = renovationRoundUp(normalNetBase * factor * multiplier, 1000);
       normalNet = renovationRoundUp(normalList * netRate, 10000);
       if (splitTr) {
-        trPartList = renovationRoundUp(trNet * trFactor * multiplier, 10000);
+        trPartList = renovationRoundUp(trNet * trFactor * multiplier, 1000);
         trPartNet = renovationRoundUp(trPartList * netRate, 10000);
       }
     }
     // TR別計算を使わない場合はTRも標準側に含まれる。
     if (!splitTr) {
       if (kind === "bara") {
-        normalList = renovationRoundUp(directList * factor, 10000);
+        normalList = renovationRoundUp(directList * factor, 1000);
         normalNet = renovationRoundUp(directNet * factor * 1.15, 10000);
       } else {
         const multiplier = kind === "govt" ? 3.8 : 2.28;
         const netRate = kind === "govt" ? 0.33 : 0.55;
-        normalList = renovationRoundUp(directNet * factor * multiplier, 10000);
+        normalList = renovationRoundUp(directNet * factor * multiplier, 1000);
         normalNet = renovationRoundUp(normalList * netRate, 10000);
       }
     }

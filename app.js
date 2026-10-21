@@ -3496,6 +3496,12 @@ function _estTheadHtml() {
 const EST_PRINT_SINGLE_ROW_LIMIT = 30; // 単一項目: 1列あたりの表示高さ換算上限
 const EST_PRINT_MULTI_ROW_LIMIT = 35;  // 複数項目: 従来の1列上限を維持
 
+// 改修項目は「見積明細＋社内計算情報」の2列を使う。
+// 項目数ではなく実際に印刷する列数でA4/A3を判定する。
+function estimatePrintColumnCount(units = currentEstimate.units) {
+  return units.reduce((count, unit) => count + (unit?.renovation?.enabled ? 2 : 1), 0);
+}
+
 // 品名・仕様セルの縮小判定。beforeprint時は画面CSS・画面幅のままなので、
 // 紙面幅と印刷用列幅を一時適用してから測定しないと判定がずれる
 function _shrinkPrintCells(section, paperW) {
@@ -3612,7 +3618,8 @@ function renderEstimateLinesForPrint() {
   const theadHtml = _estTheadHtml();
   const SEP_WEIGHT = 0.2;
   const perCol = EST_PRINT_MULTI_ROW_LIMIT;
-  const numCols = units.length <= 2 ? 2 : 4;
+  const printColumnCount = estimatePrintColumnCount(units);
+  const numCols = printColumnCount <= 2 ? 2 : 4;
   const colW = `calc(${(100 / numCols).toFixed(4)}% - 2px)`;
 
   // 全体合計を計算
@@ -3784,7 +3791,7 @@ function renderEstimateLinesForPrint() {
     section.insertBefore(pageDiv, empty);
   }
 
-  _shrinkPrintCells(section, units.length >= 3 ? 1527 : 733); // A3横404mm≈1527px / A4縦194mm≈733px
+  _shrinkPrintCells(section, printColumnCount >= 3 ? 1527 : 733); // A3横404mm≈1527px / A4縦194mm≈733px
 }
 
 function fitPrintToOnePage() {
@@ -3809,8 +3816,8 @@ window.addEventListener("beforeprint", () => {
   }
   renderEstimateLinesForPrint();
   fitPrintToOnePage();
-  // 3-4ユニット: A3横向きページサイズを動的適用
-  if (currentEstimate.units.length >= 3) {
+  // 実印刷列が3列以上ならA3横向きを適用（改修は社内情報を含めて2列）。
+  if (estimatePrintColumnCount() >= 3) {
     const ps = document.createElement("style");
     ps.id = "print-page-size-override";
     ps.textContent = "@page { size: A3 landscape; margin: 8mm; }";

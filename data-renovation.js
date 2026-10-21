@@ -3230,20 +3230,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GR-MBH",
     "spec": "",
     "defaultQty": 1,
-    "listPrice": 210300,
-    "netPrice": 84100,
-    "costPrice": 84100,
-    "priceLabel": "各々UP R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "太陽光",
-        "effectiveDate": null,
-        "listPrice": 141000,
-        "netPrice": 65000,
-        "costPrice": 64400
-      }
-    ]
+    "listPrice": 141000,
+    "netPrice": 65000,
+    "costPrice": 64400,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-05-008",
@@ -3896,20 +3888,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GR",
     "spec": "",
     "defaultQty": 1,
-    "listPrice": 152300,
-    "netPrice": 60700,
-    "costPrice": 60700,
-    "priceLabel": "45%up R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "改定前",
-        "effectiveDate": null,
-        "listPrice": 105000,
-        "netPrice": 42000,
-        "costPrice": 41860
-      }
-    ]
+    "listPrice": 105000,
+    "netPrice": 42000,
+    "costPrice": 41860,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-06-007",
@@ -3918,20 +3902,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GR-4AP",
     "spec": "",
     "defaultQty": 1,
-    "listPrice": 169700,
-    "netPrice": 67800,
-    "costPrice": 67800,
-    "priceLabel": "45%up R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "改定前",
-        "effectiveDate": null,
-        "listPrice": 117000,
-        "netPrice": 47000,
-        "costPrice": 46690
-      }
-    ]
+    "listPrice": 117000,
+    "netPrice": 47000,
+    "costPrice": 46690,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-06-008",
@@ -3940,20 +3916,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GR-4APH",
     "spec": "",
     "defaultQty": 1,
-    "listPrice": 175500,
-    "netPrice": 70100,
-    "costPrice": 70100,
-    "priceLabel": "45%up R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "改定前",
-        "effectiveDate": null,
-        "listPrice": 121000,
-        "netPrice": 49000,
-        "costPrice": 48300
-      }
-    ]
+    "listPrice": 121000,
+    "netPrice": 49000,
+    "costPrice": 48300,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-06-009",
@@ -3962,20 +3930,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GR-4A2P",
     "spec": "",
     "defaultQty": 2,
-    "listPrice": 175500,
-    "netPrice": 70100,
-    "costPrice": 70100,
-    "priceLabel": "45%up R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "改定前",
-        "effectiveDate": null,
-        "listPrice": 121000,
-        "netPrice": 49000,
-        "costPrice": 48300
-      }
-    ]
+    "listPrice": 121000,
+    "netPrice": 49000,
+    "costPrice": 48300,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-06-010",
@@ -3984,20 +3944,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GR-6APH",
     "spec": "",
     "defaultQty": 1,
-    "listPrice": 204500,
-    "netPrice": 81800,
-    "costPrice": 81800,
-    "priceLabel": "45%up R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "改定前",
-        "effectiveDate": null,
-        "listPrice": 141000,
-        "netPrice": 57000,
-        "costPrice": 56350
-      }
-    ]
+    "listPrice": 141000,
+    "netPrice": 57000,
+    "costPrice": 56350,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-06-011",
@@ -4006,20 +3958,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GR-6A2P",
     "spec": "",
     "defaultQty": 1,
-    "listPrice": 204500,
-    "netPrice": 81800,
-    "costPrice": 81800,
-    "priceLabel": "45%up R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "改定前",
-        "effectiveDate": null,
-        "listPrice": 141000,
-        "netPrice": 57000,
-        "costPrice": 56350
-      }
-    ]
+    "listPrice": 141000,
+    "netPrice": 57000,
+    "costPrice": 56350,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-06-012",
@@ -4028,20 +3972,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GF",
     "spec": "",
     "defaultQty": 1,
-    "listPrice": 131600,
-    "netPrice": 52600,
-    "costPrice": 52600,
-    "priceLabel": "45%up R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "改定前",
-        "effectiveDate": null,
-        "listPrice": 90700,
-        "netPrice": 37000,
-        "costPrice": 36260
-      }
-    ]
+    "listPrice": 90700,
+    "netPrice": 37000,
+    "costPrice": 36260,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-06-013",
@@ -4050,20 +3986,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GF-2APH",
     "spec": "",
     "defaultQty": 1,
-    "listPrice": 149400,
-    "netPrice": 59600,
-    "costPrice": 59600,
-    "priceLabel": "45%up R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "改定前",
-        "effectiveDate": null,
-        "listPrice": 103000,
-        "netPrice": 42000,
-        "costPrice": 41090
-      }
-    ]
+    "listPrice": 103000,
+    "netPrice": 42000,
+    "costPrice": 41090,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-06-014",
@@ -4072,21 +4000,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GF-PH",
     "spec": "",
     "defaultQty": 1,
-    "listPrice": 143300,
-    "netPrice": 57300,
-    "costPrice": 57300,
-    "priceLabel": "45%up R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "改定前",
-        "effectiveDate": null,
-        "listPrice": 98800,
-        "netPrice": 40000,
-        "costPrice": 39480,
-        "sourceName": "ME110GR-PH"
-      }
-    ]
+    "listPrice": 98800,
+    "netPrice": 40000,
+    "costPrice": 39480,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-06-015",
@@ -4095,20 +4014,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GBA",
     "spec": "",
     "defaultQty": 1,
-    "listPrice": 116800,
-    "netPrice": 46700,
-    "costPrice": 46700,
-    "priceLabel": "45%up R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "改定前",
-        "effectiveDate": null,
-        "listPrice": 80500,
-        "netPrice": 33000,
-        "costPrice": 32200
-      }
-    ]
+    "listPrice": 80500,
+    "netPrice": 33000,
+    "costPrice": 32200,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-06-016",
@@ -4117,20 +4028,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GBA-H",
     "spec": "",
     "defaultQty": 1,
-    "listPrice": 131600,
-    "netPrice": 52600,
-    "costPrice": 52600,
-    "priceLabel": "45%up R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "改定前",
-        "effectiveDate": null,
-        "listPrice": 90700,
-        "netPrice": 37000,
-        "costPrice": 36260
-      }
-    ]
+    "listPrice": 90700,
+    "netPrice": 37000,
+    "costPrice": 36260,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-06-017",
@@ -4139,20 +4042,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GR-BH",
     "spec": "",
     "defaultQty": 1,
-    "listPrice": 252300,
-    "netPrice": 100400,
-    "costPrice": 100400,
-    "priceLabel": "45%up R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "改定前",
-        "effectiveDate": null,
-        "listPrice": 174000,
-        "netPrice": 70000,
-        "costPrice": 69230
-      }
-    ]
+    "listPrice": 174000,
+    "netPrice": 70000,
+    "costPrice": 69230,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-06-018",
@@ -4161,20 +4056,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GR-CH",
     "spec": "",
     "defaultQty": 1,
-    "listPrice": 288600,
-    "netPrice": 115800,
-    "costPrice": 115800,
-    "priceLabel": "45%up R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "改定前",
-        "effectiveDate": null,
-        "listPrice": 199000,
-        "netPrice": 80000,
-        "costPrice": 79800
-      }
-    ]
+    "listPrice": 199000,
+    "netPrice": 80000,
+    "costPrice": 79800,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-06-019",
@@ -4183,20 +4070,12 @@ const RENOVATION_ITEMS = [
     "name": "ME110GR-MBH",
     "spec": "",
     "defaultQty": 1,
-    "listPrice": 210300,
-    "netPrice": 84100,
-    "costPrice": 84100,
-    "priceLabel": "45%up R6.10.1",
-    "effectiveDate": "2024-10-01",
-    "history": [
-      {
-        "label": "改定前",
-        "effectiveDate": null,
-        "listPrice": 145000,
-        "netPrice": 58000,
-        "costPrice": 57960
-      }
-    ]
+    "listPrice": 145000,
+    "netPrice": 58000,
+    "costPrice": 57960,
+    "priceLabel": "現行",
+    "effectiveDate": null,
+    "history": []
   },
   {
     "id": "REN-07-005",

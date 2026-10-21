@@ -12,11 +12,12 @@ const RENOVATION_QUOTE_METHODS = {
   bara: { label: "実定価ベース（バラ）" },
   govt: { label: "役所3.8" },
   private: { label: "民間2.28" },
+  private22: { label: "民間2.2" },
 };
 const RENOVATION_PRESENTATIONS = {
   lump: { label: "一式", description: "採用した方式定価を1行で表示" },
   detail: { label: "実定価内訳", description: "機器・材料・調査・改修を実定価で表示" },
-  allocation: { label: "差額振分", description: "役所3.8／民間2.28の残額を4項目へ振分" },
+  allocation: { label: "差額振分", description: "役所3.8／民間2.28／民間2.2の残額を4項目へ振分" },
   matsuoka: { label: "松岡Jr.", description: "松岡市役所向けの社内振分方式" },
 };
 const RENOVATION_MATSUOKA_RATIOS = Object.freeze({
@@ -336,7 +337,7 @@ function calcRenovationPricing(unit) {
         trPartNet = renovationRoundUp(trNet * trFactor * 1.15, 10000);
       }
     } else {
-      const multiplier = kind === "govt" ? 3.8 : 2.28;
+      const multiplier = kind === "govt" ? 3.8 : kind === "private22" ? 2.2 : 2.28;
       const netRate = kind === "govt" ? 0.33 : 0.55;
       normalList = renovationRoundUp(normalNetBase * factor * multiplier, 1000);
       normalNet = renovationRoundUp(normalList * netRate, 10000);
@@ -351,7 +352,7 @@ function calcRenovationPricing(unit) {
         normalList = renovationRoundUp(directList * factor, 1000);
         normalNet = renovationRoundUp(directNet * factor * 1.15, 10000);
       } else {
-        const multiplier = kind === "govt" ? 3.8 : 2.28;
+        const multiplier = kind === "govt" ? 3.8 : kind === "private22" ? 2.2 : 2.28;
         const netRate = kind === "govt" ? 0.33 : 0.55;
         normalList = renovationRoundUp(directNet * factor * multiplier, 1000);
         normalNet = renovationRoundUp(normalList * netRate, 10000);
@@ -371,6 +372,7 @@ function calcRenovationPricing(unit) {
     bara: buildCandidate("bara"),
     govt: buildCandidate("govt"),
     private: buildCandidate("private"),
+    private22: buildCandidate("private22"),
   };
   if (!RENOVATION_QUOTE_METHODS[state.quoteMethod]) state.quoteMethod = "bara";
   const selected = candidates[state.quoteMethod];
@@ -490,10 +492,10 @@ function renovationInternalCardHtml(unit) {
     `<span>NET／定価<b>${percent(pricing.net, pricing.list)}</b></span>` +
     `</div>` +
     `<div class="renovation-internal-patterns">` +
-    `<h4>定価・NET算出方式 3パターン <small>提出NET比較用</small></h4>` +
+    `<h4>定価・NET算出方式 4パターン <small>提出NET比較用</small></h4>` +
     `<table><thead><tr><th>算出方式</th><th>定価</th><th>NET</th><th>NET／定価</th></tr></thead>` +
     `<tbody>${candidateRows}</tbody></table>` +
-    `<p>現在の見積には「採用中」の方式を反映。ほか2方式は提出NETの比較用です。</p>` +
+    `<p>現在の見積には「採用中」の方式を反映。ほか3方式は提出NETの比較用です。</p>` +
     `</div></section>`;
 }
 
@@ -588,7 +590,7 @@ function setRenovationQuoteMethod(method) {
     return;
   }
   if ((state.presentationMethod === "lump" || state.presentationMethod === "allocation") && method === "bara") {
-    showToast(`${RENOVATION_PRESENTATIONS[state.presentationMethod].label}は役所3.8方式または民間2.28方式を選択してください`);
+    showToast(`${RENOVATION_PRESENTATIONS[state.presentationMethod].label}は役所3.8方式、民間2.28方式または民間2.2方式を選択してください`);
     return;
   }
   state.quoteMethod = method;

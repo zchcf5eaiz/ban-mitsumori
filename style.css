@@ -1213,6 +1213,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-catalog-list { flex:1; height:auto; min-height:0; overflow:auto; border-top:1px solid #e2e8f0; }
 .renovation-catalog-item { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px; align-items:center; padding:7px; border-bottom:1px solid #edf2f7; font-size:11px; }
 .renovation-catalog-item:hover { background:#f4f9ff; }
+.renovation-catalog-item.selected { background:#e8f4ff; box-shadow:inset 4px 0 0 #2368a2; }
 .renovation-catalog-select { display:block; width:100%; min-width:0; padding:0; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer; }
 .renovation-catalog-select:focus-visible { outline:2px solid #3182ce; outline-offset:2px; border-radius:3px; }
 .renovation-catalog-item strong, .renovation-catalog-item small, .renovation-catalog-item span { display:block; overflow-wrap:anywhere; }
@@ -1241,6 +1242,8 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-material-catalog .renovation-material-add { flex:1; min-width:0; }
 .renovation-selection-subtitle { padding:6px 9px; border-bottom:1px solid #dbe4ee; background:#edf4fb; color:#24496f; font-size:11px; font-weight:700; }
 .renovation-material-card { display:flex; align-items:stretch; border:1px solid #cbd5e1; border-radius:4px; overflow:hidden; background:#f8fafc; }
+.renovation-material-card.selected { border:2px solid #2368a2; background:#e8f4ff; box-shadow:0 0 0 2px rgba(35,104,162,.12); }
+.renovation-selected-badge { display:inline-block !important; width:max-content; margin-top:3px; padding:1px 6px; border-radius:9px; background:#2368a2; color:#fff !important; font-size:8px; font-style:normal; font-weight:700; line-height:1.5; }
 .renovation-material-buttons .renovation-material-add { display:flex; flex-direction:column; align-items:flex-start; gap:1px; border:0; border-radius:0; min-width:128px; text-align:left; }
 .renovation-material-buttons .renovation-material-add small { color:#475569; font-size:8px; }
 .renovation-material-buttons .renovation-material-add.price-missing { background:#fff8e8; }
@@ -1316,7 +1319,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-pattern-panel .renovation-price-card.active { border-color:#16804a; }
 .renovation-price-card { display:grid; grid-template-columns:1fr 1fr; gap:4px 8px; width:100%; border:1px solid #cbd5e1; background:#fff; border-radius:6px; padding:7px 9px; text-align:left; cursor:pointer; color:#334155; }
 .renovation-price-card:hover { border-color:#3b82b6; background:#f7fbff; }
-.renovation-price-card.active { border:2px solid #16804a; background:#eefbf3; }
+.renovation-price-card.active { border:2px solid #16804a; background:#dff7e8; box-shadow:0 0 0 3px rgba(22,128,74,.16); }
 .renovation-price-card:disabled { cursor:not-allowed; opacity:.52; background:#f1f5f9; border-color:#d8dee8; }
 .renovation-price-card:disabled:hover { background:#f1f5f9; border-color:#d8dee8; }
 .renovation-price-card-title { grid-column:1 / -1; font-weight:700; color:#183b64; }

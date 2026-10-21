@@ -563,12 +563,38 @@ function syncAllRenovationQuoteLines() {
   syncRenovationSourceNotes();
 }
 
+function captureRenovationViewPosition() {
+  const root = document.getElementById("renovation-root");
+  return {
+    windowX: window.scrollX,
+    windowY: window.scrollY,
+    equipmentTop: root?.querySelector("#renovation-catalog-list")?.scrollTop || 0,
+    materialTop: root?.querySelector(".renovation-material-catalog-scroll")?.scrollTop || 0,
+    selectionTop: root?.querySelector(".renovation-work .renovation-table-wrap")?.scrollTop || 0,
+  };
+}
+
+function restoreRenovationViewPosition(position) {
+  if (!position) return;
+  const root = document.getElementById("renovation-root");
+  const equipment = root?.querySelector("#renovation-catalog-list");
+  const material = root?.querySelector(".renovation-material-catalog-scroll");
+  const selection = root?.querySelector(".renovation-work .renovation-table-wrap");
+  if (equipment) equipment.scrollTop = position.equipmentTop;
+  if (material) material.scrollTop = position.materialTop;
+  if (selection) selection.scrollTop = position.selectionTop;
+  window.scrollTo(position.windowX, position.windowY);
+}
+
 function refreshRenovation() {
+  const viewPosition = captureRenovationViewPosition();
   const unit = activeUnit();
   syncRenovationQuoteLine(unit);
   syncRenovationSourceNotes();
   renderRenovationTab();
   renderCatalogEstimatePanels();
+  restoreRenovationViewPosition(viewPosition);
+  requestAnimationFrame(() => restoreRenovationViewPosition(viewPosition));
 }
 
 function setRenovationMethod(method) {
@@ -834,6 +860,10 @@ function addRenovationUnit() {
 function renderRenovationCatalog() {
   const container = document.getElementById("renovation-catalog-list");
   if (!container) return;
+  const selectedQuantities = new Map();
+  (getRenovationState()?.equipment || []).forEach(row => {
+    selectedQuantities.set(row.itemId, (selectedQuantities.get(row.itemId) || 0) + (Number(row.qty) || 0));
+  });
   let items = RENOVATION_ITEMS.filter(item => renovationEquipmentDisplayCategoryId(item) === renovationCategoryId);
   if (renovationSearchText) {
     items = RENOVATION_ITEMS.filter(item => `${renovationEquipmentManufacturer(item)} ${item.name} ${item.spec} ${item.category}`.toLowerCase().includes(renovationSearchText));
@@ -844,8 +874,9 @@ function renderRenovationCatalog() {
     const item = getRenovationMasterItem(source.id);
     const manufacturer = renovationEquipmentManufacturer(item);
     const unavailable = item.listPrice == null && item.netPrice == null && item.costPrice == null;
-    return `<div class="renovation-catalog-item${unavailable ? " price-missing" : ""}">` +
-      `<button class="renovation-catalog-select" onclick="addRenovationEquipment('${item.id}')" title="この機器を追加"><strong>＋ ${manufacturer ? `${esc(manufacturer)}｜` : ""}${esc(item.name)}</strong>${item.spec ? `<small>${esc(item.spec)}</small>` : ""}` +
+    const selectedQty = selectedQuantities.get(item.id) || 0;
+    return `<div class="renovation-catalog-item${unavailable ? " price-missing" : ""}${selectedQty ? " selected" : ""}">` +
+      `<button class="renovation-catalog-select" aria-pressed="${selectedQty > 0}" onclick="addRenovationEquipment('${item.id}')" title="この機器を追加"><strong>＋ ${manufacturer ? `${esc(manufacturer)}｜` : ""}${esc(item.name)}</strong>${selectedQty ? `<em class="renovation-selected-badge">選択済 ×${selectedQty}</em>` : ""}${item.spec ? `<small>${esc(item.spec)}</small>` : ""}` +
       `<span>定価 ${item.listPrice == null ? "未登録" : fmtNum(item.listPrice)} ／ NET ${item.netPrice == null ? "未登録" : fmtNum(item.netPrice)} ／ 仕入 ${item.costPrice == null ? "未登録" : fmtNum(item.costPrice)}</span>` +
       `${item.note ? `<small class="renovation-item-note">備考：${esc(item.note)}</small>` : ""}</button>` +
       `<div class="renovation-catalog-actions"><button onclick="showRenovationPriceHistory('${item.id}')">履歴</button>` +
@@ -929,6 +960,10 @@ function renderRenovationTab() {
   const visibleMaterials = RENOVATION_MATERIALS
     .filter(item => renovationMaterialDisplayGroup(item) === renovationMaterialGroup)
     .map(item => getRenovationMaterialItem(item.id) || item);
+  const selectedMaterialQuantities = new Map();
+  state.materials.forEach(row => {
+    selectedMaterialQuantities.set(row.materialId, (selectedMaterialQuantities.get(row.materialId) || 0) + (Number(row.qty) || 0));
+  });
   const materialNotes = RENOVATION_REFERENCE_NOTES?.materialGroups?.[renovationMaterialGroup] || [];
   root.innerHTML = `<div class="renovation-sticky-controls">` + renovationUnitSwitcherHtml() + `</div>` +
     `<div class="renovation-layout"><section class="renovation-catalog"><div class="renovation-section-title">1. 機器を選択</div>` +
@@ -942,8 +977,9 @@ function renderRenovationTab() {
         const capacity = renovationMaterialCapacity(item);
         const materialCost = renovationMaterialPrice(item, "costPrice");
         const materialNet = renovationMaterialPrice(item, "netPrice");
-        return `<div class="renovation-material-card"><button class="renovation-material-add ${materialCost == null ? "price-missing" : ""}" onclick="addRenovationMaterial('${item.id}')">` +
-          `<span>＋ ${esc(item.name)} ${esc(item.spec)}</span><small>定価 ${item.listPrice == null ? "係数計算" : fmtNum(item.listPrice)} ／ NET ${materialNet == null ? "係数計算" : fmtNum(materialNet)} ／ 仕入 ${materialCost == null ? "未登録" : fmtNum(materialCost)}${capacity ? ` ／ ${esc(capacity.short)}` : ""}</small>` +
+        const selectedQty = selectedMaterialQuantities.get(item.id) || 0;
+        return `<div class="renovation-material-card${selectedQty ? " selected" : ""}"><button class="renovation-material-add ${materialCost == null ? "price-missing" : ""}" aria-pressed="${selectedQty > 0}" onclick="addRenovationMaterial('${item.id}')">` +
+          `<span>＋ ${esc(item.name)} ${esc(item.spec)}</span>${selectedQty ? `<em class="renovation-selected-badge">選択済 ×${selectedQty}</em>` : ""}<small>定価 ${item.listPrice == null ? "係数計算" : fmtNum(item.listPrice)} ／ NET ${materialNet == null ? "係数計算" : fmtNum(materialNet)} ／ 仕入 ${materialCost == null ? "未登録" : fmtNum(materialCost)}${capacity ? ` ／ ${esc(capacity.short)}` : ""}</small>` +
           `${item.note ? `<small class="renovation-item-note">備考：${esc(item.note)}</small>` : ""}</button>` +
           `<div class="renovation-catalog-actions renovation-material-card-actions"><button onclick="showRenovationMaterialPriceHistory('${item.id}')" title="価格履歴">履歴</button><button onclick="editRenovationMaterialPrice('${item.id}')" title="登録価格と備考を変更">価格・備考</button></div></div>`;
       }).join("")}</div>` +

@@ -3012,16 +3012,19 @@ function buildCatalogEstimatePanel() {
 
   const pricing = calcUnitPricing(unit);
   const { raw, list, net } = pricing;
-  const rateListLabel = pricing.isRenovation ? pricing.rateLabel : `×${unit.listRate}`;
-  const rateNetLabel = pricing.isRenovation ? "自動" : `×${unit.netRate}`;
+  const rawLabel = pricing.isRenovation ? "社内原価合計" : "積算合計";
+  const listLabel = pricing.isRenovation ? "採用定価" : "定価";
+  const netLabel = pricing.isRenovation ? "提出NET" : "NET";
+  const rateListLabel = pricing.isRenovation ? pricing.quoteMethodLabel : `×${unit.listRate}`;
+  const rateNetLabel = pricing.isRenovation ? "自動算出" : `×${unit.netRate}`;
   return `<div class="catalog-est-header"><div class="catalog-est-title">選択中: ${esc(unit.unitName)}</div>` +
     `<div class="catalog-est-help">ここでの編集は見積作成にも反映されます</div></div>` +
     `<div class="catalog-unit-switcher">${unitButtons}<button type="button" class="catalog-unit-chip catalog-unit-add" onclick="addUnit()">＋</button></div>` +
     `<div class="catalog-est-lines">${linesHtml ? `<table class="estimate-table catalog-estimate-table">${_estTheadHtml()}<tbody>${linesHtml}</tbody></table>` : `<div class="catalog-est-empty">管理表の品目をクリックすると、ここへ追加されます。</div>`}</div>` +
     `<div class="catalog-est-totals">` +
-      `<div class="catalog-est-total-row"><span>積算合計</span><strong>${fmtNum(raw)}</strong></div>` +
-      `<div class="catalog-est-total-row"><span>定価 ${esc(rateListLabel)}</span><strong>${fmtNum(list)}</strong></div>` +
-      `<div class="catalog-est-total-row"><span>NET ${esc(rateNetLabel)}</span><strong>${fmtNum(net)}</strong></div>` +
+      `<div class="catalog-est-total-row"><span>${rawLabel}</span><strong>${fmtNum(raw)}</strong></div>` +
+      `<div class="catalog-est-total-row"><span>${listLabel} ${esc(rateListLabel)}</span><strong>${fmtNum(list)}</strong></div>` +
+      `<div class="catalog-est-total-row"><span>${netLabel} ${esc(rateNetLabel)}</span><strong>${fmtNum(net)}</strong></div>` +
     `</div>`;
 }
 
@@ -3314,15 +3317,18 @@ function renderEstimateLines() {
     const ufRaw = unitPricing.raw;
     const ufList = unitPricing.list;
     const ufNet = unitPricing.net;
-    const ufListRate = unitPricing.isRenovation ? unitPricing.rateLabel : `×${unit.listRate}`;
-    const ufNetRate = unitPricing.isRenovation ? "自動" : `×${unit.netRate}`;
+    const ufRawLabel = unitPricing.isRenovation ? "社内原価合計" : "積算合計";
+    const ufListLabel = unitPricing.isRenovation ? "採用定価" : "定価";
+    const ufNetLabel = unitPricing.isRenovation ? "提出NET" : "NET";
+    const ufListRate = unitPricing.isRenovation ? unitPricing.quoteMethodLabel : `×${unit.listRate}`;
+    const ufNetRate = unitPricing.isRenovation ? "自動算出" : `×${unit.netRate}`;
     const uf = document.createElement("div");
     uf.className = "unit-col-footer";
     uf.dataset.unit = i;
     uf.innerHTML =
-      `<div class="ucf-row"><span class="ucf-label">積算合計</span><span class="ucf-v ucf-v-raw">${fmtNum(ufRaw)}</span></div>` +
-      `<div class="ucf-row ucf-list"><span class="ucf-label">定価 <small class="ucf-r-list">${esc(ufListRate)}</small></span><span class="ucf-v ucf-v-list">${fmtNum(ufList)}</span></div>` +
-      `<div class="ucf-row ucf-net"><span class="ucf-label">NET <small class="ucf-r-net">${esc(ufNetRate)}</small></span><span class="ucf-v ucf-v-net">${fmtNum(ufNet)}</span></div>`;
+      `<div class="ucf-row"><span class="ucf-label"><span class="ucf-title-raw">${ufRawLabel}</span></span><span class="ucf-v ucf-v-raw">${fmtNum(ufRaw)}</span></div>` +
+      `<div class="ucf-row ucf-list"><span class="ucf-label"><span class="ucf-title-list">${ufListLabel}</span> <small class="ucf-r-list">${esc(ufListRate)}</small></span><span class="ucf-v ucf-v-list">${fmtNum(ufList)}</span></div>` +
+      `<div class="ucf-row ucf-net"><span class="ucf-label"><span class="ucf-title-net">${ufNetLabel}</span> <small class="ucf-r-net">${esc(ufNetRate)}</small></span><span class="ucf-v ucf-v-net">${fmtNum(ufNet)}</span></div>`;
     col.appendChild(uf);
     if (unit?.renovation?.enabled && typeof renovationInternalCardHtml === "function") {
       const pair = document.createElement("div");
@@ -3572,7 +3578,7 @@ function renderEstimateLinesForPrint() {
     // 改修は、見積明細と社内計算情報を必ず左右2列で対にして印刷する。
     if (units[0]?.renovation?.enabled && typeof renovationInternalCardHtml === "function") {
       const pageDiv = document.createElement("div");
-      pageDiv.className = "est-print-page renovation-print-pair";
+      pageDiv.className = "est-print-page renovation-print-pair has-renovation-print";
       pageDiv.style.cssText = "display:flex;gap:2px;align-items:flex-start;";
       pageDiv.appendChild(_makeTable(rowsHtml, false, unitHdrHtml));
       const internalCol = document.createElement("div");
@@ -3677,8 +3683,11 @@ function renderEstimateLinesForPrint() {
       });
       curCols[ci].push({
         type: 'footer', raw, listP, netP,
-        listRate: unitPricing.rateLabel,
-        netRate: "自動",
+        rawLabel: "社内原価合計",
+        listLabel: "採用定価",
+        netLabel: "提出NET",
+        listRate: unitPricing.quoteMethodLabel,
+        netRate: "自動算出",
       });
       colWeights[ci] += 4.5;
       advanceCol();
@@ -3706,8 +3715,11 @@ function renderEstimateLinesForPrint() {
     if (colWeights[ci] + fw > perCol + 0.01 && colWeights[ci] > 0) advanceCol();
     curCols[ci].push({
       type: 'footer', raw, listP, netP,
+      rawLabel: unitPricing.isRenovation ? "社内原価合計" : "積算合計",
+      listLabel: unitPricing.isRenovation ? "採用定価" : "定価",
+      netLabel: unitPricing.isRenovation ? "提出NET" : "NET",
       listRate: unitPricing.isRenovation ? unitPricing.rateLabel : `×${u.listRate}`,
-      netRate: unitPricing.isRenovation ? "自動" : `×${u.netRate}`,
+      netRate: unitPricing.isRenovation ? "自動算出" : `×${u.netRate}`,
     });
     colWeights[ci] += fw;
 
@@ -3721,6 +3733,9 @@ function renderEstimateLinesForPrint() {
     const page = pages[p];
     const pageDiv = document.createElement("div");
     pageDiv.className = "est-print-page";
+    if (page.some(column => column.some(slot => slot.type === "renovation-internal"))) {
+      pageDiv.classList.add("has-renovation-print");
+    }
     if (p > 0) pageDiv.style.pageBreakBefore = "always";
 
     // 全体合計バナー
@@ -3762,15 +3777,15 @@ function renderEstimateLinesForPrint() {
           fd.style.cssText = "border:1.5px solid #1a365d;margin-top:2px;font-size:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact;";
           fd.innerHTML =
             `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 5px;background:#f7fafc;border-bottom:1px solid #e2e8f0;">` +
-              `<span style="font-weight:700;color:#2d3748;">積算合計</span>` +
+              `<span style="font-weight:700;color:#2d3748;">${esc(slot.rawLabel || "積算合計")}</span>` +
               `<span style="font-weight:700;color:#1a365d;">${fmtNum(slot.raw)}</span>` +
             `</div>` +
             `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 5px;background:#f7fafc;border-bottom:1px solid #e2e8f0;">` +
-              `<span style="font-weight:700;color:#2d3748;">定価<small style="font-weight:normal;color:#888;"> ${esc(slot.listRate)}</small></span>` +
+              `<span style="min-width:0;font-weight:700;color:#2d3748;">${esc(slot.listLabel || "定価")}<small style="font-weight:normal;color:#888;"> ${esc(slot.listRate)}</small></span>` +
               `<span style="font-weight:700;color:#1a365d;">${fmtNum(slot.listP)}</span>` +
             `</div>` +
             `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 5px;background:#e8f5e9;">` +
-              `<span style="font-weight:700;color:#276749;">NET<small style="font-weight:normal;color:#276749;"> ${esc(slot.netRate)}</small></span>` +
+              `<span style="min-width:0;font-weight:700;color:#276749;">${esc(slot.netLabel || "NET")}<small style="font-weight:normal;color:#276749;"> ${esc(slot.netRate)}</small></span>` +
               `<span style="font-weight:700;font-size:9px;color:#276749;">${fmtNum(slot.netP)}</span>` +
             `</div>`;
           colContainer.appendChild(fd);
@@ -4259,10 +4274,21 @@ function renderTotals() {
   const netPrice = pricing.net;
   document.getElementById("total-list").textContent  = fmtNum(listPrice);
   document.getElementById("total-net").textContent    = fmtNum(netPrice);
+  document.getElementById("total-grand-label").textContent = pricing.isRenovation ? "社内原価合計" : "積算合計";
+  document.getElementById("total-list-label").textContent = pricing.isRenovation ? "採用定価" : "定価";
+  document.getElementById("total-net-label").textContent = pricing.isRenovation ? "提出NET" : "NET 価格";
   document.getElementById("rate-list-input").value = unit.listRate;
   document.getElementById("rate-net-input").value  = unit.netRate;
   document.getElementById("rate-list-input").disabled = pricing.isRenovation;
   document.getElementById("rate-net-input").disabled = pricing.isRenovation;
+  document.getElementById("rate-list-standard").style.display = pricing.isRenovation ? "none" : "inline";
+  document.getElementById("rate-net-standard").style.display = pricing.isRenovation ? "none" : "inline";
+  const renovationListLabel = document.getElementById("rate-list-renovation");
+  const renovationNetLabel = document.getElementById("rate-net-renovation");
+  renovationListLabel.style.display = pricing.isRenovation ? "inline" : "none";
+  renovationNetLabel.style.display = pricing.isRenovation ? "inline" : "none";
+  renovationListLabel.textContent = pricing.quoteMethodLabel || "選択方式";
+  renovationNetLabel.textContent = "自動算出";
   document.querySelector(".rate-preset-buttons")?.classList.toggle("rates-disabled", pricing.isRenovation);
 
   // 複数ユニット: 全体合計を totals-table に追加行として表示
@@ -4300,8 +4326,11 @@ function renderTotals() {
     uf.querySelector(".ucf-v-raw").textContent  = fmtNum(raw);
     uf.querySelector(".ucf-v-list").textContent = fmtNum(listP);
     uf.querySelector(".ucf-v-net").textContent  = fmtNum(netP);
-    uf.querySelector(".ucf-r-list").textContent = unitPricing.isRenovation ? unitPricing.rateLabel : `×${u.listRate}`;
-    uf.querySelector(".ucf-r-net").textContent  = unitPricing.isRenovation ? "自動" : `×${u.netRate}`;
+    uf.querySelector(".ucf-title-raw").textContent = unitPricing.isRenovation ? "社内原価合計" : "積算合計";
+    uf.querySelector(".ucf-title-list").textContent = unitPricing.isRenovation ? "採用定価" : "定価";
+    uf.querySelector(".ucf-title-net").textContent = unitPricing.isRenovation ? "提出NET" : "NET";
+    uf.querySelector(".ucf-r-list").textContent = unitPricing.isRenovation ? unitPricing.quoteMethodLabel : `×${u.listRate}`;
+    uf.querySelector(".ucf-r-net").textContent  = unitPricing.isRenovation ? "自動算出" : `×${u.netRate}`;
   });
 }
 

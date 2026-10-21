@@ -4,8 +4,9 @@
 
 const STORAGE_RENOVATION_PRICES = "ban_renovation_prices_v1";
 const STORAGE_RENOVATION_MATERIAL_PRICES = "ban_renovation_material_prices_v1";
+const RENOVATION_NET_FACTOR = 1.2;
 const RENOVATION_METHODS = {
-  base: { label: "一括係数", description: "TRを含む全体に標準係数を使用" },
+  base: { label: "一括係数", description: "TRを含む全体に定価・NETの各係数を使用" },
   transformer: { label: "TR別係数", description: "TRだけ専用の低い係数を使用" },
 };
 const RENOVATION_QUOTE_METHODS = {
@@ -210,12 +211,13 @@ function createRenovationState() {
     method: "base",
     quoteMethod: "bara",
     presentationMethod: "detail",
-    pricingFactor: 1.2,
+    pricingFactor: RENOVATION_NET_FACTOR,
+    listPricingFactor: 1.2,
     transformerFactor: 1.1,
     materialNetFactor: 1.2,
     materialListFactor: 1.2,
     renovationListFactor: 1.5,
-    pricingVersion: 2,
+    pricingVersion: 4,
     equipment: [],
     materials: [],
     siteSurveyList: 60000,
@@ -246,6 +248,12 @@ function getRenovationState(unit = activeUnit()) {
     state.quoteMethod = "govt";
   }
   if (state.transformerFactor == null) state.transformerFactor = 1.1;
+  if (state.listPricingFactor == null) {
+    // 旧版の「標準係数」は実質的にバラ定価の調整値として使われていた。
+    state.listPricingFactor = (Number(state.pricingVersion) || 0) < 3
+      ? renovationFactor(state.pricingFactor, 1.2)
+      : 1.2;
+  }
   if (state.materialNetFactor == null) state.materialNetFactor = 1.2;
   if (state.materialListFactor == null) state.materialListFactor = 1.2;
   if (state.renovationListFactor == null) state.renovationListFactor = 1.5;
@@ -259,6 +267,15 @@ function getRenovationState(unit = activeUnit()) {
       if (master?.netPrice == null && Number(row.netPrice) === cost) row.netPrice = null;
     });
     state.pricingVersion = 2;
+  }
+  if ((Number(state.pricingVersion) || 0) < 3) {
+    // 保存済みの調整値はバラ定価側へ残し、NET係数だけ規定値へ戻す。
+    state.pricingFactor = RENOVATION_NET_FACTOR;
+    state.pricingVersion = 3;
+  }
+  if ((Number(state.pricingVersion) || 0) < 4) {
+    state.pricingFactor = RENOVATION_NET_FACTOR;
+    state.pricingVersion = 4;
   }
   return state;
 }
@@ -322,7 +339,8 @@ function calcRenovationPricing(unit) {
   const directList = equipmentList + materialList + (Number(state.siteSurveyList) || 0) + renovationList;
   const directNet = equipmentNet + materialNet + (Number(state.siteSurveyNet) || 0) + labor;
   const cost = equipmentCost + materialCost + (Number(state.siteSurveyCost) || 0) + laborCost;
-  const factor = renovationFactor(state.pricingFactor, 1.2);
+  const netFactor = RENOVATION_NET_FACTOR;
+  const listFactor = renovationFactor(state.listPricingFactor, 1.2);
   const trFactor = renovationFactor(state.transformerFactor, 1.1);
   const splitTr = state.method === "transformer";
   const normalListBase = directList - trList;
@@ -330,8 +348,8 @@ function calcRenovationPricing(unit) {
   const buildCandidate = (kind) => {
     let normalList, normalNet, trPartList = 0, trPartNet = 0;
     if (kind === "bara") {
-      normalList = renovationRoundUp(normalListBase * factor, 1000);
-      normalNet = renovationRoundUp(normalNetBase * factor * 1.15, 10000);
+      normalList = renovationRoundUp(normalListBase * listFactor, 1000);
+      normalNet = renovationRoundUp(normalNetBase * netFactor * 1.15, 10000);
       if (splitTr) {
         trPartList = renovationRoundUp(trList * trFactor, 1000);
         trPartNet = renovationRoundUp(trNet * trFactor * 1.15, 10000);
@@ -339,7 +357,7 @@ function calcRenovationPricing(unit) {
     } else {
       const multiplier = kind === "govt" ? 3.8 : kind === "private22" ? 2.2 : 2.28;
       const netRate = kind === "govt" ? 0.33 : 0.55;
-      normalList = renovationRoundUp(normalNetBase * factor * multiplier, 1000);
+      normalList = renovationRoundUp(normalNetBase * netFactor * multiplier, 1000);
       normalNet = renovationRoundUp(normalList * netRate, 10000);
       if (splitTr) {
         trPartList = renovationRoundUp(trNet * trFactor * multiplier, 1000);
@@ -349,12 +367,12 @@ function calcRenovationPricing(unit) {
     // TR別計算を使わない場合はTRも標準側に含まれる。
     if (!splitTr) {
       if (kind === "bara") {
-        normalList = renovationRoundUp(directList * factor, 1000);
-        normalNet = renovationRoundUp(directNet * factor * 1.15, 10000);
+        normalList = renovationRoundUp(directList * listFactor, 1000);
+        normalNet = renovationRoundUp(directNet * netFactor * 1.15, 10000);
       } else {
         const multiplier = kind === "govt" ? 3.8 : kind === "private22" ? 2.2 : 2.28;
         const netRate = kind === "govt" ? 0.33 : 0.55;
-        normalList = renovationRoundUp(directNet * factor * multiplier, 1000);
+        normalList = renovationRoundUp(directNet * netFactor * multiplier, 1000);
         normalNet = renovationRoundUp(normalList * netRate, 10000);
       }
     }
@@ -426,6 +444,9 @@ function calcRenovationPricing(unit) {
     materialCost, materialNet, materialList, labor, laborCost, renovationList, directList, directNet,
     trList, trNet, trCost,
     distributionDifference, distributionFeasible, distributionOverrun,
+    calculationMethodLabel: RENOVATION_METHODS[state.method]?.label || "改修",
+    quoteMethodLabel: RENOVATION_QUOTE_METHODS[state.quoteMethod]?.label || "実定価ベース（バラ）",
+    presentationMethodLabel: RENOVATION_PRESENTATIONS[state.presentationMethod]?.label || "一式",
     rateLabel: `${RENOVATION_METHODS[state.method]?.label || "改修"}・${RENOVATION_QUOTE_METHODS[state.quoteMethod].label}・${RENOVATION_PRESENTATIONS[state.presentationMethod]?.label || "一式"}`,
   };
 }
@@ -462,19 +483,36 @@ function renovationInternalCardHtml(unit) {
     `<div class="renovation-internal-details"><h4>${esc(title)} <small>${esc(note)}</small></h4>` +
     `<table><thead><tr><th>品名・仕様</th><th>数量</th><th>定価</th><th>NET</th><th>仕入</th></tr></thead>` +
     `<tbody>${rows}</tbody></table></div></td></tr>`;
-  const candidateRows = Object.entries(RENOVATION_QUOTE_METHODS).map(([key, option]) => {
+  const conditionGroup = (number, label, options, currentKey) => `<div class="renovation-condition-group">` +
+    `<strong><b>${number}</b>${esc(label)}</strong><div>${Object.entries(options).map(([key, option]) => {
+      const current = key === currentKey;
+      return `<span class="renovation-condition-option${current ? " current" : ""}">${esc(option.label)}` +
+        `${current ? `<em>選択中</em>` : ""}</span>`;
+    }).join("")}</div></div>`;
+  const candidateCards = Object.entries(RENOVATION_QUOTE_METHODS).map(([key, option]) => {
     const candidate = pricing.candidates[key];
     if (!candidate) return "";
     const current = key === state.quoteMethod;
-    return `<tr${current ? ` class="renovation-pattern-current"` : ""}>` +
-      `<td>${esc(option.label)}${current ? `<span class="renovation-pattern-badge">採用中</span>` : ""}</td>` +
-      `<td>${fmtNum(candidate.list)}</td><td>${fmtNum(candidate.net)}</td>` +
-      `<td>${Number.isFinite(candidate.netToListRate) ? `${candidate.netToListRate.toFixed(1)}%` : "—"}</td></tr>`;
+    return `<article class="renovation-pattern-card${current ? " current" : ""}">` +
+      `<div class="renovation-pattern-card-heading"><strong>${esc(option.label)}</strong>` +
+      `${current ? `<span class="renovation-pattern-badge">選択中</span>` : ""}</div>` +
+      `<div class="renovation-pattern-prices"><span>定価<b>${fmtNum(candidate.list)}</b></span><span>NET<b>${fmtNum(candidate.net)}</b></span></div>` +
+      `<div class="renovation-pattern-metrics">` +
+      `<span>NET／定価<b>${candidate.netToListRate.toFixed(1)}%</b></span>` +
+      `<span>機器原価率<b>${candidate.equipmentCostRate.toFixed(1)}%</b></span>` +
+      `<span>総原価率<b>${candidate.costRate.toFixed(1)}%</b></span>` +
+      `<span>粗利率<b>${candidate.grossMargin.toFixed(1)}%</b></span>` +
+      `</div></article>`;
   }).join("");
 
   return `<section class="renovation-internal-card">` +
     `<div class="renovation-internal-card-heading"><strong>${esc(unit.unitName || "改修工事")}</strong>` +
     `<span>${esc(method)}・${esc(quote)}・${esc(presentation)}</span></div>` +
+    `<div class="renovation-internal-conditions"><h4>選択した見積条件 <small>全候補と現在の選択</small></h4>` +
+    conditionGroup("①", "TRの扱い", RENOVATION_METHODS, state.method) +
+    conditionGroup("②", "定価・NET算出方式", RENOVATION_QUOTE_METHODS, state.quoteMethod) +
+    conditionGroup("③", "見積明細の出し方", RENOVATION_PRESENTATIONS, state.presentationMethod) +
+    `</div>` +
     `<table class="renovation-internal-total-table"><thead><tr><th>計算項目</th><th>定価</th><th>NET</th><th>仕入・社内原価</th></tr></thead><tbody>` +
     row("機器", pricing.equipmentList, pricing.equipmentNet, pricing.equipmentCost) +
     detailSectionRow("機器内訳", "各単価", equipmentRows) +
@@ -493,9 +531,8 @@ function renovationInternalCardHtml(unit) {
     `</div>` +
     `<div class="renovation-internal-patterns">` +
     `<h4>定価・NET算出方式 4パターン <small>提出NET比較用</small></h4>` +
-    `<table><thead><tr><th>算出方式</th><th>定価</th><th>NET</th><th>NET／定価</th></tr></thead>` +
-    `<tbody>${candidateRows}</tbody></table>` +
-    `<p>現在の見積には「採用中」の方式を反映。ほか3方式は提出NETの比較用です。</p>` +
+    `<div class="renovation-pattern-card-grid">${candidateCards}</div>` +
+    `<p>現在の見積には「選択中」の方式を反映。ほか3方式は提出NET・原価率・粗利率の比較用です。</p>` +
     `</div></section>`;
 }
 
@@ -519,7 +556,7 @@ function syncRenovationQuoteLine(unit = activeUnit()) {
   const splitRows = presentation !== "lump";
 
   if (!splitRows) {
-    const spec = `${methodLabel}・${quoteLabel}／標準×${state.pricingFactor}` +
+    const spec = `${methodLabel}・${quoteLabel}／バラ定価×${state.listPricingFactor}・NET×${RENOVATION_NET_FACTOR}` +
       `${state.method === "transformer" ? `・TR×${state.transformerFactor}` : ""}` +
       `／材料NET×${state.materialNetFactor}・材料定価×${state.materialListFactor}・改修×${state.renovationListFactor}`;
     add("summary", unit.unitName || "改修工事", spec, 1, pricing.list);
@@ -1003,7 +1040,8 @@ function renderRenovationTab() {
       `<label>改修費 社内原価<input type="number" min="0" value="${state.labor.cost}" onchange="updateRenovationNumber('labor.cost',this.value)"><small>粗利率の計算に使用</small></label>` +
       `</div><div class="renovation-calculated-cost renovation-calculated-cost-three"><span>改修費 定価</span><b>${fmtNum(pricing.renovationList)}</b><span>改修費 NET</span><b>${fmtNum(pricing.labor)}</b><span>社内原価</span><b>${fmtNum(pricing.laborCost)}</b></div></section>` +
     `<section><div class="renovation-section-title">6. 諸経費・計算係数</div><div class="renovation-cost-inputs renovation-factor-inputs">` +
-      `<label class="renovation-factor">標準係数<input type="number" min="0" step="0.01" value="${state.pricingFactor}" onchange="updateRenovationNumber('pricingFactor',this.value)"><small>通常1.20。高額時は1.10、1.05などへ変更</small></label>` +
+      `<label class="renovation-factor">バラ定価係数<input type="number" min="0" step="0.01" value="${state.listPricingFactor}" onchange="updateRenovationNumber('listPricingFactor',this.value)"><small>基本1.20。諸経費とのバランスに応じて自由に変更</small></label>` +
+      `<label class="renovation-factor">NET計算係数<input type="number" value="${RENOVATION_NET_FACTOR}" disabled><small>常に1.20で固定</small></label>` +
       `<label class="renovation-factor">TR別計算係数<input type="number" min="0" step="0.01" value="${state.transformerFactor}" onchange="updateRenovationNumber('transformerFactor',this.value)"><small>「TR別計算」を選んだ時だけ使用</small></label>` +
       `<label>材料 NET係数<input type="number" min="0" step="0.01" value="${state.materialNetFactor}" onchange="updateRenovationNumber('materialNetFactor',this.value)"><small>未登録NETは仕入×この係数</small></label>` +
       `<label>材料 定価係数<input type="number" min="0" step="0.01" value="${state.materialListFactor}" onchange="updateRenovationNumber('materialListFactor',this.value)"></label>` +

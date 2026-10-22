@@ -3599,7 +3599,8 @@ function renderEstimateLinesForPrint() {
       if (p > 0) pageDiv.style.pageBreakBefore = "always";
       let firstTable = true;
       if (wTotal <= perCol + 0.01) {
-        pageDiv.appendChild(_makeTable(rowsSlice, p === 0, p === 0 ? unitHdrHtml : ""));
+        // 通常の1項目も、複数項目と同じ半幅で左側へ配置する。
+        pageDiv.appendChild(_makeTable(rowsSlice, false, p === 0 ? unitHdrHtml : ""));
       } else {
         let leftWeight = 0, splitIdx = 0;
         for (let i = 0; i < rowsSlice.length; i++) {

@@ -19065,7 +19065,6 @@ const RENOVATION_COPPER_CURRENT_DENSITY = [
 const RENOVATION_REFERENCE_NOTES = {
   "general": [
     "試験費、処分費は含んでおりません。",
-    "クレーン車とTRの撤去及び据付は含んでおりません。",
     "現地調査の結果、費用が変わる場合があります。",
     "重量運搬、クレーン車、重量物の撤去・据付は含んでおりません。"
   ],

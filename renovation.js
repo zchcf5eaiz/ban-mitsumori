@@ -60,25 +60,38 @@ function renovationSourceNotesForUnit(unit) {
   return [...notes];
 }
 
-function removeRenovationAutoNotes(value) {
-  const text = String(value || "");
+function removeRenovationAutoNotes(value, previousNotes = []) {
+  let text = String(value || "");
+  // 旧形式の見出し付き自動注記を、既存保存データから取り除く。
   const start = text.indexOf(RENOVATION_AUTO_NOTES_START);
-  if (start < 0) return text.trim();
-  const end = text.indexOf(RENOVATION_AUTO_NOTES_END, start);
-  const after = end < 0 ? text.length : end + RENOVATION_AUTO_NOTES_END.length;
-  return `${text.slice(0, start)}\n${text.slice(after)}`.replace(/\n{3,}/g, "\n\n").trim();
+  if (start >= 0) {
+    const end = text.indexOf(RENOVATION_AUTO_NOTES_END, start);
+    const after = end < 0 ? text.length : end + RENOVATION_AUTO_NOTES_END.length;
+    text = `${text.slice(0, start)}\n${text.slice(after)}`;
+  }
+  // 新形式は見出しを印刷しないため、前回自動生成した行を保存データで識別する。
+  const previous = new Set((previousNotes || []).map(note => String(note || "").trim()).filter(Boolean));
+  if (previous.size) {
+    text = text.split("\n").filter(line => {
+      const note = line.trim().replace(/^・/, "").trim();
+      return !previous.has(note);
+    }).join("\n");
+  }
+  return text.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 /** 手入力の備考を残しつつ、選択内容に関係する元表の注意事項だけを自動更新する。 */
 function syncRenovationSourceNotes() {
-  const manualNotes = removeRenovationAutoNotes(currentEstimate.notes);
+  const previousNotes = Array.isArray(currentEstimate.renovationAutoNotes)
+    ? currentEstimate.renovationAutoNotes
+    : [];
+  const manualNotes = removeRenovationAutoNotes(currentEstimate.notes, previousNotes);
   const sourceNotes = new Set();
   currentEstimate.units.forEach(unit => {
     renovationSourceNotesForUnit(unit).forEach(note => sourceNotes.add(note));
   });
-  const automaticNotes = sourceNotes.size
-    ? `${RENOVATION_AUTO_NOTES_START}\n${[...sourceNotes].map(note => `・${note}`).join("\n")}\n${RENOVATION_AUTO_NOTES_END}`
-    : "";
+  currentEstimate.renovationAutoNotes = [...sourceNotes];
+  const automaticNotes = [...sourceNotes].map(note => `・${note}`).join("\n");
   currentEstimate.notes = [manualNotes, automaticNotes].filter(Boolean).join("\n\n");
   const notes = document.getElementById("notes-textarea");
   if (notes) notes.value = currentEstimate.notes;
@@ -534,6 +547,100 @@ function renovationInternalCardHtml(unit) {
     `<div class="renovation-pattern-card-grid">${candidateCards}</div>` +
     `<p>現在の見積には「選択中」の方式を反映。ほか3方式は提出NET・原価率・粗利率の比較用です。</p>` +
     `</div></section>`;
+}
+
+/** 印刷用の社内計算情報を、A4相当の高さごとの列HTMLへ分割する。 */
+function renovationInternalPrintColumns(unit, rowLimit = 35) {
+  const state = getRenovationState(unit);
+  const pricing = calcRenovationPricing(unit);
+  if (!state || !pricing) return [];
+  const percent = (value, base) => Number(base) > 0 ? `${(Number(value) / Number(base) * 100).toFixed(1)}%` : "—";
+  const totalCost = Number(pricing.raw) || 0;
+  const profit = (Number(pricing.net) || 0) - totalCost;
+  const method = RENOVATION_METHODS[state.method]?.label || "改修";
+  const quote = RENOVATION_QUOTE_METHODS[state.quoteMethod]?.label || "バラ方式";
+  const presentation = RENOVATION_PRESENTATIONS[state.presentationMethod]?.label || "一式";
+  const columns = [[]];
+  const weights = [0];
+  const nextColumn = () => { columns.push([]); weights.push(0); };
+  const addBlock = (html, weight) => {
+    const ci = columns.length - 1;
+    if (weights[ci] > 0 && weights[ci] + weight > rowLimit) nextColumn();
+    columns[columns.length - 1].push(html);
+    weights[weights.length - 1] += weight;
+  };
+  const totalRow = (label, list, net, cost, className = "") => `<tr${className ? ` class="${className}"` : ""}>` +
+    `<td>${esc(label)}</td><td>${fmtNum(list)}</td><td>${fmtNum(net)}</td><td>${cost == null ? "—" : fmtNum(cost)}</td></tr>`;
+  const totalTable = rows => `<table class="renovation-internal-total-table"><thead><tr><th>計算項目</th><th>定価</th><th>NET</th><th>仕入・社内原価</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const detailRow = (item, list, net, cost) => `<tr><td><strong>${esc(item.name || "未名称")}</strong>` +
+    `${item.spec ? `<small>${esc(item.spec)}</small>` : ""}</td><td>${fmtNum(item.qty)}</td>` +
+    `<td>${fmtNum(list)}</td><td>${fmtNum(net)}</td><td>${fmtNum(cost)}</td></tr>`;
+  const detailTable = (title, note, rows, continued) => `<div class="renovation-internal-details">` +
+    `<h4>${esc(title)}${continued ? "（続き）" : ""} <small>${esc(note)}</small></h4>` +
+    `<table><thead><tr><th>品名・仕様</th><th>数量</th><th>定価</th><th>NET</th><th>仕入</th></tr></thead>` +
+    `<tbody>${rows.join("") || `<tr><td colspan="5" class="renovation-internal-empty">選択なし</td></tr>`}</tbody></table></div>`;
+  const addDetails = (title, note, rows) => {
+    const sourceRows = rows.length ? rows : [""];
+    let index = 0;
+    let continued = false;
+    while (index < sourceRows.length) {
+      let ci = columns.length - 1;
+      if (weights[ci] > rowLimit - 3) { nextColumn(); ci++; }
+      const capacity = Math.max(1, Math.floor(rowLimit - weights[ci] - 2));
+      const chunk = sourceRows.slice(index, index + capacity);
+      addBlock(detailTable(title, note, chunk[0] === "" ? [] : chunk, continued), 2 + chunk.length);
+      index += chunk.length;
+      continued = true;
+    }
+  };
+  const conditionGroup = (number, label, options, currentKey) => `<div class="renovation-condition-group">` +
+    `<strong><b>${number}</b>${esc(label)}</strong><div>${Object.entries(options).map(([key, option]) => {
+      const current = key === currentKey;
+      return `<span class="renovation-condition-option${current ? " current" : ""}">${esc(option.label)}` +
+        `${current ? `<em>選択中</em>` : ""}</span>`;
+    }).join("")}</div></div>`;
+  addBlock(`<div class="renovation-internal-conditions"><h4>選択した見積条件 <small>全候補と現在の選択</small></h4>` +
+    conditionGroup("①", "TRの扱い", RENOVATION_METHODS, state.method) +
+    conditionGroup("②", "定価・NET算出方式", RENOVATION_QUOTE_METHODS, state.quoteMethod) +
+    conditionGroup("③", "見積明細の出し方", RENOVATION_PRESENTATIONS, state.presentationMethod) + `</div>`, 5);
+
+  addBlock(totalTable(totalRow("機器", pricing.equipmentList, pricing.equipmentNet, pricing.equipmentCost)), 2);
+  addDetails("機器内訳", "各単価", state.equipment.map(item => detailRow(
+    item, Number(item.listPrice) || 0, Number(item.netPrice) || 0, Number(item.costPrice) || 0
+  )));
+  addBlock(totalTable(totalRow("材料費", pricing.materialList, pricing.materialNet, pricing.materialCost)), 2);
+  addDetails("材料内訳", "各単価／空欄登録は係数計算", state.materials.map(item => {
+    const cost = Number(item.costPrice ?? item.unitPrice) || 0;
+    const net = item.netPrice == null ? cost * state.materialNetFactor : Number(item.netPrice) || 0;
+    const list = item.listPrice == null ? net * state.materialListFactor : Number(item.listPrice) || 0;
+    return detailRow(item, list, net, cost);
+  }));
+  addBlock(totalTable(
+    totalRow("現地調査費", state.siteSurveyList, state.siteSurveyNet, state.siteSurveyCost) +
+    totalRow("改修費", pricing.renovationList, pricing.labor, pricing.laborCost) +
+    totalRow("方式差額・諸経費", pricing.list - pricing.directList, pricing.net - pricing.directNet, null) +
+    totalRow("採用合計", pricing.list, pricing.net, totalCost, "renovation-internal-total")
+  ), 5);
+  addBlock(`<div class="renovation-internal-metrics">` +
+    `<span>NET利益額<b>${fmtNum(profit)}</b></span><span>粗利率<b>${percent(profit, pricing.net)}</b></span>` +
+    `<span>総原価率<b>${percent(totalCost, pricing.net)}</b></span><span>NET／定価<b>${percent(pricing.net, pricing.list)}</b></span></div>`, 2);
+  const candidateCards = Object.entries(RENOVATION_QUOTE_METHODS).map(([key, option]) => {
+    const candidate = pricing.candidates[key];
+    const current = key === state.quoteMethod;
+    return `<article class="renovation-pattern-card${current ? " current" : ""}"><div class="renovation-pattern-card-heading">` +
+      `<strong>${esc(option.label)}</strong>${current ? `<span class="renovation-pattern-badge">選択中</span>` : ""}</div>` +
+      `<div class="renovation-pattern-prices"><span>定価<b>${fmtNum(candidate.list)}</b></span><span>NET<b>${fmtNum(candidate.net)}</b></span></div>` +
+      `<div class="renovation-pattern-metrics"><span>NET／定価<b>${candidate.netToListRate.toFixed(1)}%</b></span>` +
+      `<span>機器原価率<b>${candidate.equipmentCostRate.toFixed(1)}%</b></span><span>総原価率<b>${candidate.costRate.toFixed(1)}%</b></span>` +
+      `<span>粗利率<b>${candidate.grossMargin.toFixed(1)}%</b></span></div></article>`;
+  }).join("");
+  addBlock(`<div class="renovation-internal-patterns"><h4>定価・NET算出方式 4パターン <small>提出NET比較用</small></h4>` +
+    `<div class="renovation-pattern-card-grid">${candidateCards}</div>` +
+    `<p>現在の見積には「選択中」の方式を反映。ほか3方式は提出NET・原価率・粗利率の比較用です。</p></div>`, 8);
+
+  return columns.map((blocks, index) => `<section class="renovation-internal-card renovation-internal-print-flow">` +
+    `<div class="renovation-internal-card-heading"><strong>${esc(unit.unitName || "改修工事")}${index ? "（続き）" : ""}</strong>` +
+    `<span>${esc(method)}・${esc(quote)}・${esc(presentation)}</span></div>${blocks.join("")}</section>`);
 }
 
 function syncRenovationQuoteLine(unit = activeUnit()) {

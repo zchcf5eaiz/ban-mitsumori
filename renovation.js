@@ -1135,15 +1135,15 @@ function renderRenovationTab() {
       `<div class="renovation-selection-subtitle">選択した材料</div>` +
       `<div class="renovation-table-wrap"><table><thead><tr><th>材料</th><th>数量</th><th>定価</th><th>NET</th><th>仕入</th><th>備考</th><th>仕入計</th><th></th></tr></thead><tbody>${materialRows || `<tr><td colspan="8" class="renovation-empty">材料を追加してください。</td></tr>`}</tbody></table></div></section>` +
     `<section><div class="renovation-section-title">4. 現地調査費</div><div class="renovation-cost-inputs renovation-cost-inputs-small">` +
-      `<label>現地調査 定価<input type="number" min="0" value="${state.siteSurveyList}" onchange="updateRenovationNumber('siteSurveyList',this.value)"></label>` +
-      `<label>現地調査 NET<input type="number" min="0" value="${state.siteSurveyNet}" onchange="updateRenovationNumber('siteSurveyNet',this.value)"></label>` +
+      `<label class="renovation-important-input">現地調査 定価<input type="number" min="0" value="${state.siteSurveyList}" onchange="updateRenovationNumber('siteSurveyList',this.value)"></label>` +
+      `<label class="renovation-important-input">現地調査 NET<input type="number" min="0" value="${state.siteSurveyNet}" onchange="updateRenovationNumber('siteSurveyNet',this.value)"></label>` +
       `<label>現地調査 社内原価<input type="number" min="0" value="${state.siteSurveyCost}" onchange="updateRenovationNumber('siteSurveyCost',this.value)"><small>粗利率の計算に使用</small></label>` +
       `</div></section>` +
     `<section><div class="renovation-section-title">5. 改修費</div><div class="renovation-cost-inputs">` +
       `<label>時間単価<input type="number" min="0" value="${state.labor.hourlyRate}" onchange="updateRenovationNumber('labor.hourlyRate',this.value)"></label>` +
       `<label>工数係数<input type="number" min="0" step="0.05" value="${state.labor.factor}" onchange="updateRenovationNumber('labor.factor',this.value)"></label>` +
       `<label>作業時間<input type="number" min="0" step="0.5" value="${state.labor.hours}" onchange="updateRenovationNumber('labor.hours',this.value)"></label>` +
-      `<label>人数<input type="number" min="0" step="1" value="${state.labor.people}" onchange="updateRenovationNumber('labor.people',this.value)"></label>` +
+      `<label class="renovation-important-input">人数<input type="number" min="0" step="1" value="${state.labor.people}" onchange="updateRenovationNumber('labor.people',this.value)"></label>` +
       `<label>改修費 社内原価<input type="number" min="0" value="${state.labor.cost}" onchange="updateRenovationNumber('labor.cost',this.value)"><small>粗利率の計算に使用</small></label>` +
       `</div><div class="renovation-calculated-cost renovation-calculated-cost-three"><span>改修費 定価</span><b>${fmtNum(pricing.renovationList)}</b><span>改修費 NET</span><b>${fmtNum(pricing.labor)}</b><span>社内原価</span><b>${fmtNum(pricing.laborCost)}</b></div></section>` +
     `<section><div class="renovation-section-title">6. 諸経費・計算係数</div><div class="renovation-cost-inputs renovation-factor-inputs">` +

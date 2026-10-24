@@ -4,6 +4,7 @@
 
 const STORAGE_RENOVATION_PRICES = "ban_renovation_prices_v1";
 const STORAGE_RENOVATION_MATERIAL_PRICES = "ban_renovation_material_prices_v1";
+const STORAGE_RENOVATION_EQUIPMENT_MASTER = "ban_renovation_equipment_master_v1";
 const RENOVATION_NET_FACTOR = 1.2;
 const RENOVATION_METHODS = {
   base: { label: "一括係数", description: "TRを含む全体に定価・NETの各係数を使用" },
@@ -34,6 +35,7 @@ const RENOVATION_MATSUOKA_RATIOS = Object.freeze({
 let renovationCategoryId = RENOVATION_CATEGORIES[0]?.id || "";
 let renovationSearchText = "";
 let renovationMaterialGroup = RENOVATION_MATERIAL_GROUPS?.[0] || "電線(KIP)";
+let renovationEquipmentMasterCache = null;
 
 function renovationNotesHtml(notes, title = "元表の注意事項") {
   const rows = (notes || []).filter(Boolean);
@@ -106,6 +108,42 @@ function saveRenovationPriceOverrides(overrides) {
   localStorage.setItem(STORAGE_RENOVATION_PRICES, JSON.stringify(overrides));
 }
 
+function cloneRenovationMasterRows(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function loadRenovationEquipmentMaster() {
+  if (renovationEquipmentMasterCache) return renovationEquipmentMasterCache;
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_RENOVATION_EQUIPMENT_MASTER) || "null");
+    if (saved && Array.isArray(saved.categories) && saved.categories.length && Array.isArray(saved.items)) {
+      renovationEquipmentMasterCache = saved;
+      return renovationEquipmentMasterCache;
+    }
+  } catch {}
+  renovationEquipmentMasterCache = {
+    version: 1,
+    categories: cloneRenovationMasterRows(RENOVATION_CATEGORIES),
+    items: cloneRenovationMasterRows(RENOVATION_ITEMS),
+  };
+  return renovationEquipmentMasterCache;
+}
+
+function saveRenovationEquipmentMaster(master) {
+  master.version = 1;
+  master.updatedAt = new Date().toISOString();
+  renovationEquipmentMasterCache = master;
+  localStorage.setItem(STORAGE_RENOVATION_EQUIPMENT_MASTER, JSON.stringify(master));
+}
+
+function renovationEquipmentCategories() {
+  return loadRenovationEquipmentMaster().categories;
+}
+
+function renovationEquipmentItems() {
+  return loadRenovationEquipmentMaster().items;
+}
+
 function loadRenovationMaterialPriceOverrides() {
   try { return JSON.parse(localStorage.getItem(STORAGE_RENOVATION_MATERIAL_PRICES) || "{}"); }
   catch { return {}; }
@@ -127,7 +165,7 @@ function renovationFactor(value, fallback) {
 }
 
 function getRenovationMasterItem(id) {
-  const original = RENOVATION_ITEMS.find(item => item.id === id);
+  const original = renovationEquipmentItems().find(item => item.id === id);
   if (!original) return null;
   const override = loadRenovationPriceOverrides()[id];
   if (!override?.current) return original;
@@ -198,6 +236,7 @@ function renovationEquipmentDisplayCategoryId(item) {
 }
 
 function renovationEquipmentManufacturer(item) {
+  if (String(item?.manufacturer || "").trim()) return String(item.manufacturer).trim();
   if (item?.categoryId !== "cat-4") return "";
   const row = Number(String(item.id || "").match(/^REN-05-(\d+)$/)?.[1] || 0);
   if (row === 5 || (row >= 8 && row <= 21)) return "三菱";
@@ -478,7 +517,7 @@ function renovationInternalCardHtml(unit) {
   const row = (label, list, net, cost, className = "") => `<tr${className ? ` class="${className}"` : ""}>` +
     `<td>${esc(label)}</td><td>${fmtNum(list)}</td><td>${fmtNum(net)}</td><td>${cost == null ? "—" : fmtNum(cost)}</td></tr>`;
   const detailRow = (item, list, net, cost) => `<tr>` +
-    `<td><strong>${esc(item.name || "未名称")}</strong>${item.spec ? `<small>${esc(item.spec)}</small>` : ""}</td>` +
+    `<td><strong>${item.manufacturer ? `${esc(item.manufacturer)}｜` : ""}${esc(item.name || "未名称")}</strong>${item.spec ? `<small>${esc(item.spec)}</small>` : ""}</td>` +
     `<td>${fmtNum(item.qty)}</td><td>${fmtNum(list)}</td><td>${fmtNum(net)}</td><td>${fmtNum(cost)}</td></tr>`;
   const equipmentRows = state.equipment.map(item => detailRow(
     item,
@@ -572,7 +611,7 @@ function renovationInternalPrintColumns(unit, rowLimit = 35) {
   const totalRow = (label, list, net, cost, className = "") => `<tr${className ? ` class="${className}"` : ""}>` +
     `<td>${esc(label)}</td><td>${fmtNum(list)}</td><td>${fmtNum(net)}</td><td>${cost == null ? "—" : fmtNum(cost)}</td></tr>`;
   const totalTable = rows => `<table class="renovation-internal-total-table"><thead><tr><th>計算項目</th><th>定価</th><th>NET</th><th>仕入・社内原価</th></tr></thead><tbody>${rows}</tbody></table>`;
-  const detailRow = (item, list, net, cost) => `<tr><td><strong>${esc(item.name || "未名称")}</strong>` +
+  const detailRow = (item, list, net, cost) => `<tr><td><strong>${item.manufacturer ? `${esc(item.manufacturer)}｜` : ""}${esc(item.name || "未名称")}</strong>` +
     `${item.spec ? `<small>${esc(item.spec)}</small>` : ""}</td><td>${fmtNum(item.qty)}</td>` +
     `<td>${fmtNum(list)}</td><td>${fmtNum(net)}</td><td>${fmtNum(cost)}</td></tr>`;
   const detailTable = (title, note, rows, continued) => `<div class="renovation-internal-details">` +
@@ -697,7 +736,23 @@ function syncRenovationQuoteLine(unit = activeUnit()) {
       }
     }
   }
+  if (Array.isArray(state.lineOrder) && state.lineOrder.length) {
+    const order = new Map(state.lineOrder.map((key, index) => [key, index]));
+    generated.sort((a, b) => {
+      const ai = order.has(a.renovationKey) ? order.get(a.renovationKey) : Number.MAX_SAFE_INTEGER;
+      const bi = order.has(b.renovationKey) ? order.get(b.renovationKey) : Number.MAX_SAFE_INTEGER;
+      return ai - bi;
+    });
+  }
+  state.lineOrder = generated.map(row => row.renovationKey);
   unit.lines = [...normalLines, ...generated];
+}
+
+/** 見積作成で並べ替えた改修明細の順番を、次回再計算後も維持する。 */
+function rememberRenovationLineOrder(unit) {
+  const state = getRenovationState(unit);
+  if (!state) return;
+  state.lineOrder = unit.lines.filter(row => row.renovationGenerated).map(row => row.renovationKey);
 }
 
 function syncAllRenovationQuoteLines() {
@@ -798,6 +853,7 @@ function addRenovationEquipment(id) {
   if (found) found.qty += 1;
   else state.equipment.push({
     lineId: genId(), itemId: id, name: item.name, spec: item.spec || "", category: item.category,
+    manufacturer: renovationEquipmentManufacturer(item),
     qty: item.defaultQty || 1, listPrice: item.listPrice || 0, netPrice: item.netPrice || 0,
     costPrice: item.costPrice || 0, note: item.note || "", priceLabel: item.priceLabel || "", effectiveDate: item.effectiveDate || null,
   });
@@ -864,6 +920,239 @@ function setRenovationSearch(value) {
   updateRenovationCategoryHighlight();
   renderRenovationCatalog();
 }
+
+function renovationMasterSafeId(prefix) {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function refreshRenovationMasterView() {
+  const categories = renovationEquipmentCategories();
+  if (!categories.some(category => category.id === renovationCategoryId)) renovationCategoryId = categories[0]?.id || "";
+  renderRenovationTab();
+}
+
+function showRenovationCategoryManager() {
+  document.getElementById("renovation-category-manager")?.remove();
+  const categories = renovationEquipmentCategories();
+  const items = renovationEquipmentItems();
+  const overlay = document.createElement("div");
+  overlay.id = "renovation-category-manager";
+  overlay.className = "renovation-modal-overlay";
+  overlay.onclick = event => { if (event.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="renovation-modal renovation-master-modal"><button class="renovation-modal-close" onclick="this.closest('.renovation-modal-overlay').remove()">×</button>` +
+    `<h3>機器カテゴリ管理</h3><div class="renovation-master-toolbar"><button onclick="addRenovationCategory()">＋ カテゴリ追加</button>` +
+    `<button onclick="exportRenovationEquipmentMaster()">マスタJSON出力</button><button onclick="importRenovationEquipmentMaster()">マスタJSON読込</button></div>` +
+    `<table><thead><tr><th>順番</th><th>カテゴリ名</th><th>項目数</th><th>操作</th></tr></thead><tbody>` +
+    categories.map((category, index) => `<tr><td><button onclick="moveRenovationCategory('${category.id}',-1)"${index === 0 ? " disabled" : ""}>↑</button>` +
+      `<button onclick="moveRenovationCategory('${category.id}',1)"${index === categories.length - 1 ? " disabled" : ""}>↓</button></td>` +
+      `<td>${esc(category.label)}</td><td>${items.filter(item => renovationEquipmentDisplayCategoryId(item) === category.id).length}</td>` +
+      `<td><button onclick="editRenovationCategory('${category.id}')">編集</button> <button class="renovation-master-delete" onclick="deleteRenovationCategory('${category.id}')">削除</button></td></tr>`).join("") +
+    `</tbody></table><p>JSON出力したファイルを共有いただければ、その内容をアプリの初期データへ反映できます。</p></div>`;
+  document.body.appendChild(overlay);
+}
+
+function addRenovationCategory() {
+  const label = prompt("追加するカテゴリ名", "新しいカテゴリ");
+  if (label == null || !label.trim()) return;
+  const master = loadRenovationEquipmentMaster();
+  const category = { id: renovationMasterSafeId("cat-custom"), label: label.trim(), sourceLabel: "ユーザー追加" };
+  master.categories.push(category);
+  saveRenovationEquipmentMaster(master);
+  renovationCategoryId = category.id;
+  showRenovationCategoryManager();
+  refreshRenovationMasterView();
+}
+
+function editRenovationCategory(id) {
+  const master = loadRenovationEquipmentMaster();
+  const category = master.categories.find(row => row.id === id);
+  if (!category) return;
+  const label = prompt("カテゴリ名", category.label || "");
+  if (label == null || !label.trim()) return;
+  category.label = label.trim();
+  master.items.forEach(item => {
+    if (renovationEquipmentDisplayCategoryId(item) === id) item.category = category.label;
+  });
+  saveRenovationEquipmentMaster(master);
+  showRenovationCategoryManager();
+  refreshRenovationMasterView();
+}
+
+function deleteRenovationCategory(id) {
+  const master = loadRenovationEquipmentMaster();
+  const category = master.categories.find(row => row.id === id);
+  if (!category || master.categories.length <= 1) {
+    showToast("カテゴリは最低1件必要です");
+    return;
+  }
+  const itemCount = master.items.filter(item => renovationEquipmentDisplayCategoryId(item) === id).length;
+  if (!confirm(`「${category.label}」を削除します。${itemCount ? `カテゴリ内の${itemCount}項目も削除されます。` : ""}\n既存見積に追加済みの明細は残ります。`)) return;
+  master.categories = master.categories.filter(row => row.id !== id);
+  master.items = master.items.filter(item => renovationEquipmentDisplayCategoryId(item) !== id);
+  saveRenovationEquipmentMaster(master);
+  renovationCategoryId = master.categories[0]?.id || "";
+  showRenovationCategoryManager();
+  refreshRenovationMasterView();
+}
+
+function moveRenovationCategory(id, direction) {
+  const master = loadRenovationEquipmentMaster();
+  const index = master.categories.findIndex(row => row.id === id);
+  const next = index + Number(direction);
+  if (index < 0 || next < 0 || next >= master.categories.length) return;
+  [master.categories[index], master.categories[next]] = [master.categories[next], master.categories[index]];
+  saveRenovationEquipmentMaster(master);
+  showRenovationCategoryManager();
+  refreshRenovationMasterView();
+}
+
+function showRenovationEquipmentEditor(id = "") {
+  const categories = renovationEquipmentCategories();
+  const current = id ? getRenovationMasterItem(id) : null;
+  const selectedCategory = current ? renovationEquipmentDisplayCategoryId(current) : renovationCategoryId;
+  const overlay = document.createElement("div");
+  overlay.className = "renovation-modal-overlay";
+  overlay.onclick = event => { if (event.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="renovation-modal renovation-master-modal"><button class="renovation-modal-close" type="button" onclick="this.closest('.renovation-modal-overlay').remove()">×</button>` +
+    `<h3>${current ? "機器項目を編集" : "機器項目を追加"}</h3><form class="renovation-master-form" data-item-id="${escAttr(id)}" onsubmit="saveRenovationEquipmentEditor(event)">` +
+    `<label>カテゴリ<select name="categoryId" required>${categories.map(category => `<option value="${escAttr(category.id)}"${category.id === selectedCategory ? " selected" : ""}>${esc(category.label)}</option>`).join("")}</select></label>` +
+    `<label>項目名<input name="name" required value="${escAttr(current?.name || "")}"></label>` +
+    `<label>メーカー<input name="manufacturer" value="${escAttr(renovationEquipmentManufacturer(current) || "")}"></label>` +
+    `<label>型式・仕様<input name="spec" value="${escAttr(current?.spec || "")}"></label>` +
+    `<label class="wide">備考<textarea name="note">${esc(current?.note || "")}</textarea></label>` +
+    `<label>定価<input name="listPrice" inputmode="numeric" value="${current?.listPrice == null ? "" : escAttr(String(current.listPrice))}" placeholder="未登録は空欄"></label>` +
+    `<label>NET<input name="netPrice" inputmode="numeric" value="${current?.netPrice == null ? "" : escAttr(String(current.netPrice))}" placeholder="未登録は空欄"></label>` +
+    `<label>仕入<input name="costPrice" inputmode="numeric" value="${current?.costPrice == null ? "" : escAttr(String(current.costPrice))}" placeholder="未登録は空欄"></label>` +
+    `<label>追加時数量<input name="defaultQty" type="number" min="1" step="1" value="${escAttr(String(current?.defaultQty || 1))}"></label>` +
+    `<div class="renovation-master-form-actions"><button type="button" onclick="this.closest('.renovation-modal-overlay').remove()">キャンセル</button><button type="submit">保存</button></div>` +
+    `</form></div>`;
+  document.body.appendChild(overlay);
+}
+
+function saveRenovationEquipmentEditor(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  const master = loadRenovationEquipmentMaster();
+  const id = form.dataset.itemId || renovationMasterSafeId("ren-custom");
+  const index = master.items.findIndex(item => item.id === id);
+  const previous = index >= 0 ? getRenovationMasterItem(id) : null;
+  const categoryId = String(data.get("categoryId") || "");
+  const category = master.categories.find(row => row.id === categoryId);
+  if (!category) return;
+  const next = {
+    ...(index >= 0 ? master.items[index] : {}),
+    id, categoryId, category: category.label,
+    name: String(data.get("name") || "").trim(),
+    manufacturer: String(data.get("manufacturer") || "").trim(),
+    spec: String(data.get("spec") || "").trim(),
+    note: String(data.get("note") || "").trim(),
+    defaultQty: Math.max(1, Number(data.get("defaultQty")) || 1),
+    listPrice: nullableRenovationPrice(data.get("listPrice")),
+    netPrice: nullableRenovationPrice(data.get("netPrice")),
+    costPrice: nullableRenovationPrice(data.get("costPrice")),
+    priceLabel: index >= 0 ? "アプリで編集" : "ユーザー追加",
+    effectiveDate: renovationToday(),
+  };
+  if (previous) {
+    next.history = [{
+      label: previous.priceLabel || "編集前", effectiveDate: previous.effectiveDate || null,
+      changedAt: new Date().toISOString(), listPrice: previous.listPrice, netPrice: previous.netPrice,
+      costPrice: previous.costPrice, note: previous.note || "",
+    }, ...(previous.history || [])];
+  } else next.history = [];
+  if (index >= 0) master.items[index] = next;
+  else master.items.push(next);
+  const overrides = loadRenovationPriceOverrides();
+  delete overrides[id];
+  saveRenovationPriceOverrides(overrides);
+  saveRenovationEquipmentMaster(master);
+  renovationCategoryId = categoryId;
+  form.closest(".renovation-modal-overlay")?.remove();
+  refreshRenovationMasterView();
+  showToast(index >= 0 ? "機器項目を更新しました" : "機器項目を追加しました");
+}
+
+function deleteRenovationEquipmentMasterItem(id) {
+  const item = getRenovationMasterItem(id);
+  if (!item || !confirm(`「${item.name}」を機器マスタから削除します。\n既存見積に追加済みの明細は残ります。`)) return;
+  const master = loadRenovationEquipmentMaster();
+  master.items = master.items.filter(row => row.id !== id);
+  saveRenovationEquipmentMaster(master);
+  const overrides = loadRenovationPriceOverrides();
+  delete overrides[id];
+  saveRenovationPriceOverrides(overrides);
+  renderRenovationCatalog();
+}
+
+function moveRenovationEquipmentMasterItem(id, direction) {
+  const master = loadRenovationEquipmentMaster();
+  const current = master.items.find(item => item.id === id);
+  if (!current) return;
+  const categoryId = renovationEquipmentDisplayCategoryId(current);
+  const siblings = master.items.filter(item => renovationEquipmentDisplayCategoryId(item) === categoryId);
+  const siblingIndex = siblings.findIndex(item => item.id === id);
+  const target = siblings[siblingIndex + Number(direction)];
+  if (!target) return;
+  const index = master.items.findIndex(item => item.id === id);
+  const targetIndex = master.items.findIndex(item => item.id === target.id);
+  [master.items[index], master.items[targetIndex]] = [master.items[targetIndex], master.items[index]];
+  saveRenovationEquipmentMaster(master);
+  renderRenovationCatalog();
+}
+
+function exportRenovationEquipmentMaster() {
+  const source = loadRenovationEquipmentMaster();
+  const master = cloneRenovationMasterRows(source);
+  master.items = source.items.map(item => cloneRenovationMasterRows(getRenovationMasterItem(item.id) || item));
+  master.exportedAt = new Date().toISOString();
+  const blob = new Blob([JSON.stringify(master, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `改修機器マスタ_${renovationToday()}.json`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+function importRenovationEquipmentMaster() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json,application/json";
+  input.onchange = () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const master = JSON.parse(reader.result);
+        if (!Array.isArray(master.categories) || !master.categories.length || !Array.isArray(master.items)) throw new Error("形式不正");
+        const ids = new Set();
+        master.categories.forEach(category => {
+          if (!/^[A-Za-z0-9_-]+$/.test(category.id || "") || !String(category.label || "").trim() || ids.has(category.id)) throw new Error("カテゴリ不正");
+          ids.add(category.id);
+        });
+        const itemIds = new Set();
+        master.items.forEach(item => {
+          if (!/^[A-Za-z0-9_-]+$/.test(item.id || "") || !String(item.name || "").trim() || itemIds.has(item.id)) throw new Error("項目不正");
+          if (!ids.has(renovationEquipmentDisplayCategoryId(item))) throw new Error("カテゴリ参照不正");
+          itemIds.add(item.id);
+        });
+        if (!confirm(`カテゴリ${master.categories.length}件、機器${master.items.length}件を読み込み、現在の機器マスタを置き換えますか？`)) return;
+        saveRenovationEquipmentMaster({ version: 1, categories: master.categories, items: master.items });
+        saveRenovationPriceOverrides({});
+        renovationCategoryId = master.categories[0].id;
+        document.getElementById("renovation-category-manager")?.remove();
+        refreshRenovationMasterView();
+        showToast("改修機器マスタを読み込みました");
+      } catch {
+        alert("改修機器マスタとして読み込めないJSONです。");
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
 function updateRenovationCategoryHighlight() {
   document.querySelectorAll(".renovation-categories button[data-category-id]").forEach(button => {
     const isActive = !renovationSearchText && button.dataset.categoryId === renovationCategoryId;
@@ -1004,17 +1293,18 @@ function addRenovationUnit() {
 function renderRenovationCatalog() {
   const container = document.getElementById("renovation-catalog-list");
   if (!container) return;
+  const masterItems = renovationEquipmentItems();
   const selectedQuantities = new Map();
   (getRenovationState()?.equipment || []).forEach(row => {
     selectedQuantities.set(row.itemId, (selectedQuantities.get(row.itemId) || 0) + (Number(row.qty) || 0));
   });
-  let items = RENOVATION_ITEMS.filter(item => renovationEquipmentDisplayCategoryId(item) === renovationCategoryId);
+  let items = masterItems.filter(item => renovationEquipmentDisplayCategoryId(item) === renovationCategoryId);
   if (renovationSearchText) {
-    items = RENOVATION_ITEMS.filter(item => `${renovationEquipmentManufacturer(item)} ${item.name} ${item.spec} ${item.category}`.toLowerCase().includes(renovationSearchText));
+    items = masterItems.filter(item => `${renovationEquipmentManufacturer(item)} ${item.name} ${item.spec} ${item.note || ""} ${item.category}`.toLowerCase().includes(renovationSearchText));
   }
-  const category = RENOVATION_CATEGORIES.find(row => row.id === renovationCategoryId);
+  const category = renovationEquipmentCategories().find(row => row.id === renovationCategoryId);
   const categoryNotes = renovationSearchText ? [] : (RENOVATION_REFERENCE_NOTES?.categories?.[category?.label] || []);
-  container.innerHTML = items.map(source => {
+  container.innerHTML = items.map((source, index) => {
     const item = getRenovationMasterItem(source.id);
     const manufacturer = renovationEquipmentManufacturer(item);
     const unavailable = item.listPrice == null && item.netPrice == null && item.costPrice == null;
@@ -1023,8 +1313,11 @@ function renderRenovationCatalog() {
       `<button class="renovation-catalog-select" aria-pressed="${selectedQty > 0}" onclick="addRenovationEquipment('${item.id}')" title="この機器を追加"><strong>＋ ${manufacturer ? `${esc(manufacturer)}｜` : ""}${esc(item.name)}</strong>${selectedQty ? `<em class="renovation-selected-badge">選択済 ×${selectedQty}</em>` : ""}${item.spec ? `<small>${esc(item.spec)}</small>` : ""}` +
       `<span>定価 ${item.listPrice == null ? "未登録" : fmtNum(item.listPrice)} ／ NET ${item.netPrice == null ? "未登録" : fmtNum(item.netPrice)} ／ 仕入 ${item.costPrice == null ? "未登録" : fmtNum(item.costPrice)}</span>` +
       `${item.note ? `<small class="renovation-item-note">備考：${esc(item.note)}</small>` : ""}</button>` +
-      `<div class="renovation-catalog-actions"><button onclick="showRenovationPriceHistory('${item.id}')">履歴</button>` +
-      `<button onclick="editRenovationMasterPrice('${item.id}')">価格・備考</button></div></div>`;
+      `<div class="renovation-catalog-actions"><button onclick="moveRenovationEquipmentMasterItem('${item.id}',-1)" title="上へ"${renovationSearchText || index === 0 ? " disabled" : ""}>↑</button>` +
+      `<button onclick="moveRenovationEquipmentMasterItem('${item.id}',1)" title="下へ"${renovationSearchText || index === items.length - 1 ? " disabled" : ""}>↓</button>` +
+      `<button onclick="showRenovationPriceHistory('${item.id}')">履歴</button>` +
+      `<button onclick="showRenovationEquipmentEditor('${item.id}')">編集</button>` +
+      `<button class="renovation-master-delete" onclick="deleteRenovationEquipmentMasterItem('${item.id}')">削除</button></div></div>`;
   }).join("") || `<div class="renovation-empty">該当する機器はありません。</div>`;
   if (categoryNotes.length) container.insertAdjacentHTML("beforeend", renovationNotesHtml(categoryNotes, `${category.label}の元表メモ`));
 }
@@ -1068,7 +1361,7 @@ function renderRenovationTab() {
   syncRenovationQuoteLine(unit);
   syncRenovationSourceNotes();
   const pricing = calcRenovationPricing(unit);
-  const equipmentRows = state.equipment.map(row => `<tr><td><strong>${esc(row.name)}</strong><small>${esc(row.spec || row.category)}</small></td>` +
+  const equipmentRows = state.equipment.map(row => `<tr><td><strong>${row.manufacturer ? `${esc(row.manufacturer)}｜` : ""}${esc(row.name)}</strong><small>${esc(row.spec || row.category)}</small></td>` +
     `<td><input type="number" min="0" step="1" value="${row.qty}" onchange="updateRenovationEquipment('${row.lineId}','qty',this.value)"></td>` +
     `<td><input type="number" min="0" step="1" value="${row.listPrice}" onchange="updateRenovationEquipment('${row.lineId}','listPrice',this.value)"></td>` +
     `<td><input type="number" min="0" step="1" value="${row.netPrice}" onchange="updateRenovationEquipment('${row.lineId}','netPrice',this.value)"></td>` +
@@ -1109,10 +1402,14 @@ function renderRenovationTab() {
     selectedMaterialQuantities.set(row.materialId, (selectedMaterialQuantities.get(row.materialId) || 0) + (Number(row.qty) || 0));
   });
   const materialNotes = RENOVATION_REFERENCE_NOTES?.materialGroups?.[renovationMaterialGroup] || [];
+  const equipmentCategories = renovationEquipmentCategories();
+  if (!equipmentCategories.some(category => category.id === renovationCategoryId)) renovationCategoryId = equipmentCategories[0]?.id || "";
   root.innerHTML = `<div class="renovation-sticky-controls">` + renovationUnitSwitcherHtml() + `</div>` +
     `<div class="renovation-layout"><section class="renovation-catalog"><div class="renovation-section-title">1. 機器を選択</div>` +
       `<input class="renovation-search" type="search" placeholder="全価格表から検索" value="${escAttr(renovationSearchText)}" oninput="setRenovationSearch(this.value)">` +
-      `<div class="renovation-categories">${RENOVATION_CATEGORIES.map(cat => `<button data-category-id="${escAttr(cat.id)}" class="${cat.id === renovationCategoryId && !renovationSearchText ? "active" : ""}" aria-pressed="${cat.id === renovationCategoryId && !renovationSearchText}" onclick="setRenovationCategory('${cat.id}')">${esc(cat.label)}</button>`).join("")}</div>` +
+      `<div class="renovation-categories">${equipmentCategories.map(cat => `<button data-category-id="${escAttr(cat.id)}" class="${cat.id === renovationCategoryId && !renovationSearchText ? "active" : ""}" aria-pressed="${cat.id === renovationCategoryId && !renovationSearchText}" onclick="setRenovationCategory('${cat.id}')">${esc(cat.label)}</button>`).join("")}</div>` +
+      `<div class="renovation-master-toolbar"><button onclick="showRenovationEquipmentEditor()">＋ 機器項目</button><button onclick="showRenovationCategoryManager()">カテゴリ管理</button>` +
+      `<button onclick="exportRenovationEquipmentMaster()" title="他のPCへの移行や初期データ化の共有に使用">マスタ出力</button><button onclick="importRenovationEquipmentMaster()">マスタ読込</button></div>` +
       `<div id="renovation-catalog-list" class="renovation-catalog-list"></div></section>` +
     `<section class="renovation-catalog renovation-material-catalog"><div class="renovation-section-title">2. 材料を選択</div>` +
       `<div class="renovation-material-catalog-scroll">` +

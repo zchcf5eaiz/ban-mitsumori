@@ -3441,8 +3441,8 @@ function _buildLineRows(lines) {
     itemNo++;
     if (line.renovationGenerated) {
       const sub = line.qty * line.unitPrice;
-      return `<tr class="renovation-generated-row">
-        <td class="ec-sep no-print"></td><td class="ec-no">${itemNo}</td>
+      return `<tr class="renovation-generated-row" ${dragAttrs}>
+        <td class="ec-sep no-print"><span class="line-drag-grip" title="ドラッグして並べ替え">⠿</span></td><td class="ec-no">${itemNo}</td>
         <td class="ec-name">${esc(line.name || "改修工事")}</td><td class="ec-spec">${esc(line.spec || "")}</td>
         <td class="ec-price">${fmtNum(line.unitPrice)}</td><td class="ec-qty">${line.qty}</td>
         <td class="ec-subtotal">${fmtNum(sub)}</td><td class="ec-del no-print"><small>改修タブで編集</small></td>
@@ -4253,6 +4253,7 @@ function onLineDrop(e, targetLineId) {
     let newIdx = lines.findIndex(x => x.lineId === targetLineId);
     if (!insertBefore) newIdx++;
     lines.splice(newIdx, 0, moved);
+    if (typeof rememberRenovationLineOrder === "function") rememberRenovationLineOrder(currentEstimate.units[srcUnitIdx]);
   } else {
     // 異なるユニット: コピー（元は残す）
     const srcLine = currentEstimate.units[srcUnitIdx].lines[srcLineIdx];

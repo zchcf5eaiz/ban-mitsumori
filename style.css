@@ -166,6 +166,8 @@ body {
 /* ドラッグ&ドロップ */
 tr[draggable="true"] { cursor: grab; }
 tr[draggable="true"]:active { cursor: grabbing; }
+.line-drag-grip { display:inline-flex; align-items:center; justify-content:center; width:18px; height:24px; color:#57708f; font-size:15px; font-weight:700; cursor:grab; user-select:none; }
+.line-drag-grip:active { cursor:grabbing; color:#1d4f86; }
 .dragging { opacity: 0.4; }
 .drag-over-top td { box-shadow: inset 0 2px 0 0 #3182ce; }
 .drag-over-bottom td { box-shadow: inset 0 -2px 0 0 #3182ce; }
@@ -1204,6 +1206,9 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-categories { display:flex; gap:4px; flex-wrap:wrap; padding:0 7px 7px; }
 .renovation-categories button, .renovation-material-groups button, .renovation-material-buttons button { border:1px solid #cbd5e1; background:#f8fafc; border-radius:4px; padding:4px 7px; font-size:10px; cursor:pointer; }
 .renovation-categories button.active { background:#2368a2; color:#fff; border-color:#2368a2; }
+.renovation-master-toolbar { display:flex; flex-wrap:wrap; gap:4px; padding:0 7px 7px; }
+.renovation-master-toolbar button { border:1px solid #9fb2c8; border-radius:4px; background:#fff; color:#294967; padding:4px 7px; font-size:9px; font-weight:600; cursor:pointer; }
+.renovation-master-toolbar button:first-child { background:#e8f4ff; border-color:#6da4d2; color:#174f7f; }
 .renovation-catalog {
   position:sticky;
   top:var(--renovation-sticky-top);
@@ -1223,6 +1228,8 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-catalog-item.price-missing { background:#fff9f0; }
 .renovation-catalog-actions { display:flex; gap:3px; }
 .renovation-catalog-actions button { border:1px solid #cbd5e1; background:#fff; border-radius:3px; padding:4px 5px; font-size:9px; cursor:pointer; white-space:nowrap; }
+.renovation-catalog-actions button:disabled { opacity:.35; cursor:not-allowed; }
+.renovation-catalog-actions .renovation-master-delete, .renovation-master-delete { color:#a32626; border-color:#e1aaaa; background:#fff8f8; }
 .renovation-table-wrap { overflow:auto; max-height:260px; }
 .renovation-table-wrap table, .renovation-modal table { width:100%; border-collapse:collapse; font-size:10px; }
 .renovation-table-wrap th, .renovation-table-wrap td, .renovation-modal th, .renovation-modal td { border:1px solid #e2e8f0; padding:5px; text-align:right; }
@@ -1344,6 +1351,18 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-modal h3 { margin:0 35px 12px 0; color:#1e3a5f; }
 .renovation-modal-close { position:absolute; right:10px; top:8px; border:0; background:transparent; font-size:25px; cursor:pointer; }
 .renovation-modal p { color:#64748b; font-size:10px; }
+.renovation-master-modal { width:min(820px,95vw); }
+.renovation-master-modal .renovation-master-toolbar { padding:0 0 10px; }
+.renovation-master-modal td:last-child { white-space:nowrap; }
+.renovation-master-modal button { border:1px solid #b8c5d4; border-radius:4px; background:#fff; color:#294967; padding:4px 7px; cursor:pointer; }
+.renovation-master-modal button:disabled { opacity:.35; cursor:not-allowed; }
+.renovation-master-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.renovation-master-form label { color:#42566d; font-size:11px; font-weight:600; }
+.renovation-master-form input, .renovation-master-form select, .renovation-master-form textarea { display:block; width:100%; box-sizing:border-box; margin-top:4px; padding:7px 8px; border:1px solid #bcc9d8; border-radius:4px; background:#fff; font:inherit; font-weight:400; }
+.renovation-master-form textarea { min-height:70px; resize:vertical; }
+.renovation-master-form .wide, .renovation-master-form-actions { grid-column:1/-1; }
+.renovation-master-form-actions { display:flex; justify-content:flex-end; gap:7px; padding-top:4px; }
+.renovation-master-form-actions button[type="submit"] { background:#2368a2; border-color:#2368a2; color:#fff; font-weight:700; }
 .rates-disabled { opacity:.45; pointer-events:none; }
 .renovation-internal-summary { margin:8px 0; border:2px solid #274c77; border-radius:7px; overflow:hidden; background:#f8fbff; }
 .renovation-internal-heading { display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:7px 10px; background:#274c77; color:#fff; }

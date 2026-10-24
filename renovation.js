@@ -926,9 +926,12 @@ function renovationMasterSafeId(prefix) {
 }
 
 function refreshRenovationMasterView() {
+  const viewPosition = captureRenovationViewPosition();
   const categories = renovationEquipmentCategories();
   if (!categories.some(category => category.id === renovationCategoryId)) renovationCategoryId = categories[0]?.id || "";
   renderRenovationTab();
+  restoreRenovationViewPosition(viewPosition);
+  requestAnimationFrame(() => restoreRenovationViewPosition(viewPosition));
 }
 
 function showRenovationCategoryManager() {

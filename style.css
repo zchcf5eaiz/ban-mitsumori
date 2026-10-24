@@ -1231,6 +1231,13 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-catalog-item small { color:#64748b; margin-top:2px; }
 .renovation-catalog-item span { color:#59697c; margin-top:3px; font-size:9px; }
 .renovation-catalog-item.price-missing { background:#fff9f0; }
+.renovation-catalog-item.equipment-highlight-yellow { background:#fff3ad; }
+.renovation-catalog-item.equipment-highlight-green { background:#dff3df; }
+.renovation-catalog-item.equipment-highlight-blue { background:#dfeeff; }
+.renovation-catalog-item.equipment-highlight-pink { background:#ffe1e8; }
+.renovation-catalog-item.equipment-highlight-orange { background:#ffe4c2; }
+.renovation-catalog-item.equipment-highlight-gray { background:#e7ebf0; }
+.renovation-catalog-item[class*="equipment-highlight-"]:hover { filter:brightness(.98); }
 .renovation-catalog-actions { display:flex; gap:3px; }
 .renovation-catalog-actions button { border:1px solid #cbd5e1; background:#fff; border-radius:3px; padding:4px 5px; font-size:9px; cursor:pointer; white-space:nowrap; }
 .renovation-catalog-actions button:disabled { opacity:.35; cursor:not-allowed; }
@@ -1366,6 +1373,18 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-master-form input, .renovation-master-form select, .renovation-master-form textarea { display:block; width:100%; box-sizing:border-box; margin-top:4px; padding:7px 8px; border:1px solid #bcc9d8; border-radius:4px; background:#fff; font:inherit; font-weight:400; }
 .renovation-master-form textarea { min-height:70px; resize:vertical; }
 .renovation-master-form .wide, .renovation-master-form-actions { grid-column:1/-1; }
+.renovation-highlight-picker { display:flex; flex-wrap:wrap; gap:7px; margin:0; padding:8px; border:1px solid #bcc9d8; border-radius:5px; }
+.renovation-highlight-picker legend { padding:0 4px; color:#42566d; font-size:11px; font-weight:600; }
+.renovation-master-form .renovation-highlight-option { position:relative; display:inline-flex; align-items:center; justify-content:center; min-width:46px; padding:6px 9px; border:2px solid transparent; border-radius:5px; color:#334155; cursor:pointer; box-sizing:border-box; }
+.renovation-master-form .renovation-highlight-option input { position:absolute; width:1px; height:1px; margin:0; padding:0; opacity:0; pointer-events:none; }
+.renovation-highlight-option:has(input:checked) { border-color:#1d4f86; box-shadow:0 0 0 1px #fff inset; }
+.renovation-highlight-option.highlight-none { background:#fff; border-color:#cbd5e1; }
+.renovation-highlight-option.highlight-yellow { background:#fff3ad; }
+.renovation-highlight-option.highlight-green { background:#dff3df; }
+.renovation-highlight-option.highlight-blue { background:#dfeeff; }
+.renovation-highlight-option.highlight-pink { background:#ffe1e8; }
+.renovation-highlight-option.highlight-orange { background:#ffe4c2; }
+.renovation-highlight-option.highlight-gray { background:#e7ebf0; }
 .renovation-master-form-actions { display:flex; justify-content:flex-end; gap:7px; padding-top:4px; }
 .renovation-master-form-actions button[type="submit"] { background:#2368a2; border-color:#2368a2; color:#fff; font-weight:700; }
 .rates-disabled { opacity:.45; pointer-events:none; }

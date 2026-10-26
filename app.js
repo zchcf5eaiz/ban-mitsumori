@@ -1498,7 +1498,7 @@ function renderOptionTable() {
           </tr>
           <tr class="mg-row" data-custom-selection-key="option:カップリング" onclick="addOptionToEstimate(event, 'カップリング')">
             <td class="mg-spec">カップリング</td>
-            <td class="mg-price"><input type="number" id="opt-price-coupling" min="0" step="0.1" value="30"
+            <td class="mg-price"><input type="number" id="opt-price-coupling" min="0" step="0.1" value="20"
                  onclick="event.stopPropagation()" onfocus="this.select()"></td>
           </tr>
         </tbody>

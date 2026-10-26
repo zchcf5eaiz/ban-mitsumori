@@ -739,13 +739,12 @@ function renderMasterTable() {
       }
       // カテゴリGの場合、P-BOX計算機を先頭に挿入
       if (cg.id === "G") {
-        html += `<div class="cat-tables-grid4">`;
+        html += `<div class="cat-tables-grid4 pbox-tools-grid">`;
         html += renderPBoxCalculator();
         html += renderDuctCalculator();
         html += renderFrameCalculator();
         html += renderTrayCalculator();
         html += renderOptionTable();
-        html += renderOption2Table();
         html += renderQuickItemsTable();
         html += renderSusDiffTable();
         html += `</div>`;
@@ -1472,38 +1471,72 @@ function addTrayToEstimate() {
 }
 
 // ============================================================
-// オプション表（片扉・両扉）
+// オプション表
 // ============================================================
 
 function renderOptionTable() {
-  return `<div class="name-group pbox-calc">
+  return `<div class="name-group pbox-calc pbox-calc-options">
     <div class="pbox-title">オプション</div>
-    <table class="mg-table option-table">
-      <thead><tr><th>品名</th><th>単価</th></tr></thead>
-      <tbody>
-        <tr class="mg-row" data-custom-selection-key="option:片扉" onclick="addOptionToEstimate(event, '片扉')">
-          <td class="mg-spec">片扉</td>
-          <td class="mg-price"><input type="number" id="opt-price-single" min="0" step="0.1" value="25"
-               onclick="event.stopPropagation()" onfocus="this.select()"></td>
-        </tr>
-        <tr class="mg-row" data-custom-selection-key="option:両扉" onclick="addOptionToEstimate(event, '両扉')">
-          <td class="mg-spec">両扉</td>
-          <td class="mg-price"><input type="number" id="opt-price-double" min="0" step="0.1" value="41"
-               onclick="event.stopPropagation()" onfocus="this.select()"></td>
-        </tr>
-        <tr class="mg-row" data-custom-selection-key="option:窓" onclick="addOptionToEstimate(event, '窓')">
-          <td class="mg-spec">窓</td>
-          <td class="mg-price"><input type="number" id="opt-price-window" min="0" step="0.1" value="25"
-               onclick="event.stopPropagation()" onfocus="this.select()"></td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="option-combined-grid">
+      <table class="mg-table option-table">
+        <thead><tr><th>品名</th><th>単価</th></tr></thead>
+        <tbody>
+          <tr class="mg-row" data-custom-selection-key="option:片扉" onclick="addOptionToEstimate(event, '片扉')">
+            <td class="mg-spec">片扉</td>
+            <td class="mg-price"><input type="number" id="opt-price-single" min="0" step="0.1" value="25"
+                 onclick="event.stopPropagation()" onfocus="this.select()"></td>
+          </tr>
+          <tr class="mg-row" data-custom-selection-key="option:両扉" onclick="addOptionToEstimate(event, '両扉')">
+            <td class="mg-spec">両扉</td>
+            <td class="mg-price"><input type="number" id="opt-price-double" min="0" step="0.1" value="41"
+                 onclick="event.stopPropagation()" onfocus="this.select()"></td>
+          </tr>
+          <tr class="mg-row" data-custom-selection-key="option:窓" onclick="addOptionToEstimate(event, '窓')">
+            <td class="mg-spec">窓</td>
+            <td class="mg-price"><input type="number" id="opt-price-window" min="0" step="0.1" value="25"
+                 onclick="event.stopPropagation()" onfocus="this.select()"></td>
+          </tr>
+          <tr class="mg-row" data-custom-selection-key="option:カップリング" onclick="addOptionToEstimate(event, 'カップリング')">
+            <td class="mg-spec">カップリング</td>
+            <td class="mg-price"><input type="number" id="opt-price-coupling" min="0" step="0.1" value="30"
+                 onclick="event.stopPropagation()" onfocus="this.select()"></td>
+          </tr>
+        </tbody>
+      </table>
+      <table class="mg-table option-table">
+        <thead><tr><th>品名</th><th>単価</th></tr></thead>
+        <tbody>
+          <tr class="mg-row" data-custom-selection-key="option2:ポール取付" onclick="addOption2ToEstimate(event, 'ポール取付')">
+            <td class="mg-spec">ポール取付</td>
+            <td class="mg-price"><input type="number" id="opt2-price-pole" min="0" step="0.1" value="100"
+                 onclick="event.stopPropagation()" onfocus="this.select()"></td>
+          </tr>
+          <tr class="mg-row" data-custom-selection-key="option2:コン柱取付" onclick="addOption2ToEstimate(event, 'コン柱取付')">
+            <td class="mg-spec">コン柱取付</td>
+            <td class="mg-price"><input type="number" id="opt2-price-conchu" min="0" step="0.1" value="100"
+                 onclick="event.stopPropagation()" onfocus="this.select()"></td>
+          </tr>
+          <tr class="mg-row" data-custom-selection-key="option2:スタンド" onclick="addOption2ToEstimate(event, 'スタンド')">
+            <td class="mg-spec">スタンド</td>
+            <td class="mg-price"><input type="number" id="opt2-price-stand" min="0" step="0.1" value="150"
+                 onclick="event.stopPropagation()" onfocus="this.select()"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>`;
 }
 
 function addOptionToEstimate(event, type) {
   if (event.target.tagName === "INPUT") return;
-  const inputId = type === "片扉" ? "opt-price-single" : type === "両扉" ? "opt-price-double" : "opt-price-window";
+  const idMap = {
+    "片扉": "opt-price-single",
+    "両扉": "opt-price-double",
+    "窓": "opt-price-window",
+    "カップリング": "opt-price-coupling",
+  };
+  const inputId = idMap[type];
+  if (!inputId) return;
   const price = parseFloat(document.getElementById(inputId).value) || 0;
   if (price <= 0) return;
 
@@ -1530,34 +1563,8 @@ function addOptionToEstimate(event, type) {
 }
 
 // ============================================================
-// オプション2（ポール取付・コン柱取付・スタンド）
+// 取付オプション（統合オプション表の右側）
 // ============================================================
-
-function renderOption2Table() {
-  return `<div class="name-group pbox-calc">
-    <div class="pbox-title">オプション2</div>
-    <table class="mg-table option-table">
-      <thead><tr><th>品名</th><th>単価</th></tr></thead>
-      <tbody>
-        <tr class="mg-row" data-custom-selection-key="option2:ポール取付" onclick="addOption2ToEstimate(event, 'ポール取付')">
-          <td class="mg-spec">ポール取付</td>
-          <td class="mg-price"><input type="number" id="opt2-price-pole" min="0" step="0.1" value="100"
-               onclick="event.stopPropagation()" onfocus="this.select()"></td>
-        </tr>
-        <tr class="mg-row" data-custom-selection-key="option2:コン柱取付" onclick="addOption2ToEstimate(event, 'コン柱取付')">
-          <td class="mg-spec">コン柱取付</td>
-          <td class="mg-price"><input type="number" id="opt2-price-conchu" min="0" step="0.1" value="100"
-               onclick="event.stopPropagation()" onfocus="this.select()"></td>
-        </tr>
-        <tr class="mg-row" data-custom-selection-key="option2:スタンド" onclick="addOption2ToEstimate(event, 'スタンド')">
-          <td class="mg-spec">スタンド</td>
-          <td class="mg-price"><input type="number" id="opt2-price-stand" min="0" step="0.1" value="150"
-               onclick="event.stopPropagation()" onfocus="this.select()"></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>`;
-}
 
 function addOption2ToEstimate(event, type) {
   if (event.target.tagName === "INPUT") return;
@@ -4035,7 +4042,7 @@ function inferCustomSelectionKey(line) {
     return "frame:" + line.name;
   }
   if (line.name === "防油トレー") return "tray:防油トレー";
-  if (["片扉", "両扉", "窓"].includes(line.name)) return "option:" + line.name;
+  if (["片扉", "両扉", "窓", "カップリング"].includes(line.name)) return "option:" + line.name;
   if (["ポール取付", "コン柱取付", "スタンド"].includes(line.name)) return "option2:" + line.name;
   if (["上部ダクト", "下部ダクト", "自立"].includes(line.name)) return "quick:" + line.name;
   if (line.name === "SUS差額" && spec) return "sus-diff:" + spec;

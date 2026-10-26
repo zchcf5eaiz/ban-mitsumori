@@ -461,6 +461,14 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .cat-tables-grid4 .name-group-wide { min-width: 0; }
 .cat-tables-grid4 .mg-table,
 .cat-tables-grid4 .mg-matrix { width: 100%; }
+.pbox-tools-grid {
+  gap: 6px;
+  align-items: start;
+  flex: 1 1 100%;
+  width: 100%;
+}
+.pbox-tools-grid > .pbox-calc { width: 100%; max-width: none; }
+.pbox-tools-grid > .pbox-calc-options { grid-column: span 2; }
 
 /* カテゴリ内テーブル 2段レイアウト */
 .cat-tables-stack {
@@ -1011,6 +1019,14 @@ tr[draggable="true"]:active { cursor: grabbing; }
 }
 
 /* オプション表 */
+.option-combined-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 6px;
+  background: #edf2f7;
+}
+.option-combined-grid .option-table { background: #fff; }
 .pbox-options {
   display: grid; grid-template-columns: auto 1fr;
   gap: 1px; padding: 4px; background: #e2e8f0;

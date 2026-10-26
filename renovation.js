@@ -42,7 +42,6 @@ const RENOVATION_MATSUOKA_RATIOS = Object.freeze({
 });
 
 let renovationCategoryId = RENOVATION_CATEGORIES[0]?.id || "";
-let renovationSearchText = "";
 let renovationMaterialGroup = RENOVATION_MATERIAL_GROUPS?.[0] || "電線(KIP)";
 let renovationEquipmentMasterCache = null;
 
@@ -918,14 +917,6 @@ function removeRenovationMaterial(lineId) {
 
 function setRenovationCategory(id) {
   renovationCategoryId = id;
-  renovationSearchText = "";
-  const search = document.querySelector(".renovation-search");
-  if (search) search.value = "";
-  updateRenovationCategoryHighlight();
-  renderRenovationCatalog();
-}
-function setRenovationSearch(value) {
-  renovationSearchText = value.trim().toLowerCase();
   updateRenovationCategoryHighlight();
   renderRenovationCatalog();
 }
@@ -1111,10 +1102,6 @@ let renovationMasterDragScroll = 0;
 let renovationMasterDragScrollFrame = 0;
 
 function startRenovationEquipmentMasterDrag(event, id) {
-  if (renovationSearchText) {
-    event.preventDefault();
-    return;
-  }
   renovationMasterDragId = id;
   event.dataTransfer.effectAllowed = "move";
   event.dataTransfer.setData("text/plain", id);
@@ -1129,7 +1116,7 @@ function scrollRenovationEquipmentMasterWhileDragging(container) {
 }
 
 function overRenovationEquipmentMasterDrag(event) {
-  if (!renovationMasterDragId || renovationSearchText) return;
+  if (!renovationMasterDragId) return;
   event.preventDefault();
   event.dataTransfer.dropEffect = "move";
   const row = event.target.closest(".renovation-catalog-item");
@@ -1160,7 +1147,7 @@ function dropRenovationEquipmentMasterItem(event, targetId) {
   const targetRow = event.target.closest(".renovation-catalog-item");
   const targetRect = targetRow?.getBoundingClientRect();
   const insertAfter = targetRect ? event.clientY >= targetRect.top + targetRect.height / 2 : false;
-  if (!sourceId || sourceId === targetId || renovationSearchText) {
+  if (!sourceId || sourceId === targetId) {
     endRenovationEquipmentMasterDrag();
     return;
   }
@@ -1251,7 +1238,7 @@ function importRenovationEquipmentMaster() {
 
 function updateRenovationCategoryHighlight() {
   document.querySelectorAll(".renovation-categories button[data-category-id]").forEach(button => {
-    const isActive = !renovationSearchText && button.dataset.categoryId === renovationCategoryId;
+    const isActive = button.dataset.categoryId === renovationCategoryId;
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", String(isActive));
   });
@@ -1394,21 +1381,16 @@ function renderRenovationCatalog() {
   (getRenovationState()?.equipment || []).forEach(row => {
     selectedQuantities.set(row.itemId, (selectedQuantities.get(row.itemId) || 0) + (Number(row.qty) || 0));
   });
-  let items = masterItems.filter(item => renovationEquipmentDisplayCategoryId(item) === renovationCategoryId);
-  if (renovationSearchText) {
-    items = masterItems.filter(item => `${renovationEquipmentManufacturer(item)} ${item.name} ${item.spec} ${item.note || ""} ${item.category}`.toLowerCase().includes(renovationSearchText));
-  }
+  const items = masterItems.filter(item => renovationEquipmentDisplayCategoryId(item) === renovationCategoryId);
   const category = renovationEquipmentCategories().find(row => row.id === renovationCategoryId);
-  const categoryNotes = renovationSearchText ? [] : (RENOVATION_REFERENCE_NOTES?.categories?.[category?.label] || []);
+  const categoryNotes = RENOVATION_REFERENCE_NOTES?.categories?.[category?.label] || [];
   container.innerHTML = items.map(source => {
     const item = getRenovationMasterItem(source.id);
     const manufacturer = renovationEquipmentManufacturer(item);
     const unavailable = item.listPrice == null && item.netPrice == null && item.costPrice == null;
     const selectedQty = selectedQuantities.get(item.id) || 0;
     const highlight = renovationEquipmentHighlight(item.highlight);
-    const dragGrip = renovationSearchText
-      ? `<span class="renovation-master-drag-grip disabled" title="検索中は並び替えできません">⠿</span>`
-      : `<span class="renovation-master-drag-grip" draggable="true" ondragstart="startRenovationEquipmentMasterDrag(event,'${item.id}')" ondragend="endRenovationEquipmentMasterDrag()" title="ドラッグして並び替え">⠿</span>`;
+    const dragGrip = `<span class="renovation-master-drag-grip" draggable="true" ondragstart="startRenovationEquipmentMasterDrag(event,'${item.id}')" ondragend="endRenovationEquipmentMasterDrag()" title="ドラッグして並び替え">⠿</span>`;
     return `<div class="renovation-catalog-item${unavailable ? " price-missing" : ""}${selectedQty ? " selected" : ""}${highlight !== "none" ? ` equipment-highlight-${highlight}` : ""}" data-master-item-id="${escAttr(item.id)}" ondragover="overRenovationEquipmentMasterDrag(event)" ondragleave="leaveRenovationEquipmentMasterDrag(event)" ondrop="dropRenovationEquipmentMasterItem(event,'${item.id}')">${dragGrip}` +
       `<button class="renovation-catalog-select" aria-pressed="${selectedQty > 0}" onclick="addRenovationEquipment('${item.id}')" title="この機器を追加"><strong>＋ ${manufacturer ? `${esc(manufacturer)}｜` : ""}${esc(item.name)}</strong>${selectedQty ? `<em class="renovation-selected-badge">選択済 ×${selectedQty}</em>` : ""}${item.spec ? `<small>${esc(item.spec)}</small>` : ""}` +
       `<span>定価 ${item.listPrice == null ? "未登録" : fmtNum(item.listPrice)} ／ NET ${item.netPrice == null ? "未登録" : fmtNum(item.netPrice)} ／ 仕入 ${item.costPrice == null ? "未登録" : fmtNum(item.costPrice)}</span>` +
@@ -1504,8 +1486,7 @@ function renderRenovationTab() {
   if (!equipmentCategories.some(category => category.id === renovationCategoryId)) renovationCategoryId = equipmentCategories[0]?.id || "";
   root.innerHTML = `<div class="renovation-sticky-controls">` + renovationUnitSwitcherHtml() + `</div>` +
     `<div class="renovation-layout"><section class="renovation-catalog"><div class="renovation-section-title">1. 機器を選択</div>` +
-      `<input class="renovation-search" type="search" placeholder="全価格表から検索" value="${escAttr(renovationSearchText)}" oninput="setRenovationSearch(this.value)">` +
-      `<div class="renovation-categories">${equipmentCategories.map(cat => `<button data-category-id="${escAttr(cat.id)}" class="${cat.id === renovationCategoryId && !renovationSearchText ? "active" : ""}" aria-pressed="${cat.id === renovationCategoryId && !renovationSearchText}" onclick="setRenovationCategory('${cat.id}')">${esc(cat.label)}</button>`).join("")}</div>` +
+      `<div class="renovation-categories">${equipmentCategories.map(cat => `<button data-category-id="${escAttr(cat.id)}" class="${cat.id === renovationCategoryId ? "active" : ""}" aria-pressed="${cat.id === renovationCategoryId}" onclick="setRenovationCategory('${cat.id}')">${esc(cat.label)}</button>`).join("")}</div>` +
       `<div class="renovation-master-toolbar"><button onclick="showRenovationEquipmentEditor()">＋ 機器項目</button><button onclick="showRenovationCategoryManager()">カテゴリ管理</button>` +
       `<button onclick="exportRenovationEquipmentMaster()" title="他のPCへの移行や初期データ化の共有に使用">マスタ出力</button><button onclick="importRenovationEquipmentMaster()">マスタ読込</button></div>` +
       `<div id="renovation-catalog-list" class="renovation-catalog-list"></div></section>` +

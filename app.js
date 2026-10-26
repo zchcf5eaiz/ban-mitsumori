@@ -1521,6 +1521,11 @@ function renderOptionTable() {
             <td class="mg-price"><input type="number" id="opt2-price-stand" min="0" step="0.1" value="150"
                  onclick="event.stopPropagation()" onfocus="this.select()"></td>
           </tr>
+          <tr class="mg-row" data-custom-selection-key="option2:ルーバー" onclick="addOption2ToEstimate(event, 'ルーバー')">
+            <td class="mg-spec">ルーバー</td>
+            <td class="mg-price"><input type="number" id="opt2-price-louver" min="0" step="0.1" value="30"
+                 onclick="event.stopPropagation()" onfocus="this.select()"></td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -1568,8 +1573,15 @@ function addOptionToEstimate(event, type) {
 
 function addOption2ToEstimate(event, type) {
   if (event.target.tagName === "INPUT") return;
-  const idMap = { "ポール取付": "opt2-price-pole", "コン柱取付": "opt2-price-conchu", "スタンド": "opt2-price-stand" };
-  const price = parseFloat(document.getElementById(idMap[type]).value) || 0;
+  const idMap = {
+    "ポール取付": "opt2-price-pole",
+    "コン柱取付": "opt2-price-conchu",
+    "スタンド": "opt2-price-stand",
+    "ルーバー": "opt2-price-louver",
+  };
+  const inputId = idMap[type];
+  if (!inputId) return;
+  const price = parseFloat(document.getElementById(inputId).value) || 0;
   if (price <= 0) return;
 
   const input = prompt("数量を入力してください\n" + type + " (単価: " + price + ")", "1");
@@ -4043,7 +4055,7 @@ function inferCustomSelectionKey(line) {
   }
   if (line.name === "防油トレー") return "tray:防油トレー";
   if (["片扉", "両扉", "窓", "カップリング"].includes(line.name)) return "option:" + line.name;
-  if (["ポール取付", "コン柱取付", "スタンド"].includes(line.name)) return "option2:" + line.name;
+  if (["ポール取付", "コン柱取付", "スタンド", "ルーバー"].includes(line.name)) return "option2:" + line.name;
   if (["上部ダクト", "下部ダクト", "自立"].includes(line.name)) return "quick:" + line.name;
   if (line.name === "SUS差額" && spec) return "sus-diff:" + spec;
   return "";

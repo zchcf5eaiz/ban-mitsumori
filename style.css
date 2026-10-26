@@ -1022,9 +1022,9 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .option-combined-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding: 6px;
-  background: #edf2f7;
+  column-gap: 6px;
+  padding: 0;
+  background: #fff;
 }
 .option-combined-grid .option-table { background: #fff; }
 .pbox-options {

@@ -1228,6 +1228,13 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-catalog-item strong, .renovation-catalog-item small, .renovation-catalog-item span { display:block; overflow-wrap:anywhere; }
 .renovation-catalog-item small { color:#64748b; margin-top:2px; }
 .renovation-catalog-item span { color:#59697c; margin-top:3px; font-size:9px; }
+.renovation-catalog-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:6px; }
+.renovation-catalog-mainline { display:flex; flex-wrap:wrap; align-items:baseline; gap:0 2px; min-width:0; line-height:1.35; }
+.renovation-catalog-mainline .renovation-catalog-maker { color:#36536f; font-size:10px; white-space:nowrap; }
+.renovation-catalog-mainline .renovation-catalog-name { color:#172f4c; font-size:12px; }
+.renovation-catalog-mainline .renovation-catalog-spec { display:inline!important; margin:0!important; color:#455f79; font-size:11px; font-weight:600; }
+.renovation-catalog-prices { display:flex; flex-wrap:wrap; gap:2px 10px; margin-top:4px; color:#263f5b; }
+.renovation-catalog-prices span { display:inline!important; margin:0!important; color:inherit; font-size:11px; font-weight:700; white-space:nowrap; }
 .renovation-catalog-item.price-missing { background:#fff9f0; }
 .renovation-catalog-item.equipment-highlight-yellow { background:#fff3ad; }
 .renovation-catalog-item.equipment-highlight-green { background:#dff3df; }
@@ -1248,7 +1255,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-table-wrap td small { display:block; color:#718096; margin-top:2px; }
 .renovation-table-wrap input { width:68px; box-sizing:border-box; padding:4px; border:1px solid #cbd5e1; text-align:right; }
 .renovation-table-wrap input.renovation-note-input { width:150px; text-align:left; }
-.renovation-item-note { color:#8a4b10 !important; white-space:normal; }
+.renovation-item-note { color:#8a4b10 !important; white-space:normal; font-size:9px; }
 .renovation-delete { border:0; color:#fff; background:#cf3434; border-radius:3px; cursor:pointer; }
 .renovation-empty { padding:20px !important; text-align:center !important; color:#8492a6; }
 .renovation-material-groups { display:flex; flex-wrap:wrap; gap:4px; padding:7px 7px 0; }

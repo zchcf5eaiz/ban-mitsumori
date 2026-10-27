@@ -1252,13 +1252,11 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-catalog-prices { display:flex; flex-wrap:wrap; align-items:center; gap:2px 10px; margin-top:4px; color:#16639a; }
 .renovation-catalog-prices span { display:inline-flex!important; align-items:center; min-height:18px; margin:0!important; color:inherit; font-size:11px; font-weight:700; line-height:18px; white-space:nowrap; }
 .renovation-tr-price-table { margin-top:5px; overflow:hidden; border:1px solid #c7d5e4; border-radius:4px; background:#fff; }
-.renovation-tr-estimate-price { margin-top:5px; overflow:hidden; border-radius:4px; }
+.renovation-tr-estimate-price { margin-top:4px; }
 .renovation-tr-price-row { display:grid; grid-template-columns:72px repeat(3,minmax(0,1fr)); align-items:center; min-height:23px; color:#516579; }
 .renovation-tr-price-row + .renovation-tr-price-row { border-top:1px solid #e3eaf1; }
 .renovation-tr-price-row strong { padding:4px 5px; color:#38516b; font-size:9px; white-space:nowrap; }
 .renovation-tr-price-row span { display:block!important; min-width:0; margin:0!important; padding:4px 3px; color:inherit; font-size:9px; line-height:1.25; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.renovation-tr-price-row.estimate { background:#e8f4ff; color:#075b96; font-weight:700; }
-.renovation-tr-price-row.estimate strong { color:#075b96; }
 .renovation-catalog-item.price-missing { background:#fff9f0; }
 .renovation-catalog-item.equipment-highlight-yellow { background:#fff3ad; }
 .renovation-catalog-item.equipment-highlight-green { background:#dff3df; }

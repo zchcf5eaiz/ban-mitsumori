@@ -296,10 +296,10 @@ function renovationTrComparisonEditorHtml(item) {
 
 function renovationTrPriceTableHtml(item) {
   const prices = renovationTrComparisonPrices(item);
-  const row = (label, price, estimate = false) =>
-    `<div class="renovation-tr-price-row${estimate ? " estimate" : ""}"><strong>${label}</strong>` +
+  const row = (label, price) =>
+    `<div class="renovation-tr-price-row"><strong>${label}</strong>` +
     `<span>定価 ${renovationPriceText(price.listPrice)}</span><span>NET ${renovationPriceText(price.netPrice)}</span><span>仕入 ${renovationPriceText(price.costPrice)}</span></div>`;
-  return `<div class="renovation-tr-estimate-price">${row("見積価格", item, true)}</div>` +
+  return `<div class="renovation-catalog-prices renovation-tr-estimate-price"><span>定価 ${renovationPriceText(item.listPrice)}</span><span>NET ${renovationPriceText(item.netPrice)}</span><span>仕入 ${renovationPriceText(item.costPrice)}</span></div>` +
     `<div class="renovation-tr-price-table">${RENOVATION_TR_COMPARISON_MAKERS.map(maker => row(maker.label, prices[maker.key])).join("")}</div>`;
 }
 

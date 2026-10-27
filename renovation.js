@@ -120,11 +120,27 @@ function cloneRenovationMasterRows(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function removeRenovationTrManufacturerNetPrices(items) {
+  let changed = false;
+  (items || []).forEach(item => {
+    Object.values(item?.manufacturerPrices || {}).forEach(price => {
+      if (price && Object.hasOwn(price, "netPrice")) {
+        delete price.netPrice;
+        changed = true;
+      }
+    });
+  });
+  return changed;
+}
+
 function loadRenovationEquipmentMaster() {
   if (renovationEquipmentMasterCache) return renovationEquipmentMasterCache;
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_RENOVATION_EQUIPMENT_MASTER) || "null");
     if (saved && Array.isArray(saved.categories) && saved.categories.length && Array.isArray(saved.items)) {
+      if (removeRenovationTrManufacturerNetPrices(saved.items)) {
+        localStorage.setItem(STORAGE_RENOVATION_EQUIPMENT_MASTER, JSON.stringify(saved));
+      }
       renovationEquipmentMasterCache = saved;
       return renovationEquipmentMasterCache;
     }
@@ -271,7 +287,6 @@ function renovationTrComparisonPrices(item) {
     const price = stored[maker.key] || {};
     return [maker.key, {
       listPrice: nullableRenovationPrice(price.listPrice),
-      netPrice: nullableRenovationPrice(price.netPrice),
       costPrice: nullableRenovationPrice(price.costPrice),
     }];
   }));
@@ -290,7 +305,7 @@ function renovationTrComparisonEditorHtml(item) {
   return `<fieldset class="renovation-tr-price-editor wide"><legend>メーカー別価格（比較表示専用）</legend>` +
     `<p>見積への選定には使用しません。上の「見積価格」だけが反映されます。</p>` +
     RENOVATION_TR_COMPARISON_MAKERS.map(maker =>
-      `<div class="renovation-tr-price-editor-row"><strong>${maker.label}</strong>${input(maker.key, "listPrice", "定価")}${input(maker.key, "netPrice", "NET")}${input(maker.key, "costPrice", "仕入")}</div>`
+      `<div class="renovation-tr-price-editor-row"><strong>${maker.label}</strong>${input(maker.key, "listPrice", "定価")}${input(maker.key, "costPrice", "仕入")}</div>`
     ).join("") + `</fieldset>`;
 }
 
@@ -298,7 +313,7 @@ function renovationTrPriceTableHtml(item) {
   const prices = renovationTrComparisonPrices(item);
   const row = (label, price) =>
     `<div class="renovation-tr-price-row"><strong>${label}</strong>` +
-    `<span>定価 ${renovationPriceText(price.listPrice)}</span><span>NET ${renovationPriceText(price.netPrice)}</span><span>仕入 ${renovationPriceText(price.costPrice)}</span></div>`;
+    `<span>定価 ${renovationPriceText(price.listPrice)}</span><span>仕入 ${renovationPriceText(price.costPrice)}</span></div>`;
   return `<div class="renovation-catalog-prices renovation-tr-estimate-price"><span>定価 ${renovationPriceText(item.listPrice)}</span><span>NET ${renovationPriceText(item.netPrice)}</span><span>仕入 ${renovationPriceText(item.costPrice)}</span></div>` +
     `<div class="renovation-tr-price-table">${RENOVATION_TR_COMPARISON_MAKERS.map(maker => row(maker.label, prices[maker.key])).join("")}</div>`;
 }
@@ -316,14 +331,15 @@ function renovationIsTrEquipment(item) {
 function renovationInternalTrComparisonRow(item) {
   if (!renovationIsTrEquipment(item)) return "";
   const prices = renovationTrComparisonPrices(renovationTrComparisonSource(item));
-  const priceCells = price => `<span>${renovationPriceText(price.listPrice)}</span>` +
-    `<span>${renovationPriceText(price.netPrice)}</span><span>${renovationPriceText(price.costPrice)}</span>`;
+  const priceCells = price => `<span>${renovationPriceText(price.listPrice)}</span><span>${renovationPriceText(price.costPrice)}</span>`;
   return `<tr class="renovation-internal-tr-comparison-row"><td colspan="5">` +
     `<div class="renovation-internal-tr-comparison">` +
     `<div class="renovation-internal-tr-comparison-heading"><strong>TR価格比較</strong><small>参考・計算対象外</small></div>` +
+    `<div class="renovation-internal-tr-adopted"><strong>見積価格<em>計算使用</em></strong>` +
+    `<span>定価 ${renovationPriceText(item.listPrice)}</span><span>NET ${renovationPriceText(item.netPrice)}</span>` +
+    `<span>仕入 ${renovationPriceText(item.costPrice)}</span></div>` +
     `<div class="renovation-internal-tr-comparison-grid">` +
-    `<b>価格区分</b><b>定価</b><b>NET</b><b>仕入</b>` +
-    `<strong class="adopted">見積価格<em>計算使用</em></strong>${priceCells(item)}` +
+    `<b>価格区分</b><b>定価</b><b>仕入</b>` +
     RENOVATION_TR_COMPARISON_MAKERS.map(maker => `<strong>${maker.label}</strong>${priceCells(prices[maker.key])}`).join("") +
     `</div></div></td></tr>`;
 }
@@ -346,7 +362,7 @@ function createRenovationState() {
     materialNetFactor: 1.2,
     materialListFactor: 1.2,
     renovationListFactor: 1.5,
-    pricingVersion: 4,
+    pricingVersion: 5,
     equipment: [],
     materials: [],
     siteSurveyList: 60000,
@@ -405,6 +421,10 @@ function getRenovationState(unit = activeUnit()) {
   if ((Number(state.pricingVersion) || 0) < 4) {
     state.pricingFactor = RENOVATION_NET_FACTOR;
     state.pricingVersion = 4;
+  }
+  if ((Number(state.pricingVersion) || 0) < 5) {
+    removeRenovationTrManufacturerNetPrices(state.equipment);
+    state.pricingVersion = 5;
   }
   return state;
 }
@@ -1158,7 +1178,6 @@ function saveRenovationEquipmentEditor(event) {
   if (categoryId === "cat-9") {
     next.manufacturerPrices = Object.fromEntries(RENOVATION_TR_COMPARISON_MAKERS.map(maker => [maker.key, {
       listPrice: nullableRenovationPrice(data.get(`tr_${maker.key}_listPrice`)),
-      netPrice: nullableRenovationPrice(data.get(`tr_${maker.key}_netPrice`)),
       costPrice: nullableRenovationPrice(data.get(`tr_${maker.key}_costPrice`)),
     }]));
   }

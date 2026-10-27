@@ -1253,7 +1253,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-catalog-prices span { display:inline-flex!important; align-items:center; min-height:18px; margin:0!important; color:inherit; font-size:11px; font-weight:700; line-height:18px; white-space:nowrap; }
 .renovation-tr-price-table { margin-top:5px; overflow:hidden; border:1px solid #c7d5e4; border-radius:4px; background:#fff; }
 .renovation-tr-estimate-price { margin-top:4px; }
-.renovation-tr-price-row { display:grid; grid-template-columns:72px repeat(3,minmax(0,1fr)); align-items:center; min-height:23px; color:#516579; }
+.renovation-tr-price-row { display:grid; grid-template-columns:72px repeat(2,minmax(0,1fr)); align-items:center; min-height:23px; color:#516579; }
 .renovation-tr-price-row + .renovation-tr-price-row { border-top:1px solid #e3eaf1; }
 .renovation-tr-price-row strong { padding:4px 5px; color:#38516b; font-size:9px; white-space:nowrap; }
 .renovation-tr-price-row span { display:block!important; min-width:0; margin:0!important; padding:4px 3px; color:inherit; font-size:9px; line-height:1.25; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -1403,7 +1403,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-tr-price-editor { margin:0; padding:10px; border:1px solid #9fb7cf; border-radius:5px; background:#f7fbff; }
 .renovation-tr-price-editor legend { padding:0 5px; color:#244f77; font-size:11px; font-weight:700; }
 .renovation-tr-price-editor > p { margin:0 0 8px; color:#5c6f82; font-size:10px; }
-.renovation-tr-price-editor-row { display:grid; grid-template-columns:82px repeat(3,minmax(0,1fr)); gap:7px; align-items:end; padding:7px 0; }
+.renovation-tr-price-editor-row { display:grid; grid-template-columns:82px repeat(2,minmax(0,1fr)); gap:7px; align-items:end; padding:7px 0; }
 .renovation-tr-price-editor-row + .renovation-tr-price-editor-row { border-top:1px solid #dbe5ef; }
 .renovation-tr-price-editor-row > strong { align-self:center; color:#294967; font-size:11px; }
 .renovation-highlight-picker { display:flex; flex-wrap:wrap; gap:7px; margin:0; padding:8px; border:1px solid #bcc9d8; border-radius:5px; }
@@ -1458,14 +1458,15 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-internal-tr-comparison-heading { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:3px 5px; background:#e8f1fa; color:#173f69; }
 .renovation-internal-tr-comparison-heading strong { font-size:8px; }
 .renovation-internal-tr-comparison-heading small { color:#64748b; font-size:7px; }
-.renovation-internal-tr-comparison-grid { display:grid; grid-template-columns:minmax(82px,1.15fr) repeat(3,minmax(0,1fr)); align-items:stretch; }
+.renovation-internal-tr-adopted { display:grid; grid-template-columns:minmax(82px,1.15fr) repeat(3,minmax(0,1fr)); align-items:center; background:#e8f8ee; color:#14532d; }
+.renovation-internal-tr-adopted > * { min-width:0; padding:3px 4px; font-size:7px; font-weight:700; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.renovation-internal-tr-adopted > strong { text-align:left; }
+.renovation-internal-tr-adopted em { display:inline-block; margin-left:4px; padding:1px 3px; border-radius:7px; background:#16804a; color:#fff; font-size:6px; font-style:normal; vertical-align:1px; }
+.renovation-internal-tr-comparison-grid { display:grid; grid-template-columns:minmax(82px,1.15fr) repeat(2,minmax(0,1fr)); align-items:stretch; }
 .renovation-internal-tr-comparison-grid > * { min-width:0; padding:3px 4px; border-top:1px solid #e2e8f0; color:#526477; font-size:7px; font-weight:400; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.renovation-internal-tr-comparison-grid > :nth-child(-n+4) { border-top:0; background:#f8fafc; color:#64748b; font-weight:700; }
-.renovation-internal-tr-comparison-grid > :nth-child(4n+1) { text-align:left; }
-.renovation-internal-tr-comparison-grid > :nth-child(n+5):nth-child(-n+8) { background:#e8f8ee; color:#14532d; font-weight:700; }
+.renovation-internal-tr-comparison-grid > :nth-child(-n+3) { background:#f8fafc; color:#64748b; font-weight:700; }
+.renovation-internal-tr-comparison-grid > :nth-child(3n+1) { text-align:left; }
 .renovation-internal-tr-comparison-grid strong { color:#38516b; font-weight:700; }
-.renovation-internal-tr-comparison-grid strong.adopted { color:#14532d; }
-.renovation-internal-tr-comparison-grid em { display:inline-block; margin-left:4px; padding:1px 3px; border-radius:7px; background:#16804a; color:#fff; font-size:6px; font-style:normal; vertical-align:1px; }
 .renovation-internal-detail-row > td { padding:0 !important; background:#fbfdff; }
 .renovation-internal-detail-row .renovation-internal-details { padding:0 6px 6px; }
 .renovation-internal-patterns { padding:0 6px 7px; border-top:1px solid #dbe4ee; background:#f8fafc; }
@@ -1623,9 +1624,11 @@ tr[draggable="true"]:active { cursor: grabbing; }
   .renovation-internal-tr-comparison-row > td { padding:2px 3px 3px !important; }
   .renovation-internal-tr-comparison-heading { padding:2px 3px; }
   .renovation-internal-tr-comparison-heading strong, .renovation-internal-tr-comparison-heading small { font-size:5px; }
-  .renovation-internal-tr-comparison-grid { grid-template-columns:minmax(62px,1.15fr) repeat(3,minmax(0,1fr)); }
+  .renovation-internal-tr-adopted { grid-template-columns:minmax(62px,1.15fr) repeat(3,minmax(0,1fr)); }
+  .renovation-internal-tr-adopted > * { padding:1px 2px; font-size:5px; }
+  .renovation-internal-tr-adopted em { margin-left:2px; padding:0 2px; font-size:4px; }
+  .renovation-internal-tr-comparison-grid { grid-template-columns:minmax(62px,1.15fr) repeat(2,minmax(0,1fr)); }
   .renovation-internal-tr-comparison-grid > * { padding:1px 2px; font-size:5px; }
-  .renovation-internal-tr-comparison-grid em { margin-left:2px; padding:0 2px; font-size:4px; }
   .renovation-internal-patterns { padding:0 3px 3px; }
   .renovation-internal-patterns h4 { margin:4px 0 2px; padding-left:4px; font-size:7px; }
   .renovation-internal-patterns h4 small, .renovation-internal-patterns p { font-size:6px; }

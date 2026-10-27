@@ -259,6 +259,50 @@ function nullableRenovationPrice(value) {
   return cleaned === "" ? null : Math.max(0, Number(cleaned) || 0);
 }
 
+const RENOVATION_TR_COMPARISON_MAKERS = [
+  { key: "hitachi", label: "日立価格" },
+  { key: "aichi", label: "愛知価格" },
+  { key: "daihen", label: "ダイヘン価格" },
+];
+
+function renovationTrComparisonPrices(item) {
+  const stored = item?.manufacturerPrices || {};
+  return Object.fromEntries(RENOVATION_TR_COMPARISON_MAKERS.map(maker => {
+    const price = stored[maker.key] || {};
+    return [maker.key, {
+      listPrice: nullableRenovationPrice(price.listPrice),
+      netPrice: nullableRenovationPrice(price.netPrice),
+      costPrice: nullableRenovationPrice(price.costPrice),
+    }];
+  }));
+}
+
+function renovationPriceText(value) {
+  return value == null ? "未登録" : fmtNum(value);
+}
+
+function renovationTrComparisonEditorHtml(item) {
+  const prices = renovationTrComparisonPrices(item);
+  const input = (maker, field, label) => {
+    const value = prices[maker]?.[field];
+    return `<label>${label}<input name="tr_${maker}_${field}" inputmode="numeric" value="${value == null ? "" : escAttr(String(value))}" placeholder="未登録は空欄"></label>`;
+  };
+  return `<fieldset class="renovation-tr-price-editor wide"><legend>メーカー別価格（比較表示専用）</legend>` +
+    `<p>見積への選定には使用しません。上の「見積価格」だけが反映されます。</p>` +
+    RENOVATION_TR_COMPARISON_MAKERS.map(maker =>
+      `<div class="renovation-tr-price-editor-row"><strong>${maker.label}</strong>${input(maker.key, "listPrice", "定価")}${input(maker.key, "netPrice", "NET")}${input(maker.key, "costPrice", "仕入")}</div>`
+    ).join("") + `</fieldset>`;
+}
+
+function renovationTrPriceTableHtml(item) {
+  const prices = renovationTrComparisonPrices(item);
+  const row = (label, price, estimate = false) =>
+    `<div class="renovation-tr-price-row${estimate ? " estimate" : ""}"><strong>${label}</strong>` +
+    `<span>定価 ${renovationPriceText(price.listPrice)}</span><span>NET ${renovationPriceText(price.netPrice)}</span><span>仕入 ${renovationPriceText(price.costPrice)}</span></div>`;
+  return `<div class="renovation-tr-price-table">${row("見積価格", item, true)}` +
+    RENOVATION_TR_COMPARISON_MAKERS.map(maker => row(maker.label, prices[maker.key])).join("") + `</div>`;
+}
+
 function renovationMaterialPrice(item, field) {
   if (item?.[field] != null) return Number(item[field]) || 0;
   if (field === "costPrice") return item?.unitPrice == null ? null : Number(item.unitPrice) || 0;
@@ -1017,6 +1061,7 @@ function showRenovationEquipmentEditor(id = "") {
   const categories = renovationEquipmentCategories();
   const current = id ? getRenovationMasterItem(id) : null;
   const selectedCategory = current ? renovationEquipmentDisplayCategoryId(current) : renovationCategoryId;
+  const isTr = selectedCategory === "cat-9";
   const selectedHighlight = renovationEquipmentHighlight(current?.highlight);
   const overlay = document.createElement("div");
   overlay.className = "renovation-modal-overlay";
@@ -1028,10 +1073,11 @@ function showRenovationEquipmentEditor(id = "") {
     `<label>メーカー<input name="manufacturer" value="${escAttr(renovationEquipmentManufacturer(current) || "")}"></label>` +
     `<label>型式・仕様<input name="spec" value="${escAttr(current?.spec || "")}"></label>` +
     `<label class="wide">備考<textarea name="note">${esc(current?.note || "")}</textarea></label>` +
-    `<label>定価<input name="listPrice" inputmode="numeric" value="${current?.listPrice == null ? "" : escAttr(String(current.listPrice))}" placeholder="未登録は空欄"></label>` +
-    `<label>NET<input name="netPrice" inputmode="numeric" value="${current?.netPrice == null ? "" : escAttr(String(current.netPrice))}" placeholder="未登録は空欄"></label>` +
-    `<label>仕入<input name="costPrice" inputmode="numeric" value="${current?.costPrice == null ? "" : escAttr(String(current.costPrice))}" placeholder="未登録は空欄"></label>` +
+    `<label>${isTr ? "見積価格 " : ""}定価<input name="listPrice" inputmode="numeric" value="${current?.listPrice == null ? "" : escAttr(String(current.listPrice))}" placeholder="未登録は空欄"></label>` +
+    `<label>${isTr ? "見積価格 " : ""}NET<input name="netPrice" inputmode="numeric" value="${current?.netPrice == null ? "" : escAttr(String(current.netPrice))}" placeholder="未登録は空欄"></label>` +
+    `<label>${isTr ? "見積価格 " : ""}仕入<input name="costPrice" inputmode="numeric" value="${current?.costPrice == null ? "" : escAttr(String(current.costPrice))}" placeholder="未登録は空欄"></label>` +
     `<label>追加時数量<input name="defaultQty" type="number" min="1" step="1" value="${escAttr(String(current?.defaultQty || 1))}"></label>` +
+    `${isTr ? renovationTrComparisonEditorHtml(current) : ""}` +
     `<fieldset class="renovation-highlight-picker wide"><legend>一覧のハイライト</legend>${Object.entries(RENOVATION_EQUIPMENT_HIGHLIGHTS).map(([value, option]) =>
       `<label class="renovation-highlight-option highlight-${value}"><input type="radio" name="highlight" value="${value}"${value === selectedHighlight ? " checked" : ""}><span>${esc(option.label)}</span></label>`
     ).join("")}</fieldset>` +
@@ -1066,6 +1112,13 @@ function saveRenovationEquipmentEditor(event) {
     priceLabel: index >= 0 ? "アプリで編集" : "ユーザー追加",
     effectiveDate: renovationToday(),
   };
+  if (categoryId === "cat-9") {
+    next.manufacturerPrices = Object.fromEntries(RENOVATION_TR_COMPARISON_MAKERS.map(maker => [maker.key, {
+      listPrice: nullableRenovationPrice(data.get(`tr_${maker.key}_listPrice`)),
+      netPrice: nullableRenovationPrice(data.get(`tr_${maker.key}_netPrice`)),
+      costPrice: nullableRenovationPrice(data.get(`tr_${maker.key}_costPrice`)),
+    }]));
+  }
   if (previous) {
     next.history = [{
       label: previous.priceLabel || "編集前", effectiveDate: previous.effectiveDate || null,
@@ -1390,11 +1443,12 @@ function renderRenovationCatalog() {
     const unavailable = item.listPrice == null && item.netPrice == null && item.costPrice == null;
     const selectedQty = selectedQuantities.get(item.id) || 0;
     const highlight = renovationEquipmentHighlight(item.highlight);
+    const isTr = renovationEquipmentDisplayCategoryId(item) === "cat-9";
     const dragGrip = `<span class="renovation-master-drag-grip" draggable="true" ondragstart="startRenovationEquipmentMasterDrag(event,'${item.id}')" ondragend="endRenovationEquipmentMasterDrag()" title="ドラッグして並び替え">⠿</span>`;
     return `<div class="renovation-catalog-item${unavailable ? " price-missing" : ""}${selectedQty ? " selected" : ""}${highlight !== "none" ? ` equipment-highlight-${highlight}` : ""}" data-master-item-id="${escAttr(item.id)}" ondragover="overRenovationEquipmentMasterDrag(event)" ondragleave="leaveRenovationEquipmentMasterDrag(event)" ondrop="dropRenovationEquipmentMasterItem(event,'${item.id}')">${dragGrip}` +
       `<button class="renovation-catalog-select" aria-pressed="${selectedQty > 0}" onclick="addRenovationEquipment('${item.id}')" title="この機器を追加">` +
       `<div class="renovation-catalog-title-row"><div class="renovation-catalog-mainline">${manufacturer ? `<strong class="renovation-catalog-maker">${esc(manufacturer)}｜</strong>` : ""}<strong class="renovation-catalog-name">${esc(item.name)}</strong>${item.spec ? `<span class="renovation-catalog-spec">／ ${esc(item.spec)}</span>` : ""}</div>${selectedQty ? `<em class="renovation-selected-badge">選択済 ×${selectedQty}</em>` : ""}</div>` +
-      `<div class="renovation-catalog-prices"><span>定価 ${item.listPrice == null ? "未登録" : fmtNum(item.listPrice)}</span><span>NET ${item.netPrice == null ? "未登録" : fmtNum(item.netPrice)}</span><span>仕入 ${item.costPrice == null ? "未登録" : fmtNum(item.costPrice)}</span></div>` +
+      `${isTr ? renovationTrPriceTableHtml(item) : `<div class="renovation-catalog-prices"><span>定価 ${renovationPriceText(item.listPrice)}</span><span>NET ${renovationPriceText(item.netPrice)}</span><span>仕入 ${renovationPriceText(item.costPrice)}</span></div>`}` +
       `${item.note ? `<small class="renovation-item-note">備考：${esc(item.note)}</small>` : ""}</button>` +
       `<div class="renovation-catalog-actions"><button onclick="showRenovationPriceHistory('${item.id}')">履歴</button>` +
       `<button onclick="showRenovationEquipmentEditor('${item.id}')">編集</button>` +

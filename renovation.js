@@ -303,6 +303,31 @@ function renovationTrPriceTableHtml(item) {
     `<div class="renovation-tr-price-table">${RENOVATION_TR_COMPARISON_MAKERS.map(maker => row(maker.label, prices[maker.key])).join("")}</div>`;
 }
 
+function renovationTrComparisonSource(item) {
+  if (item?.manufacturerPrices) return item;
+  return getRenovationMasterItem(item?.itemId) || item || {};
+}
+
+function renovationIsTrEquipment(item) {
+  const source = renovationTrComparisonSource(item);
+  return source?.categoryId === "cat-9" || source?.category === "TR";
+}
+
+function renovationInternalTrComparisonRow(item) {
+  if (!renovationIsTrEquipment(item)) return "";
+  const prices = renovationTrComparisonPrices(renovationTrComparisonSource(item));
+  const priceCells = price => `<span>${renovationPriceText(price.listPrice)}</span>` +
+    `<span>${renovationPriceText(price.netPrice)}</span><span>${renovationPriceText(price.costPrice)}</span>`;
+  return `<tr class="renovation-internal-tr-comparison-row"><td colspan="5">` +
+    `<div class="renovation-internal-tr-comparison">` +
+    `<div class="renovation-internal-tr-comparison-heading"><strong>TR価格比較</strong><small>参考・計算対象外</small></div>` +
+    `<div class="renovation-internal-tr-comparison-grid">` +
+    `<b>価格区分</b><b>定価</b><b>NET</b><b>仕入</b>` +
+    `<strong class="adopted">見積価格<em>計算使用</em></strong>${priceCells(item)}` +
+    RENOVATION_TR_COMPARISON_MAKERS.map(maker => `<strong>${maker.label}</strong>${priceCells(prices[maker.key])}`).join("") +
+    `</div></div></td></tr>`;
+}
+
 function renovationMaterialPrice(item, field) {
   if (item?.[field] != null) return Number(item[field]) || 0;
   if (field === "costPrice") return item?.unitPrice == null ? null : Number(item.unitPrice) || 0;
@@ -576,7 +601,7 @@ function renovationInternalCardHtml(unit) {
     Number(item.listPrice) || 0,
     Number(item.netPrice) || 0,
     Number(item.costPrice) || 0
-  )).join("") || `<tr><td colspan="5" class="renovation-internal-empty">選択なし</td></tr>`;
+  ) + renovationInternalTrComparisonRow(item)).join("") || `<tr><td colspan="5" class="renovation-internal-empty">選択なし</td></tr>`;
   const materialRows = state.materials.map(item => {
     const cost = Number(item.costPrice ?? item.unitPrice) || 0;
     const net = item.netPrice == null ? cost * state.materialNetFactor : Number(item.netPrice) || 0;
@@ -671,16 +696,31 @@ function renovationInternalPrintColumns(unit, rowLimit = 35) {
     `<table><thead><tr><th>品名・仕様</th><th>数量</th><th>定価</th><th>NET</th><th>仕入</th></tr></thead>` +
     `<tbody>${rows.join("") || `<tr><td colspan="5" class="renovation-internal-empty">選択なし</td></tr>`}</tbody></table></div>`;
   const addDetails = (title, note, rows) => {
-    const sourceRows = rows.length ? rows : [""];
+    const sourceRows = (rows.length ? rows : [""]).map(row => typeof row === "string" ? { html: row, weight: 1 } : row);
     let index = 0;
     let continued = false;
     while (index < sourceRows.length) {
       let ci = columns.length - 1;
       if (weights[ci] > rowLimit - 3) { nextColumn(); ci++; }
       const capacity = Math.max(1, Math.floor(rowLimit - weights[ci] - 2));
-      const chunk = sourceRows.slice(index, index + capacity);
-      addBlock(detailTable(title, note, chunk[0] === "" ? [] : chunk, continued), 2 + chunk.length);
-      index += chunk.length;
+      const chunk = [];
+      let chunkWeight = 0;
+      while (index < sourceRows.length) {
+        const entry = sourceRows[index];
+        const entryWeight = Math.max(1, Number(entry.weight) || 1);
+        if (chunk.length && chunkWeight + entryWeight > capacity) break;
+        if (!chunk.length && entryWeight > capacity && weights[ci] > 0) {
+          nextColumn();
+          ci++;
+          break;
+        }
+        chunk.push(entry.html);
+        chunkWeight += entryWeight;
+        index++;
+        if (chunkWeight >= capacity) break;
+      }
+      if (!chunk.length) continue;
+      addBlock(detailTable(title, note, chunk[0] === "" ? [] : chunk, continued), 2 + chunkWeight);
       continued = true;
     }
   };
@@ -696,9 +736,11 @@ function renovationInternalPrintColumns(unit, rowLimit = 35) {
     conditionGroup("③", "見積明細の出し方", RENOVATION_PRESENTATIONS, state.presentationMethod) + `</div>`, 5);
 
   addBlock(totalTable(totalRow("機器", pricing.equipmentList, pricing.equipmentNet, pricing.equipmentCost)), 2);
-  addDetails("機器内訳", "各単価", state.equipment.map(item => detailRow(
-    item, Number(item.listPrice) || 0, Number(item.netPrice) || 0, Number(item.costPrice) || 0
-  )));
+  addDetails("機器内訳", "各単価", state.equipment.map(item => ({
+    html: detailRow(item, Number(item.listPrice) || 0, Number(item.netPrice) || 0, Number(item.costPrice) || 0) +
+      renovationInternalTrComparisonRow(item),
+    weight: renovationIsTrEquipment(item) ? 5 : 1,
+  })));
   addBlock(totalTable(totalRow("材料費", pricing.materialList, pricing.materialNet, pricing.materialCost)), 2);
   addDetails("材料内訳", "各単価／空欄登録は係数計算", state.materials.map(item => {
     const cost = Number(item.costPrice ?? item.unitPrice) || 0;
@@ -908,6 +950,7 @@ function addRenovationEquipment(id) {
     manufacturer: renovationEquipmentManufacturer(item),
     qty: item.defaultQty || 1, listPrice: item.listPrice || 0, netPrice: item.netPrice || 0,
     costPrice: item.costPrice || 0, note: item.note || "", priceLabel: item.priceLabel || "", effectiveDate: item.effectiveDate || null,
+    ...(renovationEquipmentDisplayCategoryId(item) === "cat-9" ? { manufacturerPrices: renovationTrComparisonPrices(item) } : {}),
   });
   refreshRenovation();
 }

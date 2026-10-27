@@ -1453,6 +1453,19 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-internal-details h4 small { color:#64748b; font-size:8px; font-weight:400; }
 .renovation-internal-details td:first-child strong, .renovation-internal-details td:first-child small { display:block; }
 .renovation-internal-details td:first-child small { margin-top:1px; color:#64748b; font-size:8px; font-weight:400; }
+.renovation-internal-tr-comparison-row > td { padding:3px 5px 5px !important; background:#f8fbff; text-align:left !important; }
+.renovation-internal-tr-comparison { overflow:hidden; border:1px solid #bfd0e0; border-radius:4px; background:#fff; }
+.renovation-internal-tr-comparison-heading { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:3px 5px; background:#e8f1fa; color:#173f69; }
+.renovation-internal-tr-comparison-heading strong { font-size:8px; }
+.renovation-internal-tr-comparison-heading small { color:#64748b; font-size:7px; }
+.renovation-internal-tr-comparison-grid { display:grid; grid-template-columns:minmax(82px,1.15fr) repeat(3,minmax(0,1fr)); align-items:stretch; }
+.renovation-internal-tr-comparison-grid > * { min-width:0; padding:3px 4px; border-top:1px solid #e2e8f0; color:#526477; font-size:7px; font-weight:400; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.renovation-internal-tr-comparison-grid > :nth-child(-n+4) { border-top:0; background:#f8fafc; color:#64748b; font-weight:700; }
+.renovation-internal-tr-comparison-grid > :nth-child(4n+1) { text-align:left; }
+.renovation-internal-tr-comparison-grid > :nth-child(n+5):nth-child(-n+8) { background:#e8f8ee; color:#14532d; font-weight:700; }
+.renovation-internal-tr-comparison-grid strong { color:#38516b; font-weight:700; }
+.renovation-internal-tr-comparison-grid strong.adopted { color:#14532d; }
+.renovation-internal-tr-comparison-grid em { display:inline-block; margin-left:4px; padding:1px 3px; border-radius:7px; background:#16804a; color:#fff; font-size:6px; font-style:normal; vertical-align:1px; }
 .renovation-internal-detail-row > td { padding:0 !important; background:#fbfdff; }
 .renovation-internal-detail-row .renovation-internal-details { padding:0 6px 6px; }
 .renovation-internal-patterns { padding:0 6px 7px; border-top:1px solid #dbe4ee; background:#f8fafc; }
@@ -1607,6 +1620,12 @@ tr[draggable="true"]:active { cursor: grabbing; }
   .renovation-internal-details h4 { margin:4px 0 2px; padding-left:4px; font-size:7px; }
   .renovation-internal-details h4 small { font-size:6px; }
   .renovation-internal-details td:first-child small { font-size:6px; }
+  .renovation-internal-tr-comparison-row > td { padding:2px 3px 3px !important; }
+  .renovation-internal-tr-comparison-heading { padding:2px 3px; }
+  .renovation-internal-tr-comparison-heading strong, .renovation-internal-tr-comparison-heading small { font-size:5px; }
+  .renovation-internal-tr-comparison-grid { grid-template-columns:minmax(62px,1.15fr) repeat(3,minmax(0,1fr)); }
+  .renovation-internal-tr-comparison-grid > * { padding:1px 2px; font-size:5px; }
+  .renovation-internal-tr-comparison-grid em { margin-left:2px; padding:0 2px; font-size:4px; }
   .renovation-internal-patterns { padding:0 3px 3px; }
   .renovation-internal-patterns h4 { margin:4px 0 2px; padding-left:4px; font-size:7px; }
   .renovation-internal-patterns h4 small, .renovation-internal-patterns p { font-size:6px; }

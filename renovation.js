@@ -299,8 +299,8 @@ function renovationTrPriceTableHtml(item) {
   const row = (label, price, estimate = false) =>
     `<div class="renovation-tr-price-row${estimate ? " estimate" : ""}"><strong>${label}</strong>` +
     `<span>定価 ${renovationPriceText(price.listPrice)}</span><span>NET ${renovationPriceText(price.netPrice)}</span><span>仕入 ${renovationPriceText(price.costPrice)}</span></div>`;
-  return `<div class="renovation-tr-price-table">${row("見積価格", item, true)}` +
-    RENOVATION_TR_COMPARISON_MAKERS.map(maker => row(maker.label, prices[maker.key])).join("") + `</div>`;
+  return `<div class="renovation-tr-estimate-price">${row("見積価格", item, true)}</div>` +
+    `<div class="renovation-tr-price-table">${RENOVATION_TR_COMPARISON_MAKERS.map(maker => row(maker.label, prices[maker.key])).join("")}</div>`;
 }
 
 function renovationMaterialPrice(item, field) {
@@ -1446,7 +1446,7 @@ function renderRenovationCatalog() {
     const isTr = renovationEquipmentDisplayCategoryId(item) === "cat-9";
     const dragGrip = `<span class="renovation-master-drag-grip" draggable="true" ondragstart="startRenovationEquipmentMasterDrag(event,'${item.id}')" ondragend="endRenovationEquipmentMasterDrag()" title="ドラッグして並び替え">⠿</span>`;
     return `<div class="renovation-catalog-item${unavailable ? " price-missing" : ""}${selectedQty ? " selected" : ""}${highlight !== "none" ? ` equipment-highlight-${highlight}` : ""}" data-master-item-id="${escAttr(item.id)}" ondragover="overRenovationEquipmentMasterDrag(event)" ondragleave="leaveRenovationEquipmentMasterDrag(event)" ondrop="dropRenovationEquipmentMasterItem(event,'${item.id}')">${dragGrip}` +
-      `<button class="renovation-catalog-select" aria-pressed="${selectedQty > 0}" onclick="addRenovationEquipment('${item.id}')" title="この機器を追加">` +
+      `<button class="renovation-catalog-select" aria-pressed="${selectedQty > 0}" onclick="addRenovationEquipment('${item.id}')" title="${isTr ? "カード内のどの価格表示を押しても、見積価格で追加します" : "この機器を追加"}">` +
       `<div class="renovation-catalog-title-row"><div class="renovation-catalog-mainline">${manufacturer ? `<strong class="renovation-catalog-maker">${esc(manufacturer)}｜</strong>` : ""}<strong class="renovation-catalog-name">${esc(item.name)}</strong>${item.spec ? `<span class="renovation-catalog-spec">／ ${esc(item.spec)}</span>` : ""}</div>${selectedQty ? `<em class="renovation-selected-badge">選択済 ×${selectedQty}</em>` : ""}</div>` +
       `${isTr ? renovationTrPriceTableHtml(item) : `<div class="renovation-catalog-prices"><span>定価 ${renovationPriceText(item.listPrice)}</span><span>NET ${renovationPriceText(item.netPrice)}</span><span>仕入 ${renovationPriceText(item.costPrice)}</span></div>`}` +
       `${item.note ? `<small class="renovation-item-note">備考：${esc(item.note)}</small>` : ""}</button>` +

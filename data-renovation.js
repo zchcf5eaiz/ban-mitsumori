@@ -62,9 +62,24 @@ const RENOVATION_CATEGORIES = [
     "sourceLabel": "SR15％ SC７％ 2026.7"
   },
   {
-    "id": "cat-9",
-    "label": "TR",
+    "id": "cat-9-1ph",
+    "label": "Tr1φ",
     "sourceLabel": "日立"
+  },
+  {
+    "id": "cat-9-3ph",
+    "label": "Tr3φ",
+    "sourceLabel": "日立"
+  },
+  {
+    "id": "cat-9-3ph-400",
+    "label": "Tr3φ(400V級)",
+    "sourceLabel": "日立"
+  },
+  {
+    "id": "cat-9-options",
+    "label": "Trオプション",
+    "sourceLabel": "個別登録"
   },
   {
     "id": "cat-10",

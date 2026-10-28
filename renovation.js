@@ -7,6 +7,7 @@ const STORAGE_RENOVATION_MATERIAL_PRICES = "ban_renovation_material_prices_v1";
 const STORAGE_RENOVATION_EQUIPMENT_MASTER = "ban_renovation_equipment_master_v1";
 const STORAGE_RENOVATION_MATERIAL_MASTER = "ban_renovation_material_master_v1";
 const STORAGE_RENOVATION_MATERIAL_CATEGORIES = "ban_renovation_material_categories_v1";
+const STORAGE_RENOVATION_MATERIAL_ORDER = "ban_renovation_material_order_v1";
 const RENOVATION_NET_FACTOR = 1.2;
 const RENOVATION_EQUIPMENT_HIGHLIGHTS = Object.freeze({
   none: { label: "なし" },
@@ -48,6 +49,7 @@ let renovationMaterialCategoryId = "";
 let renovationEquipmentMasterCache = null;
 let renovationMaterialMasterCache = null;
 let renovationMaterialCategoriesCache = null;
+let renovationMaterialOrderCache = null;
 let renovationDraftState = null;
 let renovationDraftEstimateId = null;
 
@@ -258,8 +260,37 @@ function renovationMaterialCategories() {
   return loadRenovationMaterialCategories();
 }
 
-function renovationMaterialItems() {
+function renovationMaterialBaseItems() {
   return [...RENOVATION_MATERIALS, ...loadRenovationMaterialMaster()];
+}
+
+function loadRenovationMaterialOrder(items = renovationMaterialBaseItems()) {
+  if (!renovationMaterialOrderCache) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_RENOVATION_MATERIAL_ORDER) || "null");
+      renovationMaterialOrderCache = Array.isArray(saved) ? saved.filter(id => typeof id === "string") : [];
+    } catch { renovationMaterialOrderCache = []; }
+  }
+  const validIds = new Set(items.map(item => item.id));
+  const normalized = renovationMaterialOrderCache.filter(id => validIds.has(id));
+  const knownIds = new Set(normalized);
+  items.forEach(item => { if (!knownIds.has(item.id)) normalized.push(item.id); });
+  if (normalized.length !== renovationMaterialOrderCache.length || normalized.some((id, index) => id !== renovationMaterialOrderCache[index])) {
+    renovationMaterialOrderCache = normalized;
+    localStorage.setItem(STORAGE_RENOVATION_MATERIAL_ORDER, JSON.stringify(normalized));
+  }
+  return renovationMaterialOrderCache;
+}
+
+function saveRenovationMaterialOrder(order) {
+  renovationMaterialOrderCache = [...order];
+  localStorage.setItem(STORAGE_RENOVATION_MATERIAL_ORDER, JSON.stringify(renovationMaterialOrderCache));
+}
+
+function renovationMaterialItems() {
+  const items = renovationMaterialBaseItems();
+  const byId = new Map(items.map(item => [item.id, item]));
+  return loadRenovationMaterialOrder(items).map(id => byId.get(id)).filter(Boolean);
 }
 
 function renovationToday() { return new Date().toISOString().slice(0, 10); }
@@ -1412,6 +1443,108 @@ function endRenovationEquipmentMasterDrag() {
     .forEach(item => item.classList.remove("dragging", "master-drag-over-top", "master-drag-over-bottom"));
 }
 
+let renovationMaterialDragId = "";
+let renovationMaterialDragScroll = 0;
+let renovationMaterialDragScrollFrame = 0;
+
+function startRenovationMaterialDrag(event, id) {
+  renovationMaterialDragId = id;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", id);
+  requestAnimationFrame(() => event.target.closest(".renovation-material-card")?.classList.add("dragging"));
+}
+
+function scrollRenovationMaterialWhileDragging(container) {
+  renovationMaterialDragScrollFrame = 0;
+  if (!renovationMaterialDragId || !renovationMaterialDragScroll || !container) return;
+  container.scrollTop += renovationMaterialDragScroll;
+  renovationMaterialDragScrollFrame = requestAnimationFrame(() => scrollRenovationMaterialWhileDragging(container));
+}
+
+function overRenovationMaterialDrag(event) {
+  if (!renovationMaterialDragId) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  const card = event.target.closest(".renovation-material-card");
+  if (!card || card.dataset.materialItemId === renovationMaterialDragId) return;
+  document.querySelectorAll(".renovation-material-card.master-drag-over-top,.renovation-material-card.master-drag-over-bottom")
+    .forEach(item => item.classList.remove("master-drag-over-top", "master-drag-over-bottom"));
+  const rect = card.getBoundingClientRect();
+  card.classList.add(event.clientY < rect.top + rect.height / 2 ? "master-drag-over-top" : "master-drag-over-bottom");
+
+  const container = card.closest(".renovation-material-catalog-scroll");
+  const containerRect = container?.getBoundingClientRect();
+  renovationMaterialDragScroll = !containerRect ? 0
+    : event.clientY < containerRect.top + 45 ? -12
+    : event.clientY > containerRect.bottom - 45 ? 12 : 0;
+  if (renovationMaterialDragScroll && !renovationMaterialDragScrollFrame) {
+    renovationMaterialDragScrollFrame = requestAnimationFrame(() => scrollRenovationMaterialWhileDragging(container));
+  }
+}
+
+function leaveRenovationMaterialDrag(event) {
+  const card = event.target.closest(".renovation-material-card");
+  if (card && !card.contains(event.relatedTarget)) card.classList.remove("master-drag-over-top", "master-drag-over-bottom");
+}
+
+function dropRenovationMaterialItem(event, targetId) {
+  event.preventDefault();
+  const sourceId = renovationMaterialDragId || event.dataTransfer.getData("text/plain");
+  const targetCard = event.target.closest(".renovation-material-card");
+  const targetRect = targetCard?.getBoundingClientRect();
+  const insertAfter = targetRect ? event.clientY >= targetRect.top + targetRect.height / 2 : false;
+  if (!sourceId || sourceId === targetId) {
+    endRenovationMaterialDrag();
+    return;
+  }
+  const source = getRenovationMaterialItem(sourceId);
+  const target = getRenovationMaterialItem(targetId);
+  const categoryId = renovationMaterialDisplayCategoryId(source);
+  if (!source || !target || !categoryId || categoryId !== renovationMaterialDisplayCategoryId(target)) {
+    endRenovationMaterialDrag();
+    return;
+  }
+  const items = renovationMaterialItems();
+  const resolvedById = new Map(items.map(item => [item.id, getRenovationMaterialItem(item.id) || item]));
+  const siblingIds = items
+    .filter(item => renovationMaterialDisplayCategoryId(resolvedById.get(item.id)) === categoryId)
+    .map(item => item.id);
+  const sourceIndex = siblingIds.indexOf(sourceId);
+  if (sourceIndex < 0) {
+    endRenovationMaterialDrag();
+    return;
+  }
+  const [movedId] = siblingIds.splice(sourceIndex, 1);
+  let targetIndex = siblingIds.indexOf(targetId);
+  if (targetIndex < 0) {
+    endRenovationMaterialDrag();
+    return;
+  }
+  if (insertAfter) targetIndex += 1;
+  siblingIds.splice(targetIndex, 0, movedId);
+  let siblingIndex = 0;
+  const nextOrder = items.map(item =>
+    renovationMaterialDisplayCategoryId(resolvedById.get(item.id)) === categoryId ? siblingIds[siblingIndex++] : item.id
+  );
+  saveRenovationMaterialOrder(nextOrder);
+  const scrollTop = document.querySelector(".renovation-material-catalog-scroll")?.scrollTop || 0;
+  endRenovationMaterialDrag();
+  renderRenovationTab();
+  requestAnimationFrame(() => {
+    const container = document.querySelector(".renovation-material-catalog-scroll");
+    if (container) container.scrollTop = scrollTop;
+  });
+}
+
+function endRenovationMaterialDrag() {
+  renovationMaterialDragId = "";
+  renovationMaterialDragScroll = 0;
+  if (renovationMaterialDragScrollFrame) cancelAnimationFrame(renovationMaterialDragScrollFrame);
+  renovationMaterialDragScrollFrame = 0;
+  document.querySelectorAll(".renovation-material-card.dragging,.renovation-material-card.master-drag-over-top,.renovation-material-card.master-drag-over-bottom")
+    .forEach(item => item.classList.remove("dragging", "master-drag-over-top", "master-drag-over-bottom"));
+}
+
 function exportRenovationEquipmentMaster() {
   const source = loadRenovationEquipmentMaster();
   const master = cloneRenovationMasterRows(source);
@@ -1902,7 +2035,7 @@ function renderRenovationTab() {
   const materialRows = state.materials.map(row => {
     const capacity = renovationMaterialCapacity(row);
     return `<tr><td>${esc(row.name)}<small>${esc(row.spec)}${row.unit ? ` ／ ${esc(row.unit)}` : ""}</small>${capacity ? `<small class="renovation-capacity">${esc(capacity.detail)}</small>` : ""}${row.note ? `<small class="renovation-item-note">備考：${esc(row.note)}</small>` : ""}</td>` +
-    `<td><input type="number" min="0" step="0.1" value="${row.qty}" onchange="updateRenovationMaterial('${row.lineId}','qty',this.value)"></td>` +
+    `<td><input type="number" min="0" step="1" value="${row.qty}" onchange="updateRenovationMaterial('${row.lineId}','qty',this.value)" title="上下ボタンは1刻み。小数は直接入力できます"></td>` +
     `<td><input type="number" min="0" step="1" value="${row.listPrice ?? ""}" placeholder="係数" onchange="updateRenovationMaterial('${row.lineId}','listPrice',this.value)"></td>` +
     `<td><input type="number" min="0" step="1" value="${row.netPrice ?? ""}" placeholder="係数" onchange="updateRenovationMaterial('${row.lineId}','netPrice',this.value)"></td>` +
     `<td><input type="number" min="0" step="1" value="${row.costPrice ?? row.unitPrice ?? 0}" onchange="updateRenovationMaterial('${row.lineId}','costPrice',this.value)"></td>` +
@@ -1955,8 +2088,9 @@ function renderRenovationTab() {
         const materialCost = renovationMaterialPrice(item, "costPrice");
         const materialNet = renovationMaterialPrice(item, "netPrice");
         const selectedQty = selectedMaterialQuantities.get(item.id) || 0;
-        return `<div class="renovation-material-card${selectedQty ? " selected" : ""}"><button class="renovation-material-add ${materialCost == null ? "price-missing" : ""}" aria-pressed="${selectedQty > 0}" onclick="addRenovationMaterial('${item.id}')">` +
-          `<span>＋ ${esc(item.name)} ${esc(item.spec)}</span>${selectedQty ? `<em class="renovation-selected-badge">選択済 ×${selectedQty}</em>` : ""}<small>定価 ${item.listPrice == null ? "係数計算" : fmtNum(item.listPrice)} ／ NET ${materialNet == null ? "係数計算" : fmtNum(materialNet)} ／ 仕入 ${materialCost == null ? "未登録" : fmtNum(materialCost)}${capacity ? ` ／ ${esc(capacity.short)}` : ""}</small>` +
+        const dragGrip = `<span class="renovation-master-drag-grip" draggable="true" ondragstart="startRenovationMaterialDrag(event,'${item.id}')" ondragend="endRenovationMaterialDrag()" title="ドラッグして並び替え">⠿</span>`;
+        return `<div class="renovation-material-card${selectedQty ? " selected" : ""}" data-material-item-id="${escAttr(item.id)}" ondragover="overRenovationMaterialDrag(event)" ondragleave="leaveRenovationMaterialDrag(event)" ondrop="dropRenovationMaterialItem(event,'${item.id}')">${dragGrip}<button class="renovation-material-add ${materialCost == null ? "price-missing" : ""}" aria-pressed="${selectedQty > 0}" onclick="addRenovationMaterial('${item.id}')">` +
+          `<span>${esc(item.name)} ${esc(item.spec)}</span>${selectedQty ? `<em class="renovation-selected-badge">選択済 ×${selectedQty}</em>` : ""}<small>定価 ${item.listPrice == null ? "係数計算" : fmtNum(item.listPrice)} ／ NET ${materialNet == null ? "係数計算" : fmtNum(materialNet)} ／ 仕入 ${materialCost == null ? "未登録" : fmtNum(materialCost)}${capacity ? ` ／ ${esc(capacity.short)}` : ""}</small>` +
           `${item.note ? `<small class="renovation-item-note">備考：${esc(item.note)}</small>` : ""}</button>` +
           `<div class="renovation-catalog-actions renovation-material-card-actions"><button onclick="showRenovationMaterialPriceHistory('${item.id}')" title="価格履歴">履歴</button><button onclick="showRenovationMaterialEditor('${item.id}')" title="材料情報を編集">編集</button>${item.custom ? `<button class="renovation-master-delete" onclick="deleteRenovationMaterialMasterItem('${item.id}')">削除</button>` : ""}</div></div>`;
       }).join("")}</div>` +

@@ -308,7 +308,8 @@ function renovationCopperCapacity(spec) {
 
 function renovationMaterialCapacity(item) {
   if (!item) return null;
-  if (item.group === "銅バー") {
+  const sourceGroup = renovationMaterialNoteGroup(item);
+  if (sourceGroup === "銅バー") {
     const amps = renovationCopperCapacity(item.spec);
     return amps == null ? null : {
       short: `参考 ${fmtNum(amps)}A`,
@@ -318,7 +319,7 @@ function renovationMaterialCapacity(item) {
   const size = Number.parseFloat(String(item.spec || "").replace(/[^\d.].*$/, ""));
   const family = RENOVATION_WIRE_CAPACITY?.[item.name];
   const value = family?.[size];
-  if (!value) return item.group === "電線" ? { short: "A資料なし", detail: `${item.name} ${item.spec}の許容電流資料は未登録` } : null;
+  if (!value) return sourceGroup.startsWith("電線(") ? { short: "A資料なし", detail: `${item.name} ${item.spec}の許容電流資料は未登録` } : null;
   const parts = [];
   if (value.breaker != null) parts.push(`目安 ${fmtNum(value.breaker)}A`);
   if (value.allowable != null) parts.push(`許容 ${fmtNum(value.allowable)}A`);
@@ -1479,7 +1480,7 @@ function setRenovationMaterialCategory(id) {
 function showRenovationMaterialCategoryManager() {
   document.getElementById("renovation-material-category-manager")?.remove();
   const categories = renovationMaterialCategories();
-  const items = renovationMaterialItems();
+  const items = renovationMaterialItems().map(item => getRenovationMaterialItem(item.id) || item);
   const overlay = document.createElement("div");
   overlay.id = "renovation-material-category-manager";
   overlay.className = "renovation-modal-overlay";
@@ -1546,7 +1547,9 @@ function deleteRenovationMaterialCategory(id) {
   }
   const itemCount = renovationMaterialItems().filter(item => renovationMaterialDisplayCategoryId(item) === id).length;
   if (!confirm(`「${category.label}」を削除します。${itemCount ? `カテゴリ内の${itemCount}項目も一覧から削除されます。` : ""}\n既存見積に追加済みの明細は残ります。`)) return;
-  const removedCustomItems = loadRenovationMaterialMaster().filter(item => renovationMaterialDisplayCategoryId(item) === id);
+  const removedCustomItems = loadRenovationMaterialMaster().filter(item =>
+    renovationMaterialDisplayCategoryId(getRenovationMaterialItem(item.id) || item) === id
+  );
   const removedCustomIds = removedCustomItems.map(item => item.id);
   saveRenovationMaterialCategories(categories.filter(row => row.id !== id));
   const removedCustomIdSet = new Set(removedCustomIds);
@@ -1572,25 +1575,26 @@ function moveRenovationMaterialCategory(id, direction) {
   refreshRenovationMasterView();
 }
 
-function showRenovationMaterialEditor() {
+function showRenovationMaterialEditor(id = "") {
   const categories = renovationMaterialCategories();
-  if (!categories.some(category => category.id === renovationMaterialCategoryId)) {
-    renovationMaterialCategoryId = categories[0]?.id || "";
-  }
+  const current = id ? getRenovationMaterialItem(id) : null;
+  const selectedCategoryId = current ? renovationMaterialDisplayCategoryId(current) : renovationMaterialCategoryId;
+  if (!categories.some(category => category.id === selectedCategoryId)) renovationMaterialCategoryId = categories[0]?.id || "";
+  else renovationMaterialCategoryId = selectedCategoryId;
   const overlay = document.createElement("div");
   overlay.className = "renovation-modal-overlay";
   overlay.onclick = event => { if (event.target === overlay) overlay.remove(); };
   overlay.innerHTML = `<div class="renovation-modal renovation-master-modal"><button class="renovation-modal-close" type="button" onclick="this.closest('.renovation-modal-overlay').remove()">×</button>` +
-    `<h3>材料項目を追加</h3><form class="renovation-master-form" onsubmit="saveRenovationMaterialEditor(event)">` +
+    `<h3>${current ? "材料項目を編集" : "材料項目を追加"}</h3><form class="renovation-master-form" data-item-id="${escAttr(id)}" onsubmit="saveRenovationMaterialEditor(event)">` +
     `<label>材料カテゴリ<select name="categoryId" required>${categories.map(category => `<option value="${escAttr(category.id)}"${category.id === renovationMaterialCategoryId ? " selected" : ""}>${esc(category.label)}</option>`).join("")}</select></label>` +
-    `<label>項目名<input name="name" required></label>` +
-    `<label>型式・仕様<input name="spec"></label>` +
-    `<label>単位<input name="unit" placeholder="個・m・kgなど"></label>` +
-    `<label>定価<input name="listPrice" inputmode="numeric" placeholder="未登録は空欄"></label>` +
-    `<label>NET<input name="netPrice" inputmode="numeric" placeholder="未登録は空欄"></label>` +
-    `<label>仕入<input name="costPrice" inputmode="numeric" placeholder="未登録は空欄"></label>` +
-    `<label class="wide">備考<textarea name="note"></textarea></label>` +
-    `<div class="renovation-master-form-actions wide"><button type="button" onclick="this.closest('.renovation-modal-overlay').remove()">キャンセル</button><button type="submit">材料項目を追加</button></div>` +
+    `<label>項目名<input name="name" required value="${escAttr(current?.name || "")}"></label>` +
+    `<label>型式・仕様<input name="spec" value="${escAttr(current?.spec || "")}"></label>` +
+    `<label>単位<input name="unit" value="${escAttr(current?.unit || "")}" placeholder="個・m・kgなど"></label>` +
+    `<label>定価<input name="listPrice" inputmode="numeric" value="${current?.listPrice == null ? "" : escAttr(String(current.listPrice))}" placeholder="空欄は係数計算"></label>` +
+    `<label>NET<input name="netPrice" inputmode="numeric" value="${current?.netPrice == null ? "" : escAttr(String(current.netPrice))}" placeholder="空欄は係数計算"></label>` +
+    `<label>仕入<input name="costPrice" inputmode="numeric" value="${current?.costPrice == null && current?.unitPrice == null ? "" : escAttr(String(current.costPrice ?? current.unitPrice))}" placeholder="未登録は空欄"></label>` +
+    `<label class="wide">備考<textarea name="note">${esc(current?.note || "")}</textarea></label>` +
+    `<div class="renovation-master-form-actions wide"><button type="button" onclick="this.closest('.renovation-modal-overlay').remove()">キャンセル</button><button type="submit">${current ? "保存" : "材料項目を追加"}</button></div>` +
     `</form></div>`;
   document.body.appendChild(overlay);
   overlay.querySelector('input[name="name"]')?.focus();
@@ -1604,30 +1608,62 @@ function saveRenovationMaterialEditor(event) {
   const category = renovationMaterialCategories().find(row => row.id === categoryId);
   const name = String(data.get("name") || "").trim();
   if (!category || !name) return;
+  const id = form.dataset.itemId || renovationMasterSafeId("mat-custom");
+  const current = form.dataset.itemId ? getRenovationMaterialItem(id) : null;
+  const listPrice = nullableRenovationPrice(data.get("listPrice"));
+  const netPrice = nullableRenovationPrice(data.get("netPrice"));
   const costPrice = nullableRenovationPrice(data.get("costPrice"));
-  const items = loadRenovationMaterialMaster();
-  items.push({
-    id: renovationMasterSafeId("mat-custom"),
-    custom: true,
+  const note = String(data.get("note") || "").trim();
+  const nextValues = {
     categoryId,
     group: category.label,
     name,
     spec: String(data.get("spec") || "").trim(),
     unit: String(data.get("unit") || "").trim(),
-    listPrice: nullableRenovationPrice(data.get("listPrice")),
-    netPrice: nullableRenovationPrice(data.get("netPrice")),
+    listPrice,
+    netPrice,
     costPrice,
     unitPrice: costPrice,
-    note: String(data.get("note") || "").trim(),
-    priceLabel: "ユーザー追加",
-    effectiveDate: renovationToday(),
-    history: [],
-  });
-  saveRenovationMaterialMaster(items);
+    note,
+  };
+  if (current) {
+    const overrides = loadRenovationMaterialPriceOverrides();
+    const priceChanged = current.listPrice !== listPrice || current.netPrice !== netPrice ||
+      (current.costPrice ?? current.unitPrice ?? null) !== costPrice || (current.note || "") !== note;
+    const previous = {
+      effectiveDate: current.effectiveDate || null,
+      changedAt: new Date().toISOString(),
+      listPrice: current.listPrice ?? null,
+      netPrice: current.netPrice ?? null,
+      costPrice: current.costPrice ?? current.unitPrice ?? null,
+      note: current.note || "",
+      label: current.priceLabel || "変更前",
+    };
+    overrides[id] = {
+      current: {
+        ...nextValues,
+        priceLabel: priceChanged ? "アプリで変更" : (current.priceLabel || "登録情報"),
+        effectiveDate: priceChanged ? renovationToday() : (current.effectiveDate || null),
+      },
+      history: priceChanged ? [previous, ...(overrides[id]?.history || [])] : (overrides[id]?.history || []),
+    };
+    saveRenovationMaterialPriceOverrides(overrides);
+  } else {
+    const items = loadRenovationMaterialMaster();
+    items.push({
+      id,
+      custom: true,
+      ...nextValues,
+      priceLabel: "ユーザー追加",
+      effectiveDate: renovationToday(),
+      history: [],
+    });
+    saveRenovationMaterialMaster(items);
+  }
   renovationMaterialCategoryId = categoryId;
   form.closest(".renovation-modal-overlay")?.remove();
   renderRenovationTab();
-  showToast("材料項目を追加して保存しました");
+  showToast(current ? "材料項目を変更して保存しました（選択済み材料は維持されます）" : "材料項目を追加して保存しました");
 }
 
 function deleteRenovationMaterialMasterItem(id) {
@@ -1639,44 +1675,6 @@ function deleteRenovationMaterialMasterItem(id) {
   saveRenovationMaterialPriceOverrides(overrides);
   renderRenovationTab();
   showToast("材料項目を削除しました");
-}
-
-function editRenovationMaterialPrice(id) {
-  const item = getRenovationMaterialItem(id);
-  if (!item) return;
-  const list = prompt("新しい定価（空欄は材料定価係数で計算）", item.listPrice ?? "");
-  if (list === null) return;
-  const net = prompt("新しいNET（空欄は仕入×材料NET係数で計算）", item.netPrice ?? "");
-  if (net === null) return;
-  const cost = prompt("新しい仕入（空欄は未登録）", item.costPrice ?? item.unitPrice ?? "");
-  if (cost === null) return;
-  const note = prompt("価格メモ・備考", item.note ?? item.priceLabel ?? "");
-  if (note === null) return;
-  const overrides = loadRenovationMaterialPriceOverrides();
-  const previous = {
-    effectiveDate: item.effectiveDate || null,
-    changedAt: new Date().toISOString(),
-    listPrice: item.listPrice ?? null,
-    netPrice: item.netPrice ?? null,
-    costPrice: item.costPrice ?? item.unitPrice ?? null,
-    note: item.note || "",
-    label: item.priceLabel || "変更前",
-  };
-  overrides[id] = {
-    current: {
-      listPrice: nullableRenovationPrice(list),
-      netPrice: nullableRenovationPrice(net),
-      costPrice: nullableRenovationPrice(cost),
-      unitPrice: nullableRenovationPrice(cost),
-      note: note.trim(),
-      priceLabel: "アプリで変更",
-      effectiveDate: renovationToday(),
-    },
-    history: [previous, ...(overrides[id]?.history || [])],
-  };
-  saveRenovationMaterialPriceOverrides(overrides);
-  renderRenovationTab();
-  showToast("材料の3価格・備考・変更履歴を保存しました（選択済み材料の価格は維持されます）");
 }
 
 function showRenovationMaterialPriceHistory(id) {
@@ -1932,8 +1930,8 @@ function renderRenovationTab() {
   }
   const activeMaterialCategory = materialCategories.find(category => category.id === renovationMaterialCategoryId);
   const visibleMaterials = renovationMaterialItems()
-    .filter(item => renovationMaterialDisplayCategoryId(item) === renovationMaterialCategoryId)
-    .map(item => getRenovationMaterialItem(item.id) || item);
+    .map(item => getRenovationMaterialItem(item.id) || item)
+    .filter(item => renovationMaterialDisplayCategoryId(item) === renovationMaterialCategoryId);
   const selectedMaterialQuantities = new Map();
   state.materials.forEach(row => {
     selectedMaterialQuantities.set(row.materialId, (selectedMaterialQuantities.get(row.materialId) || 0) + (Number(row.qty) || 0));
@@ -1960,7 +1958,7 @@ function renderRenovationTab() {
         return `<div class="renovation-material-card${selectedQty ? " selected" : ""}"><button class="renovation-material-add ${materialCost == null ? "price-missing" : ""}" aria-pressed="${selectedQty > 0}" onclick="addRenovationMaterial('${item.id}')">` +
           `<span>＋ ${esc(item.name)} ${esc(item.spec)}</span>${selectedQty ? `<em class="renovation-selected-badge">選択済 ×${selectedQty}</em>` : ""}<small>定価 ${item.listPrice == null ? "係数計算" : fmtNum(item.listPrice)} ／ NET ${materialNet == null ? "係数計算" : fmtNum(materialNet)} ／ 仕入 ${materialCost == null ? "未登録" : fmtNum(materialCost)}${capacity ? ` ／ ${esc(capacity.short)}` : ""}</small>` +
           `${item.note ? `<small class="renovation-item-note">備考：${esc(item.note)}</small>` : ""}</button>` +
-          `<div class="renovation-catalog-actions renovation-material-card-actions"><button onclick="showRenovationMaterialPriceHistory('${item.id}')" title="価格履歴">履歴</button><button onclick="editRenovationMaterialPrice('${item.id}')" title="登録価格と備考を変更">価格・備考</button>${item.custom ? `<button class="renovation-master-delete" onclick="deleteRenovationMaterialMasterItem('${item.id}')">削除</button>` : ""}</div></div>`;
+          `<div class="renovation-catalog-actions renovation-material-card-actions"><button onclick="showRenovationMaterialPriceHistory('${item.id}')" title="価格履歴">履歴</button><button onclick="showRenovationMaterialEditor('${item.id}')" title="材料情報を編集">編集</button>${item.custom ? `<button class="renovation-master-delete" onclick="deleteRenovationMaterialMasterItem('${item.id}')">削除</button>` : ""}</div></div>`;
       }).join("")}</div>` +
       renovationNotesHtml(materialNotes, `${activeMaterialCategory?.label || "材料"}の元表メモ`) +
       `</div></section>` +

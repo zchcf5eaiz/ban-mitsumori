@@ -3177,7 +3177,8 @@ function renderUnitTabs() {
     ? `<span class="unit-active-label">追加先: <strong>${esc(u.unitName)}</strong></span>`
     : "";
   container.innerHTML = `<div class="unit-action-bar no-print">${info}<button class="unit-tab-add" onclick="addUnit()" title="通常の項目を追加">＋ 項目追加</button>` +
-    `<button class="unit-tab-add unit-tab-add-renovation" onclick="addRenovationUnitFromEstimate()" title="改修項目を追加して編集">＋ 改修項目</button></div>`;
+    `<button class="unit-tab-add unit-tab-add-renovation" onclick="addRenovationUnitFromEstimate()" title="改修項目を追加して編集">＋ 改修項目</button>` +
+    `<button class="unit-tab-copy" onclick="showUnitCopyDialog()" title="別の保存済み見積から1項目だけコピー">他の見積から1項目コピー</button></div>`;
 }
 
 function activateUnit(idx) {
@@ -4586,6 +4587,128 @@ function copyCurrentEstimate() {
 }
 
 // ============================================================
+// 保存済み見積から1項目だけコピー
+// ============================================================
+
+function closeUnitCopyDialog() {
+  document.getElementById("unit-copy-overlay")?.remove();
+}
+
+function showUnitCopyDialog() {
+  const sources = savedEstimates.filter(estimate => estimate.id !== currentEstimate.id && estimate.units?.length);
+  if (!sources.length) {
+    showToast("コピーできる別の保存済み見積がありません");
+    return;
+  }
+  closeUnitCopyDialog();
+  const overlay = document.createElement("div");
+  overlay.id = "unit-copy-overlay";
+  overlay.addEventListener("click", event => { if (event.target === overlay) closeUnitCopyDialog(); });
+  overlay.innerHTML = `<div class="unit-copy-panel"><div class="unit-copy-head"><div><strong>他の見積から1項目コピー</strong><small>コピー元の見積と項目を選択してください</small></div>` +
+    `<button type="button" onclick="closeUnitCopyDialog()" aria-label="閉じる">&times;</button></div>` +
+    `<input type="text" id="unit-copy-search" placeholder="見積名・工事名・項目名で検索..." oninput="renderUnitCopyList(this.value)">` +
+    `<div id="unit-copy-list"></div></div>`;
+  document.body.appendChild(overlay);
+  const input = document.getElementById("unit-copy-search");
+  input.addEventListener("keydown", event => { if (event.key === "Escape") closeUnitCopyDialog(); });
+  renderUnitCopyList("");
+  input.focus();
+}
+
+function renderUnitCopyList(query) {
+  const list = document.getElementById("unit-copy-list");
+  if (!list) return;
+  const keyword = (query || "").trim().toLowerCase();
+  const estimates = savedEstimates
+    .filter(estimate => estimate.id !== currentEstimate.id && estimate.units?.length)
+    .map(estimate => {
+      const estimateMatches = [estimate.name, estimate.project?.projectName, estimate.project?.customerName]
+        .some(value => (value || "").toLowerCase().includes(keyword));
+      const units = estimate.units
+        .map((unit, index) => ({ unit, index }))
+        .filter(({ unit }) => !keyword || estimateMatches || (unit.unitName || "").toLowerCase().includes(keyword));
+      return { estimate, units };
+    })
+    .filter(row => row.units.length)
+    .sort((a, b) => (b.estimate.updatedAt || "").localeCompare(a.estimate.updatedAt || ""));
+  if (!estimates.length) {
+    list.innerHTML = `<div class="unit-copy-empty">該当する項目がありません</div>`;
+    return;
+  }
+  list.innerHTML = estimates.map(({ estimate, units }) => {
+    const projectName = estimate.project?.projectName || "";
+    const updated = estimate.updatedAt ? new Date(estimate.updatedAt).toLocaleDateString("ja-JP") : "";
+    return `<section class="unit-copy-source"><div class="unit-copy-source-head"><span><strong>${esc(estimate.name || "名称未設定")}</strong>${projectName && projectName !== estimate.name ? `<small>${esc(projectName)}</small>` : ""}</span><time>${esc(updated)}</time></div>` +
+      `<div class="unit-copy-units">${units.map(({ unit, index }) => {
+        const isRenovation = !!unit.renovation?.enabled;
+        const lineCount = (unit.lines || []).filter(line => !line.renovationGenerated || !isRenovation).length;
+        return `<button type="button" onclick="copyUnitFromSavedEstimate('${escAttr(estimate.id)}',${index})"><span>${esc(unit.unitName || `項目${index + 1}`)}</span>` +
+          `<small>${isRenovation ? "改修項目" : `明細 ${lineCount}行`}</small></button>`;
+      }).join("")}</div></section>`;
+  }).join("");
+}
+
+function uniqueCopiedUnitName(baseName, ignoredUnit = null) {
+  const base = (baseName || "コピー項目").trim() || "コピー項目";
+  const used = new Set(currentEstimate.units.filter(unit => unit !== ignoredUnit).map(unit => unit.unitName));
+  if (!used.has(base)) return base;
+  if (!used.has(`${base} のコピー`)) return `${base} のコピー`;
+  let number = 2;
+  while (used.has(`${base} のコピー${number}`)) number++;
+  return `${base} のコピー${number}`;
+}
+
+function cloneUnitForEstimate(sourceUnit, ignoredUnit = null) {
+  const copy = JSON.parse(JSON.stringify(sourceUnit));
+  copy.unitId = genId();
+  copy.unitName = uniqueCopiedUnitName(copy.unitName, ignoredUnit);
+  if (copy.renovation?.enabled) {
+    const equipmentIdMap = new Map();
+    (copy.renovation.equipment || []).forEach(row => {
+      const oldId = row.lineId;
+      row.lineId = genId();
+      if (oldId) equipmentIdMap.set(oldId, row.lineId);
+    });
+    (copy.renovation.materials || []).forEach(row => { row.lineId = genId(); });
+    if (Array.isArray(copy.renovation.lineOrder)) {
+      copy.renovation.lineOrder = copy.renovation.lineOrder.map(key => {
+        if (!key.startsWith("equipment:")) return key;
+        const oldId = key.slice("equipment:".length);
+        return equipmentIdMap.has(oldId) ? `equipment:${equipmentIdMap.get(oldId)}` : key;
+      });
+    }
+    copy.lines = (copy.lines || []).filter(line => !line.renovationGenerated);
+  }
+  (copy.lines || []).forEach(line => { line.lineId = genId(); });
+  if (copy.renovation?.enabled && typeof syncRenovationQuoteLine === "function") syncRenovationQuoteLine(copy);
+  return copy;
+}
+
+function copyUnitFromSavedEstimate(estimateId, unitIndex) {
+  const sourceEstimate = savedEstimates.find(estimate => estimate.id === estimateId);
+  const sourceUnit = sourceEstimate?.units?.[unitIndex];
+  if (!sourceUnit) {
+    showToast("コピー元の項目が見つかりません");
+    return;
+  }
+  const onlyUnit = currentEstimate.units.length === 1 ? currentEstimate.units[0] : null;
+  const replaceEmptyDefault = onlyUnit && !onlyUnit.renovation?.enabled && !(onlyUnit.lines || []).length && /^項目\d+$/.test(onlyUnit.unitName || "");
+  const copy = cloneUnitForEstimate(sourceUnit, replaceEmptyDefault ? onlyUnit : null);
+  if (replaceEmptyDefault) {
+    currentEstimate.units[0] = copy;
+    activeUnitIndex = 0;
+  } else {
+    currentEstimate.units.push(copy);
+    activeUnitIndex = currentEstimate.units.length - 1;
+  }
+  closeUnitCopyDialog();
+  _revealActiveUnitAfterRender = true;
+  rebuildClickCounts();
+  renderEstimateTab();
+  showToast(`「${copy.unitName}」を「${sourceEstimate.name || "保存済み見積"}」からコピーしました`);
+}
+
+// ============================================================
 // エクスポート / インポート
 // ============================================================
 
@@ -5002,6 +5125,8 @@ document.addEventListener("DOMContentLoaded", () => {
 .unit-active-label strong{color:#2b6cb0;}
 .unit-tab-add{background:#48bb78;border:1px solid #38a169;border-radius:6px;color:#fff;cursor:pointer;font-size:13px;padding:4px 12px;}
 .unit-tab-add:hover{background:#38a169;}
+.unit-tab-copy{background:#fff;border:1px solid #3182ce;border-radius:6px;color:#2368a2;cursor:pointer;font-size:13px;font-weight:600;padding:4px 12px;}
+.unit-tab-copy:hover{background:#ebf8ff;}
 /* 複数ユニット横並びコンテナ */
 .multi-unit-container{display:flex;gap:12px;overflow-x:auto;align-items:flex-start;padding-bottom:8px;}
 .unit-col{flex:0 0 auto;min-width:320px;border:2px solid #e2e8f0;border-radius:6px;overflow:hidden;}
@@ -5038,6 +5163,19 @@ document.addEventListener("DOMContentLoaded", () => {
 .est-search-date{color:#718096;font-size:12px;white-space:nowrap;}
 .est-search-sub{color:#4a5568;font-size:12px;margin-top:1px;}
 .est-search-empty{padding:16px;color:#999;font-size:13px;text-align:center;}
+/* 保存済み見積から1項目コピー */
+#unit-copy-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1100;display:flex;align-items:flex-start;justify-content:center;padding-top:7vh;}
+.unit-copy-panel{background:#fff;border-radius:9px;width:min(680px,92vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 12px 44px rgba(0,0,0,.32);overflow:hidden;}
+.unit-copy-head{display:flex;align-items:center;justify-content:space-between;padding:12px 15px 8px;border-bottom:1px solid #e2e8f0;}
+.unit-copy-head>div{display:flex;flex-direction:column;gap:2px;}.unit-copy-head strong{color:#1a365d;font-size:15px;}.unit-copy-head small{color:#718096;font-size:11px;}
+.unit-copy-head>button{border:0;background:none;color:#718096;cursor:pointer;font-size:22px;line-height:1;padding:2px 5px;}
+#unit-copy-search{margin:10px 12px;padding:8px 10px;border:1px solid #cbd5e0;border-radius:5px;font:inherit;font-size:13px;}
+#unit-copy-search:focus{outline:none;border-color:#3182ce;box-shadow:0 0 0 2px rgba(49,130,206,.15);}
+#unit-copy-list{overflow:auto;border-top:1px solid #edf2f7;}
+.unit-copy-source{padding:10px 13px;border-bottom:1px solid #e2e8f0;}.unit-copy-source:last-child{border-bottom:0;}
+.unit-copy-source-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:7px;}.unit-copy-source-head>span{display:flex;flex-direction:column;min-width:0;}.unit-copy-source-head strong{color:#2d3748;font-size:13px;}.unit-copy-source-head small,.unit-copy-source-head time{color:#718096;font-size:10px;}
+.unit-copy-units{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}.unit-copy-units button{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:8px 10px;border:1px solid #b9cbe0;border-radius:5px;background:#f8fbff;color:#234e72;cursor:pointer;text-align:left;}.unit-copy-units button:hover{border-color:#3182ce;background:#ebf8ff;}.unit-copy-units button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:12px;}.unit-copy-units button small{flex:none;color:#718096;font-size:9px;}
+.unit-copy-empty{padding:24px;color:#999;font-size:13px;text-align:center;}
 /* 印刷時 */
 @media print{
   .unit-action-bar,.unit-col-header,.no-print{display:none!important;}

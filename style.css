@@ -154,6 +154,26 @@ body {
   width: 100%; padding: 3px 4px; border: 1px solid #cbd5e0; border-radius: 2px;
   text-align: right; font-size: 0.82rem; font-family: inherit;
 }
+.qty-stepper {
+  display: grid; grid-template-rows: 12px 22px 12px; gap: 1px;
+  width: 100%; min-width: 30px; align-items: stretch;
+}
+.qty-stepper .qty-step-button {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; min-width: 0; height: 12px; padding: 0;
+  border: 1px solid #b8c7d9; border-radius: 2px; background: #edf4fb;
+  color: #315b82; font-size: 8px; line-height: 1; cursor: pointer;
+}
+.qty-stepper .qty-step-button:hover { background: #dcecff; border-color: #6f9bc4; }
+.qty-stepper .qty-step-button:active { background: #c7e0f7; }
+.qty-stepper input[type="number"] {
+  width: 100%; min-width: 0; height: 22px; padding: 1px 2px;
+  text-align: center; -moz-appearance: textfield; appearance: textfield;
+}
+.qty-stepper input[type="number"]::-webkit-inner-spin-button,
+.qty-stepper input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
 .ec-qty input:focus, .ec-price input:focus {
   border-color: #3182ce; outline: none; background: #fffff0;
 }
@@ -1547,6 +1567,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
   .estimate-table .ec-subtotal { width: 40px; padding-right: 2px !important; }
   .estimate-table .ec-no { width: 20px; }
   .ec-qty input, .ec-price input { width: 100%; }
+  .qty-stepper { display: block; min-width: 0; }
   .est-print-page.has-renovation-print .estimate-table { font-size:7.5px !important; }
   .est-print-page.has-renovation-print .estimate-table thead th { padding:1px 2px; font-size:7px; }
   .est-print-page.has-renovation-print .estimate-table tbody td { padding:1px !important; font-size:7.5px; }

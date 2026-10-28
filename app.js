@@ -3516,8 +3516,12 @@ function _buildLineRows(lines) {
       <td class="ec-spec">${esc(spec)}</td>
       <td class="ec-price"><input type="text" inputmode="decimal" data-numeric-input value="${line.unitPrice}"
            onchange="onLinePrice('${line.lineId}',this.value)" onfocus="this.select()"></td>
-      <td class="ec-qty"><input type="number" min="0" step="1" value="${line.qty}"
-           onchange="onLineQty('${line.lineId}',this.value)" onfocus="this.select()"></td>
+      <td class="ec-qty"><span class="qty-stepper">
+        <button type="button" class="qty-step-button no-print" onclick="stepLineQty(event,'${line.lineId}',1)" title="数量を1増やす" aria-label="数量を1増やす">▲</button>
+        <input type="number" min="0" step="1" value="${line.qty}"
+           onchange="onLineQty('${line.lineId}',this.value)" onfocus="this.select()">
+        <button type="button" class="qty-step-button no-print" onclick="stepLineQty(event,'${line.lineId}',-1)" title="数量を1減らす" aria-label="数量を1減らす">▼</button>
+      </span></td>
       <td class="ec-subtotal" id="sub-${line.lineId}">${fmtNum(sub)}</td>
       <td class="ec-del no-print">
         <button class="btn btn-danger btn-sm" onclick="removeLine('${line.lineId}')">&times;</button>
@@ -4009,6 +4013,17 @@ function onLineQty(lineId, val) {
   const el = document.getElementById("sub-" + lineId);
   if (el) el.textContent = fmtNum(l.qty * l.unitPrice);
   renderTotals();
+}
+
+function stepLineQty(event, lineId, delta) {
+  event.preventDefault();
+  event.stopPropagation();
+  const line = _findLineAnyUnit(lineId);
+  if (!line || line.renovationGenerated) return;
+  const next = Math.max(0, (parseInt(line.qty, 10) || 0) + delta);
+  const input = event.currentTarget.closest(".qty-stepper")?.querySelector("input");
+  if (input) input.value = next;
+  onLineQty(lineId, next);
 }
 
 function onLinePrice(lineId, val) {

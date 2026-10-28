@@ -46,6 +46,8 @@ let renovationCategoryId = RENOVATION_CATEGORIES[0]?.id || "";
 let renovationMaterialGroup = RENOVATION_MATERIAL_GROUPS?.[0] || "電線(KIP)";
 let renovationEquipmentMasterCache = null;
 let renovationMaterialMasterCache = null;
+let renovationDraftState = null;
+let renovationDraftEstimateId = null;
 
 function renovationNotesHtml(notes, title = "元表の注意事項") {
   const rows = (notes || []).filter(Boolean);
@@ -503,26 +505,6 @@ function getRenovationState(unit = activeUnit()) {
     state.pricingVersion = 5;
   }
   return state;
-}
-
-function startRenovationUnit() {
-  let unit = activeUnit();
-  if (unit.lines.length && !unit.renovation?.enabled) {
-    const number = currentEstimate.units.filter(u => u.renovation?.enabled).length + 1;
-    currentEstimate.units.push({
-      unitId: genId(), unitName: `改修工事${number}`, lines: [],
-      listRate: DEFAULT_RATES.listRate, netRate: DEFAULT_RATES.netRate,
-    });
-    activeUnitIndex = currentEstimate.units.length - 1;
-    unit = activeUnit();
-  } else if (/^項目\d+$/.test(unit.unitName || "")) {
-    unit.unitName = "改修工事";
-  }
-  unit.renovation = createRenovationState();
-  syncRenovationQuoteLine(unit);
-  renderRenovationTab();
-  renderCatalogEstimatePanels();
-  showToast("改修見積を開始しました");
 }
 
 function calcRenovationPricing(unit) {
@@ -1610,21 +1592,60 @@ function showRenovationPriceHistory(id) {
 }
 
 function renovationUnitSwitcherHtml() {
-  return `<div class="renovation-unit-switcher">${currentEstimate.units.map((unit, index) =>
+  const renovationUnits = currentEstimate.units
+    .map((unit, index) => ({ unit, index }))
+    .filter(({ unit }) => unit.renovation?.enabled);
+  return `<div class="renovation-unit-switcher">${renovationUnits.map(({ unit, index }) =>
     `<button class="${index === activeUnitIndex ? "active" : ""}" onclick="activateUnit(${index});renderRenovationTab()">${esc(unit.unitName)}</button>`
   ).join("")}<button onclick="addRenovationUnit()">＋ 改修項目</button>` +
     `<button class="renovation-confirm-button" onclick="switchTab('estimate')">見積作成で確認</button></div>`;
 }
 
-function addRenovationUnit() {
-  const number = currentEstimate.units.filter(unit => unit.renovation?.enabled).length + 1;
-  currentEstimate.units.push({
-    unitId: genId(), unitName: `改修工事${number}`, lines: [],
-    listRate: DEFAULT_RATES.listRate, netRate: DEFAULT_RATES.netRate, renovation: createRenovationState(),
-  });
-  activeUnitIndex = currentEstimate.units.length - 1;
+function createAndActivateRenovationUnit(initialState = null) {
+  const usedNames = new Set(currentEstimate.units.map(unit => unit.unitName));
+  let number = 1;
+  while (usedNames.has(number === 1 ? "改修工事" : `改修工事${number}`)) number++;
+  const unitName = number === 1 ? "改修工事" : `改修工事${number}`;
+  const current = activeUnit();
+  const reuseCurrent = current && !current.renovation?.enabled && !current.lines.length && /^項目\d+$/.test(current.unitName || "");
+  if (reuseCurrent) {
+    current.unitName = unitName;
+    current.renovation = initialState || createRenovationState();
+  } else {
+    currentEstimate.units.push({
+      unitId: genId(), unitName, lines: [],
+      listRate: DEFAULT_RATES.listRate, netRate: DEFAULT_RATES.netRate,
+      renovation: initialState || createRenovationState(),
+    });
+    activeUnitIndex = currentEstimate.units.length - 1;
+  }
+  renovationDraftState = null;
+  renovationDraftEstimateId = null;
   syncRenovationQuoteLine();
+  return activeUnit();
+}
+
+function addRenovationUnit() {
+  const unit = createAndActivateRenovationUnit();
   renderRenovationTab();
+  renderCatalogEstimatePanels();
+  showToast(`「${unit.unitName}」を追加しました`);
+}
+
+function addRenovationUnitFromEstimate() {
+  const unit = createAndActivateRenovationUnit();
+  switchTab("renovation");
+  showToast(`「${unit.unitName}」を追加しました`);
+}
+
+function promoteRenovationDraftOnAction(event) {
+  if (!renovationDraftState) return;
+  const target = event.target?.closest?.(
+    ".renovation-catalog-select, .renovation-material-add, .renovation-work input, .renovation-pattern-panel button"
+  );
+  if (!target) return;
+  createAndActivateRenovationUnit(renovationDraftState);
+  showToast("操作内容から改修項目を追加しました");
 }
 
 function renderRenovationCatalog() {
@@ -1688,11 +1709,30 @@ function renovationEstimatePreviewHtml(unit, pricing) {
 function renderRenovationTab() {
   const root = document.getElementById("renovation-root");
   if (!root) return;
-  const unit = activeUnit();
-  const state = getRenovationState(unit);
+  let unit = activeUnit();
+  let state = getRenovationState(unit);
+  let isDraft = false;
   if (!state) {
-    startRenovationUnit();
-    return;
+    const renovationIndex = currentEstimate.units.findIndex(row => row.renovation?.enabled);
+    if (renovationIndex >= 0) {
+      renovationDraftState = null;
+      renovationDraftEstimateId = null;
+      activeUnitIndex = renovationIndex;
+      unit = activeUnit();
+      state = getRenovationState(unit);
+    } else {
+      if (!renovationDraftState || renovationDraftEstimateId !== currentEstimate.id) {
+        renovationDraftState = createRenovationState();
+        renovationDraftEstimateId = currentEstimate.id;
+      }
+      unit = {
+        unitId: "renovation-draft", unitName: "改修工事", lines: [],
+        listRate: DEFAULT_RATES.listRate, netRate: DEFAULT_RATES.netRate,
+        renovation: renovationDraftState,
+      };
+      state = getRenovationState(unit);
+      isDraft = true;
+    }
   }
   syncRenovationQuoteLine(unit);
   syncRenovationSourceNotes();
@@ -1803,6 +1843,10 @@ function renderRenovationTab() {
       renovationEstimatePreviewHtml(unit, pricing) +
     `</aside></div></div>`;
   renderRenovationCatalog();
+  if (isDraft) {
+    root.addEventListener("click", promoteRenovationDraftOnAction, true);
+    root.addEventListener("change", promoteRenovationDraftOnAction, true);
+  }
   const stickyControls = root.querySelector(".renovation-sticky-controls");
   if (typeof observeStickyOffsetElement === "function") observeStickyOffsetElement(stickyControls);
   requestAnimationFrame(() => {

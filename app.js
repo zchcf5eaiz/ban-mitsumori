@@ -3176,7 +3176,8 @@ function renderUnitTabs() {
   const info = units.length > 1
     ? `<span class="unit-active-label">追加先: <strong>${esc(u.unitName)}</strong></span>`
     : "";
-  container.innerHTML = `<div class="unit-action-bar no-print">${info}<button class="unit-tab-add" onclick="addUnit()" title="項目を追加">＋ 項目追加</button></div>`;
+  container.innerHTML = `<div class="unit-action-bar no-print">${info}<button class="unit-tab-add" onclick="addUnit()" title="通常の項目を追加">＋ 項目追加</button>` +
+    `<button class="unit-tab-add unit-tab-add-renovation" onclick="addRenovationUnitFromEstimate()" title="改修項目を追加して編集">＋ 改修項目</button></div>`;
 }
 
 function activateUnit(idx) {
@@ -3235,13 +3236,19 @@ function moveUnit(event, idx, delta) {
 
 function deleteUnit(event, idx) {
   event.stopPropagation();
-  if (currentEstimate.units.length <= 1) return;
   const unit = currentEstimate.units[idx];
+  if (!unit || (currentEstimate.units.length <= 1 && !unit.renovation?.enabled)) return;
   const msg = unit.lines.length > 0
     ? `「${unit.unitName}」を削除しますか？明細 ${unit.lines.length} 行も削除されます。`
     : `「${unit.unitName}」を削除しますか？`;
   if (!confirm(msg)) return;
   currentEstimate.units.splice(idx, 1);
+  if (!currentEstimate.units.length) {
+    currentEstimate.units.push({
+      unitId: genId(), unitName: "項目1", lines: [],
+      listRate: DEFAULT_RATES.listRate, netRate: DEFAULT_RATES.netRate,
+    });
+  }
   if (activeUnitIndex >= currentEstimate.units.length) {
     activeUnitIndex = currentEstimate.units.length - 1;
   }
@@ -3323,7 +3330,7 @@ function renderEstimateLines() {
         <button class="unit-col-btn unit-col-move" onclick="moveUnit(event,${i},1)" title="右へ移動" aria-label="${escAttr(unit.unitName)}を右へ移動"${i === units.length - 1 ? " disabled" : ""}>▶</button>
       ` : ""}
       <button class="unit-col-btn" onclick="renameUnit(event,${i})" title="名前変更">✏</button>
-      ${units.length > 1 ? `<button class="unit-col-btn unit-col-del" onclick="deleteUnit(event,${i})" title="削除">&times;</button>` : ""}
+      ${units.length > 1 || unit.renovation?.enabled ? `<button class="unit-col-btn unit-col-del" onclick="deleteUnit(event,${i})" title="削除">&times;</button>` : ""}
     `;
     col.appendChild(hdr);
 

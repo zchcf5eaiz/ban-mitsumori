@@ -806,12 +806,12 @@ function renovationInternalCardHtml(unit) {
     conditionGroup("③", "見積明細の出し方", RENOVATION_PRESENTATIONS, state.presentationMethod) +
     `</div>` +
     `<table class="renovation-internal-total-table"><thead><tr><th>計算項目</th><th>定価</th><th>NET</th><th>仕入・社内原価</th></tr></thead><tbody>` +
-    row("機器", pricing.equipmentList, pricing.equipmentNet, pricing.equipmentCost) +
+    row("機器", pricing.equipmentList, pricing.equipmentNet, pricing.equipmentCost, "renovation-internal-key-cost") +
     detailSectionRow("機器内訳", "各単価", equipmentRows) +
-    row("材料費", pricing.materialList, pricing.materialNet, pricing.materialCost) +
+    row("材料費", pricing.materialList, pricing.materialNet, pricing.materialCost, "renovation-internal-key-cost") +
     detailSectionRow("材料内訳", "各単価／空欄登録は係数計算", materialRows) +
-    row("現地調査費", state.siteSurveyList, state.siteSurveyNet, state.siteSurveyCost) +
-    row("改修費", pricing.renovationList, pricing.labor, pricing.laborCost) +
+    row("現地調査費", state.siteSurveyList, state.siteSurveyNet, state.siteSurveyCost, "renovation-internal-key-cost") +
+    row("改修費", pricing.renovationList, pricing.labor, pricing.laborCost, "renovation-internal-key-cost") +
     row("方式差額・諸経費", pricing.list - pricing.directList, pricing.net - pricing.directNet, null) +
     row("採用合計", pricing.list, pricing.net, totalCost, "renovation-internal-total") +
     `</tbody></table>` +
@@ -898,13 +898,13 @@ function renovationInternalPrintColumns(unit, rowLimit = 35) {
     conditionGroup("②", "定価・NET算出方式", RENOVATION_QUOTE_METHODS, state.quoteMethod) +
     conditionGroup("③", "見積明細の出し方", RENOVATION_PRESENTATIONS, state.presentationMethod) + `</div>`, 5);
 
-  addBlock(totalTable(totalRow("機器", pricing.equipmentList, pricing.equipmentNet, pricing.equipmentCost)), 2);
+  addBlock(totalTable(totalRow("機器", pricing.equipmentList, pricing.equipmentNet, pricing.equipmentCost, "renovation-internal-key-cost")), 2);
   addDetails("機器内訳", "各単価", state.equipment.map(item => ({
     html: detailRow(item, Number(item.listPrice) || 0, Number(item.netPrice) || 0, Number(item.costPrice) || 0) +
       renovationInternalTrComparisonRow(item),
     weight: renovationIsTrEquipment(item) ? 5 : 1,
   })));
-  addBlock(totalTable(totalRow("材料費", pricing.materialList, pricing.materialNet, pricing.materialCost)), 2);
+  addBlock(totalTable(totalRow("材料費", pricing.materialList, pricing.materialNet, pricing.materialCost, "renovation-internal-key-cost")), 2);
   addDetails("材料内訳", "各単価／空欄登録は係数計算", state.materials.map(item => {
     const cost = Number(item.costPrice ?? item.unitPrice) || 0;
     const net = item.netPrice == null ? cost * state.materialNetFactor : Number(item.netPrice) || 0;
@@ -912,8 +912,8 @@ function renovationInternalPrintColumns(unit, rowLimit = 35) {
     return detailRow(item, list, net, cost);
   }));
   addBlock(totalTable(
-    totalRow("現地調査費", state.siteSurveyList, state.siteSurveyNet, state.siteSurveyCost) +
-    totalRow("改修費", pricing.renovationList, pricing.labor, pricing.laborCost) +
+    totalRow("現地調査費", state.siteSurveyList, state.siteSurveyNet, state.siteSurveyCost, "renovation-internal-key-cost") +
+    totalRow("改修費", pricing.renovationList, pricing.labor, pricing.laborCost, "renovation-internal-key-cost") +
     totalRow("方式差額・諸経費", pricing.list - pricing.directList, pricing.net - pricing.directNet, null) +
     totalRow("採用合計", pricing.list, pricing.net, totalCost, "renovation-internal-total")
   ), 5);

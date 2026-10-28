@@ -6,6 +6,7 @@ const STORAGE_RENOVATION_PRICES = "ban_renovation_prices_v1";
 const STORAGE_RENOVATION_MATERIAL_PRICES = "ban_renovation_material_prices_v1";
 const STORAGE_RENOVATION_EQUIPMENT_MASTER = "ban_renovation_equipment_master_v1";
 const STORAGE_RENOVATION_MATERIAL_MASTER = "ban_renovation_material_master_v1";
+const STORAGE_RENOVATION_MATERIAL_CATEGORIES = "ban_renovation_material_categories_v1";
 const RENOVATION_NET_FACTOR = 1.2;
 const RENOVATION_EQUIPMENT_HIGHLIGHTS = Object.freeze({
   none: { label: "なし" },
@@ -43,9 +44,10 @@ const RENOVATION_MATSUOKA_RATIOS = Object.freeze({
 });
 
 let renovationCategoryId = RENOVATION_CATEGORIES[0]?.id || "";
-let renovationMaterialGroup = RENOVATION_MATERIAL_GROUPS?.[0] || "電線(KIP)";
+let renovationMaterialCategoryId = "";
 let renovationEquipmentMasterCache = null;
 let renovationMaterialMasterCache = null;
+let renovationMaterialCategoriesCache = null;
 let renovationDraftState = null;
 let renovationDraftEstimateId = null;
 
@@ -68,7 +70,7 @@ function renovationSourceNotesForUnit(unit) {
   new Set(state.equipment.map(row => row.category).filter(Boolean)).forEach(category => {
     addNotes(RENOVATION_REFERENCE_NOTES?.categories?.[category]);
   });
-  new Set(state.materials.map(row => renovationMaterialDisplayGroup(row)).filter(Boolean)).forEach(group => {
+  new Set(state.materials.map(row => renovationMaterialNoteGroup(row)).filter(Boolean)).forEach(group => {
     addNotes(RENOVATION_REFERENCE_NOTES?.materialGroups?.[group]);
   });
   return [...notes];
@@ -226,6 +228,36 @@ function saveRenovationMaterialMaster(items) {
   localStorage.setItem(STORAGE_RENOVATION_MATERIAL_MASTER, JSON.stringify(items));
 }
 
+function defaultRenovationMaterialCategories() {
+  return RENOVATION_MATERIAL_GROUPS.map((label, index) => ({
+    id: `mat-category-${index + 1}`,
+    label,
+    sourceLabel: label,
+  }));
+}
+
+function loadRenovationMaterialCategories() {
+  if (renovationMaterialCategoriesCache) return renovationMaterialCategoriesCache;
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_RENOVATION_MATERIAL_CATEGORIES) || "null");
+    if (Array.isArray(saved) && saved.length && saved.every(category => category?.id && category?.label)) {
+      renovationMaterialCategoriesCache = saved;
+      return renovationMaterialCategoriesCache;
+    }
+  } catch {}
+  renovationMaterialCategoriesCache = defaultRenovationMaterialCategories();
+  return renovationMaterialCategoriesCache;
+}
+
+function saveRenovationMaterialCategories(categories) {
+  renovationMaterialCategoriesCache = categories;
+  localStorage.setItem(STORAGE_RENOVATION_MATERIAL_CATEGORIES, JSON.stringify(categories));
+}
+
+function renovationMaterialCategories() {
+  return loadRenovationMaterialCategories();
+}
+
 function renovationMaterialItems() {
   return [...RENOVATION_MATERIALS, ...loadRenovationMaterialMaster()];
 }
@@ -294,10 +326,31 @@ function renovationMaterialCapacity(item) {
   return { short: parts.join(" ／ "), detail: `${parts.join(" ／ ")}（${family.condition}）` };
 }
 
-function renovationMaterialDisplayGroup(item) {
+function renovationMaterialSourceGroup(item) {
   if (item?.group !== "電線") return item?.group || "その他";
   const family = String(item.name || "").replace(/電線$/, "");
   return `電線(${family || "その他"})`;
+}
+
+function renovationMaterialDisplayCategoryId(item) {
+  if (item?.categoryId && renovationMaterialCategories().some(category => category.id === item.categoryId)) {
+    return item.categoryId;
+  }
+  const sourceGroup = renovationMaterialSourceGroup(item);
+  return renovationMaterialCategories().find(category =>
+    category.sourceLabel === sourceGroup || category.label === sourceGroup
+  )?.id || "";
+}
+
+function renovationMaterialDisplayGroup(item) {
+  const categoryId = renovationMaterialDisplayCategoryId(item);
+  return renovationMaterialCategories().find(category => category.id === categoryId)?.label || renovationMaterialSourceGroup(item);
+}
+
+function renovationMaterialNoteGroup(item) {
+  const categoryId = renovationMaterialDisplayCategoryId(item);
+  const category = renovationMaterialCategories().find(row => row.id === categoryId);
+  return category?.sourceLabel || category?.label || renovationMaterialSourceGroup(item);
 }
 
 function renovationEquipmentDisplayCategoryId(item) {
@@ -1054,7 +1107,8 @@ function addRenovationMaterial(id) {
   const found = state.materials.find(row => row.materialId === id);
   if (found) found.qty += 1;
   else state.materials.push({
-    lineId: genId(), materialId: id, group: item.group || "その他", name: item.name, spec: item.spec, unit: item.unit, qty: 1,
+    lineId: genId(), materialId: id, categoryId: renovationMaterialDisplayCategoryId(item),
+    group: renovationMaterialDisplayGroup(item), name: item.name, spec: item.spec, unit: item.unit, qty: 1,
     unitPrice: renovationMaterialPrice(item, "costPrice") || 0,
     listPrice: item.listPrice ?? null,
     netPrice: renovationMaterialPrice(item, "netPrice"),
@@ -1416,19 +1470,119 @@ function updateRenovationCategoryHighlight() {
     button.setAttribute("aria-pressed", String(isActive));
   });
 }
-function setRenovationMaterialGroup(group) {
-  if (!RENOVATION_MATERIAL_GROUPS.includes(group)) return;
-  renovationMaterialGroup = group;
+function setRenovationMaterialCategory(id) {
+  if (!renovationMaterialCategories().some(category => category.id === id)) return;
+  renovationMaterialCategoryId = id;
   renderRenovationTab();
 }
 
+function showRenovationMaterialCategoryManager() {
+  document.getElementById("renovation-material-category-manager")?.remove();
+  const categories = renovationMaterialCategories();
+  const items = renovationMaterialItems();
+  const overlay = document.createElement("div");
+  overlay.id = "renovation-material-category-manager";
+  overlay.className = "renovation-modal-overlay";
+  overlay.onclick = event => { if (event.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="renovation-modal renovation-master-modal"><button class="renovation-modal-close" type="button" onclick="this.closest('.renovation-modal-overlay').remove()">×</button>` +
+    `<h3>材料カテゴリ管理</h3><div class="renovation-master-toolbar"><button onclick="addRenovationMaterialCategory()">＋ カテゴリ追加</button></div>` +
+    `<table><thead><tr><th>順番</th><th>カテゴリ名</th><th>項目数</th><th>操作</th></tr></thead><tbody>` +
+    categories.map((category, index) => `<tr><td><button onclick="moveRenovationMaterialCategory('${category.id}',-1)"${index === 0 ? " disabled" : ""}>↑</button>` +
+      `<button onclick="moveRenovationMaterialCategory('${category.id}',1)"${index === categories.length - 1 ? " disabled" : ""}>↓</button></td>` +
+      `<td>${esc(category.label)}</td><td>${items.filter(item => renovationMaterialDisplayCategoryId(item) === category.id).length}</td>` +
+      `<td><button onclick="editRenovationMaterialCategory('${category.id}')">編集</button> <button class="renovation-master-delete" onclick="deleteRenovationMaterialCategory('${category.id}')">削除</button></td></tr>`).join("") +
+    `</tbody></table><p>追加・名称変更・削除・並べ替えは自動保存され、全データ出力にも含まれます。</p></div>`;
+  document.body.appendChild(overlay);
+}
+
+function addRenovationMaterialCategory() {
+  const label = prompt("追加する材料カテゴリ名", "新しいカテゴリ");
+  if (label == null || !label.trim()) return;
+  const categories = renovationMaterialCategories();
+  if (categories.some(category => category.label === label.trim())) {
+    showToast("同じ名前の材料カテゴリがあります");
+    return;
+  }
+  const category = { id: renovationMasterSafeId("mat-category-custom"), label: label.trim(), sourceLabel: null };
+  categories.push(category);
+  saveRenovationMaterialCategories(categories);
+  renovationMaterialCategoryId = category.id;
+  showRenovationMaterialCategoryManager();
+  refreshRenovationMasterView();
+}
+
+function editRenovationMaterialCategory(id) {
+  const categories = renovationMaterialCategories();
+  const category = categories.find(row => row.id === id);
+  if (!category) return;
+  const previousLabel = category.label;
+  const label = prompt("材料カテゴリ名", category.label || "");
+  if (label == null || !label.trim()) return;
+  const nextLabel = label.trim();
+  if (categories.some(row => row.id !== id && row.label === nextLabel)) {
+    showToast("同じ名前の材料カテゴリがあります");
+    return;
+  }
+  category.label = nextLabel;
+  const customItems = loadRenovationMaterialMaster();
+  customItems.forEach(item => {
+    if (item.categoryId === id || (!item.categoryId && item.group === previousLabel)) {
+      item.categoryId = id;
+      item.group = nextLabel;
+    }
+  });
+  saveRenovationMaterialMaster(customItems);
+  saveRenovationMaterialCategories(categories);
+  showRenovationMaterialCategoryManager();
+  refreshRenovationMasterView();
+}
+
+function deleteRenovationMaterialCategory(id) {
+  const categories = renovationMaterialCategories();
+  const category = categories.find(row => row.id === id);
+  if (!category || categories.length <= 1) {
+    showToast("カテゴリは最低1件必要です");
+    return;
+  }
+  const itemCount = renovationMaterialItems().filter(item => renovationMaterialDisplayCategoryId(item) === id).length;
+  if (!confirm(`「${category.label}」を削除します。${itemCount ? `カテゴリ内の${itemCount}項目も一覧から削除されます。` : ""}\n既存見積に追加済みの明細は残ります。`)) return;
+  const removedCustomItems = loadRenovationMaterialMaster().filter(item => renovationMaterialDisplayCategoryId(item) === id);
+  const removedCustomIds = removedCustomItems.map(item => item.id);
+  saveRenovationMaterialCategories(categories.filter(row => row.id !== id));
+  const removedCustomIdSet = new Set(removedCustomIds);
+  saveRenovationMaterialMaster(loadRenovationMaterialMaster().filter(item => !removedCustomIdSet.has(item.id)));
+  if (removedCustomIds.length) {
+    const overrides = loadRenovationMaterialPriceOverrides();
+    removedCustomIds.forEach(itemId => delete overrides[itemId]);
+    saveRenovationMaterialPriceOverrides(overrides);
+  }
+  renovationMaterialCategoryId = renovationMaterialCategories()[0]?.id || "";
+  showRenovationMaterialCategoryManager();
+  refreshRenovationMasterView();
+}
+
+function moveRenovationMaterialCategory(id, direction) {
+  const categories = renovationMaterialCategories();
+  const index = categories.findIndex(row => row.id === id);
+  const next = index + Number(direction);
+  if (index < 0 || next < 0 || next >= categories.length) return;
+  [categories[index], categories[next]] = [categories[next], categories[index]];
+  saveRenovationMaterialCategories(categories);
+  showRenovationMaterialCategoryManager();
+  refreshRenovationMasterView();
+}
+
 function showRenovationMaterialEditor() {
+  const categories = renovationMaterialCategories();
+  if (!categories.some(category => category.id === renovationMaterialCategoryId)) {
+    renovationMaterialCategoryId = categories[0]?.id || "";
+  }
   const overlay = document.createElement("div");
   overlay.className = "renovation-modal-overlay";
   overlay.onclick = event => { if (event.target === overlay) overlay.remove(); };
   overlay.innerHTML = `<div class="renovation-modal renovation-master-modal"><button class="renovation-modal-close" type="button" onclick="this.closest('.renovation-modal-overlay').remove()">×</button>` +
     `<h3>材料項目を追加</h3><form class="renovation-master-form" onsubmit="saveRenovationMaterialEditor(event)">` +
-    `<label>材料カテゴリ<select name="group" required>${RENOVATION_MATERIAL_GROUPS.map(group => `<option value="${escAttr(group)}"${group === renovationMaterialGroup ? " selected" : ""}>${esc(group)}</option>`).join("")}</select></label>` +
+    `<label>材料カテゴリ<select name="categoryId" required>${categories.map(category => `<option value="${escAttr(category.id)}"${category.id === renovationMaterialCategoryId ? " selected" : ""}>${esc(category.label)}</option>`).join("")}</select></label>` +
     `<label>項目名<input name="name" required></label>` +
     `<label>型式・仕様<input name="spec"></label>` +
     `<label>単位<input name="unit" placeholder="個・m・kgなど"></label>` +
@@ -1446,15 +1600,17 @@ function saveRenovationMaterialEditor(event) {
   event.preventDefault();
   const form = event.currentTarget;
   const data = new FormData(form);
-  const group = String(data.get("group") || "");
+  const categoryId = String(data.get("categoryId") || "");
+  const category = renovationMaterialCategories().find(row => row.id === categoryId);
   const name = String(data.get("name") || "").trim();
-  if (!RENOVATION_MATERIAL_GROUPS.includes(group) || !name) return;
+  if (!category || !name) return;
   const costPrice = nullableRenovationPrice(data.get("costPrice"));
   const items = loadRenovationMaterialMaster();
   items.push({
     id: renovationMasterSafeId("mat-custom"),
     custom: true,
-    group,
+    categoryId,
+    group: category.label,
     name,
     spec: String(data.get("spec") || "").trim(),
     unit: String(data.get("unit") || "").trim(),
@@ -1468,7 +1624,7 @@ function saveRenovationMaterialEditor(event) {
     history: [],
   });
   saveRenovationMaterialMaster(items);
-  renovationMaterialGroup = group;
+  renovationMaterialCategoryId = categoryId;
   form.closest(".renovation-modal-overlay")?.remove();
   renderRenovationTab();
   showToast("材料項目を追加して保存しました");
@@ -1770,14 +1926,20 @@ function renderRenovationTab() {
   }).join("");
   const overheadNet = Math.max(0, pricing.net - pricing.directNet);
   const overheadLabel = isDistribution ? "振分対象差額" : "諸経費（定価差額）";
+  const materialCategories = renovationMaterialCategories();
+  if (!materialCategories.some(category => category.id === renovationMaterialCategoryId)) {
+    renovationMaterialCategoryId = materialCategories[0]?.id || "";
+  }
+  const activeMaterialCategory = materialCategories.find(category => category.id === renovationMaterialCategoryId);
   const visibleMaterials = renovationMaterialItems()
-    .filter(item => renovationMaterialDisplayGroup(item) === renovationMaterialGroup)
+    .filter(item => renovationMaterialDisplayCategoryId(item) === renovationMaterialCategoryId)
     .map(item => getRenovationMaterialItem(item.id) || item);
   const selectedMaterialQuantities = new Map();
   state.materials.forEach(row => {
     selectedMaterialQuantities.set(row.materialId, (selectedMaterialQuantities.get(row.materialId) || 0) + (Number(row.qty) || 0));
   });
-  const materialNotes = RENOVATION_REFERENCE_NOTES?.materialGroups?.[renovationMaterialGroup] || [];
+  const materialNoteKey = activeMaterialCategory?.sourceLabel || activeMaterialCategory?.label || "";
+  const materialNotes = RENOVATION_REFERENCE_NOTES?.materialGroups?.[materialNoteKey] || [];
   const equipmentCategories = renovationEquipmentCategories();
   if (!equipmentCategories.some(category => category.id === renovationCategoryId)) renovationCategoryId = equipmentCategories[0]?.id || "";
   root.innerHTML = `<div class="renovation-sticky-controls">` + renovationUnitSwitcherHtml() + `</div>` +
@@ -1788,8 +1950,8 @@ function renderRenovationTab() {
       `<div id="renovation-catalog-list" class="renovation-catalog-list"></div></section>` +
     `<section class="renovation-catalog renovation-material-catalog"><div class="renovation-section-title">2. 材料を選択</div>` +
       `<div class="renovation-material-catalog-scroll">` +
-      `<div class="renovation-material-groups">${RENOVATION_MATERIAL_GROUPS.map(group => `<button class="${group === renovationMaterialGroup ? "active" : ""}" onclick="setRenovationMaterialGroup('${escAttr(group)}')">${esc(group)}</button>`).join("")}</div>` +
-      `<div class="renovation-master-toolbar renovation-material-master-toolbar"><button onclick="showRenovationMaterialEditor()">＋ 材料項目</button></div>` +
+      `<div class="renovation-material-groups">${materialCategories.map(category => `<button class="${category.id === renovationMaterialCategoryId ? "active" : ""}" onclick="setRenovationMaterialCategory('${escAttr(category.id)}')">${esc(category.label)}</button>`).join("")}</div>` +
+      `<div class="renovation-master-toolbar renovation-material-master-toolbar"><button onclick="showRenovationMaterialEditor()">＋ 材料項目</button><button onclick="showRenovationMaterialCategoryManager()">カテゴリ管理</button></div>` +
       `<div class="renovation-material-buttons">${visibleMaterials.map(item => {
         const capacity = renovationMaterialCapacity(item);
         const materialCost = renovationMaterialPrice(item, "costPrice");
@@ -1800,7 +1962,7 @@ function renderRenovationTab() {
           `${item.note ? `<small class="renovation-item-note">備考：${esc(item.note)}</small>` : ""}</button>` +
           `<div class="renovation-catalog-actions renovation-material-card-actions"><button onclick="showRenovationMaterialPriceHistory('${item.id}')" title="価格履歴">履歴</button><button onclick="editRenovationMaterialPrice('${item.id}')" title="登録価格と備考を変更">価格・備考</button>${item.custom ? `<button class="renovation-master-delete" onclick="deleteRenovationMaterialMasterItem('${item.id}')">削除</button>` : ""}</div></div>`;
       }).join("")}</div>` +
-      renovationNotesHtml(materialNotes, `${renovationMaterialGroup}の元表メモ`) +
+      renovationNotesHtml(materialNotes, `${activeMaterialCategory?.label || "材料"}の元表メモ`) +
       `</div></section>` +
     `<div class="renovation-work"><section><div class="renovation-section-title">3. 選択内容・費用調整</div>` +
       `<div class="renovation-selection-subtitle">選択した機器</div>` +

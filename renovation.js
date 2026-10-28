@@ -389,7 +389,8 @@ function renovationTrComparisonSource(item) {
 }
 
 function renovationExcludesTrComparison(item) {
-  return /^(?:防振ゴム|ダイヤル温度計)/.test(String(item?.name || "").trim());
+  const name = String(item?.name || "").trim().normalize("NFKC");
+  return /^(?:防振ゴム|(?:ダイヤル)?温度計)/.test(name);
 }
 
 function renovationIsTrEquipment(item) {

@@ -388,6 +388,10 @@ function renovationTrComparisonSource(item) {
   return getRenovationMasterItem(item?.itemId) || item || {};
 }
 
+function renovationExcludesTrComparison(item) {
+  return /^(?:防振ゴム|ダイヤル温度計)/.test(String(item?.name || "").trim());
+}
+
 function renovationIsTrEquipment(item) {
   const source = renovationTrComparisonSource(item);
   return renovationIsTrCategoryId(source?.categoryId) || source?.category === "TR" || /^Tr[13]φ(?:\(400V級\))?$/.test(source?.category || "");
@@ -395,6 +399,7 @@ function renovationIsTrEquipment(item) {
 
 function renovationUsesTrComparison(item) {
   const source = renovationTrComparisonSource(item);
+  if (renovationExcludesTrComparison(source)) return false;
   return renovationUsesTrComparisonCategoryId(source?.categoryId) || source?.category === "TR" || /^Tr[13]φ(?:\(400V級\))?$/.test(source?.category || "");
 }
 
@@ -1194,7 +1199,7 @@ function showRenovationEquipmentEditor(id = "") {
   const categories = renovationEquipmentCategories();
   const current = id ? getRenovationMasterItem(id) : null;
   const selectedCategory = current ? renovationEquipmentDisplayCategoryId(current) : renovationCategoryId;
-  const isTr = renovationUsesTrComparisonCategoryId(selectedCategory);
+  const isTr = current ? renovationUsesTrComparison(current) : renovationUsesTrComparisonCategoryId(selectedCategory);
   const selectedHighlight = renovationEquipmentHighlight(current?.highlight);
   const overlay = document.createElement("div");
   overlay.className = "renovation-modal-overlay";
@@ -1245,12 +1250,12 @@ function saveRenovationEquipmentEditor(event) {
     priceLabel: index >= 0 ? "アプリで編集" : "ユーザー追加",
     effectiveDate: renovationToday(),
   };
-  if (renovationUsesTrComparisonCategoryId(categoryId)) {
+  if (renovationUsesTrComparison(next)) {
     next.manufacturerPrices = Object.fromEntries(RENOVATION_TR_COMPARISON_MAKERS.map(maker => [maker.key, {
       listPrice: nullableRenovationPrice(data.get(`tr_${maker.key}_listPrice`)),
       costPrice: nullableRenovationPrice(data.get(`tr_${maker.key}_costPrice`)),
     }]));
-  }
+  } else delete next.manufacturerPrices;
   if (previous) {
     next.history = [{
       label: previous.priceLabel || "編集前", effectiveDate: previous.effectiveDate || null,

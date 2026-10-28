@@ -19,6 +19,23 @@ const STORAGE_TRSPACE_LP     = "ban_trspace_lp_v1";
 // データバージョン: この値を上げるとlocalStorageのマスタを破棄してデフォルトに戻す
 const DATA_VERSION = 14;
 const STORAGE_DATA_VERSION = "ban_data_version";
+const STORAGE_CANONICAL_DEFAULTS_VERSION = "ban_canonical_defaults_version";
+
+function applyCanonicalStorageDefaults() {
+  if (typeof CANONICAL_STORAGE_DEFAULTS_VERSION === "undefined" ||
+      typeof CANONICAL_STORAGE_DEFAULTS === "undefined") return;
+  const appliedVersion = parseInt(localStorage.getItem(STORAGE_CANONICAL_DEFAULTS_VERSION) || "0", 10);
+  if (appliedVersion >= CANONICAL_STORAGE_DEFAULTS_VERSION) return;
+  const resetKeys = typeof CANONICAL_STORAGE_RESET_KEYS === "undefined"
+    ? Object.keys(CANONICAL_STORAGE_DEFAULTS)
+    : CANONICAL_STORAGE_RESET_KEYS;
+  resetKeys.forEach(key => localStorage.removeItem(key));
+  Object.entries(CANONICAL_STORAGE_DEFAULTS).forEach(([key, value]) => localStorage.setItem(key, value));
+  localStorage.setItem(STORAGE_DATA_VERSION, String(DATA_VERSION));
+  localStorage.setItem(STORAGE_CANONICAL_DEFAULTS_VERSION, String(CANONICAL_STORAGE_DEFAULTS_VERSION));
+}
+
+applyCanonicalStorageDefaults();
 
 if (parseInt(localStorage.getItem(STORAGE_DATA_VERSION) || "0") < DATA_VERSION) {
   // 全PCで古いデータを破棄してデフォルト値（data.js）を使わせる

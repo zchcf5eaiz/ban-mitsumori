@@ -483,6 +483,35 @@ function createNewEstimate() {
   };
 }
 
+/** MC単品の内部行キーではなく、管理表に表示している容量を見積へ渡す。 */
+function getMasterEstimateDisplay(master) {
+  const display = { name: master.name, spec: master.spec || "" };
+  if (master.category !== "C" || master.name !== "MCなど(単品)") return display;
+  const match = display.spec.match(/^(\S+kW) (88(?:\(正逆\))?|Y-△(?:2C|3C|M\+2C|CLOS)|SC(?:220|440)V)$/);
+  if (!match) return display;
+  const [, rowKey, equipment] = match;
+  const rowValue = column => {
+    const item = masterItems.find(m => m.category === master.category &&
+      m.name === master.name && m.spec === rowKey + " " + column);
+    const value = Number(item?.basePrice);
+    return Number.isFinite(value) && value > 0 ? value : null;
+  };
+  const ratings = [];
+  // SCの容量は対応する電圧の欄を使う。MCのAFはSCの定格ではない。
+  if (!equipment.startsWith("SC")) {
+    const amps = rowValue("MCAF");
+    if (amps !== null) ratings.push(amps + "A");
+  }
+  for (const [column, voltage] of [["MC200V", "200V"], ["MC400V", "400V"]]) {
+    if (equipment === "SC220V" && voltage !== "200V") continue;
+    if (equipment === "SC440V" && voltage !== "400V") continue;
+    const capacity = rowValue(column);
+    if (capacity !== null) ratings.push(voltage + " " + capacity + "kW");
+  }
+  display.spec = equipment + " / " + (ratings.length ? ratings.join(" / ") : "容量記載なし");
+  return display;
+}
+
 // 過去に別商品で使われていたIDのうち、当時の単価で一意に判定できるものだけ移行する。
 const LEGACY_ESTIMATE_ITEM_MIGRATIONS = {
   B060: { "35": "B06u" },
@@ -499,13 +528,20 @@ function migrateEstimateLines(lines) {
     if (!line || line.type !== "item") continue;
     const byPrice = LEGACY_ESTIMATE_ITEM_MIGRATIONS[line.masterItemId];
     const migratedId = byPrice && byPrice[String(Number(line.unitPrice))];
-    if (!migratedId) continue;
-    line.masterItemId = migratedId;
-    const master = getMasterItem(migratedId);
-    if (master) {
-      line.sourceName = master.name;
-      line.sourceSpec = master.spec || "";
-      line.sourceCatalog = isCubicleItem(migratedId) ? "cubicle" : "master";
+    if (migratedId) {
+      line.masterItemId = migratedId;
+      const master = getMasterItem(migratedId);
+      if (master) {
+        line.sourceName = master.name;
+        line.sourceSpec = master.spec || "";
+        line.sourceCatalog = isCubicleItem(migratedId) ? "cubicle" : "master";
+      }
+    }
+    const master = getMasterItem(line.masterItemId);
+    if (master?.category === "C" && master.name === "MCなど(単品)") {
+      const display = getEstimateLineDisplay(line);
+      line.sourceName = display.name;
+      line.sourceSpec = display.spec;
     }
   }
   return lines;
@@ -539,9 +575,14 @@ function migrateEstimate(e) {
 /** 見積行は追加時の名称・仕様を優先し、マスタ更新による別商品表示を防ぐ。 */
 function getEstimateLineDisplay(line) {
   const master = getMasterItem(line.masterItemId);
+  const display = master ? getMasterEstimateDisplay(master) : { name: "(不明)", spec: "" };
+  // 旧形式の自動生成仕様だけを補正し、修正済みの保存値や個別編集は保持する。
+  const legacyMCSpec = master?.category === "C" && master.name === "MCなど(単品)" &&
+    (typeof line.sourceName !== "string" || line.sourceName === master.name) &&
+    line.sourceSpec === master.spec;
   return {
-    name: typeof line.sourceName === "string" ? line.sourceName : (master ? master.name : "(不明)"),
-    spec: typeof line.sourceSpec === "string" ? line.sourceSpec : (master ? (master.spec || "") : ""),
+    name: typeof line.sourceName === "string" ? line.sourceName : display.name,
+    spec: typeof line.sourceSpec === "string" && !legacyMCSpec ? line.sourceSpec : display.spec,
     isCubicle: line.sourceCatalog === "cubicle" ||
       (line.sourceCatalog == null && isCubicleItem(line.masterItemId)),
   };
@@ -2932,7 +2973,8 @@ function addFromMaster(event, id) {
   const master = getMasterItem(id);
   if (!master) return;
 
-  const label = master.name + (master.spec ? " " + master.spec : "");
+  const display = getMasterEstimateDisplay(master);
+  const label = display.name + (display.spec ? " " + display.spec : "");
   const input = prompt("数量を入力してください\n" + label, "1");
   if (input === null) return; // キャンセル
   const qty = parseInt(input, 10);
@@ -2942,8 +2984,8 @@ function addFromMaster(event, id) {
     type: "item",
     lineId: genId(),
     masterItemId: id,
-    sourceName: master.name,
-    sourceSpec: master.spec || "",
+    sourceName: display.name,
+    sourceSpec: display.spec,
     sourceCatalog: isCubicleItem(id) ? "cubicle" : "master",
     qty: qty,
     unitPrice: master.category === "K2" ? (groupTotals[master.name] || 0) : master.basePrice,

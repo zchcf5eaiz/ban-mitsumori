@@ -4205,13 +4205,13 @@ function buildSubtotalRows(line, subtotal, actions, dragAttrs = "") {
     return `<span class="subtotal-rate-input">&times;<input type="text" inputmode="decimal" data-numeric-input aria-label="${label}" value="${rate}"
       onchange="onSubtotalRate('${line.lineId}',this.value,'${field}')"></span><span class="subtotal-rate-text" style="display:none">&times; ${rate}</span>`;
   };
-  const addButton = hasSecond ? "" : `<button type="button" class="btn btn-secondary btn-sm subtotal-more" onclick="addSubtotalMultiplier('${line.lineId}')" title="小計の計算結果にさらに倍率を掛ける">さらに×</button>`;
+  const addButton = hasSecond ? "" : `<button type="button" class="btn-insert-subtotal subtotal-more" onclick="addSubtotalMultiplier('${line.lineId}')" aria-label="さらに×" title="さらに×：小計の計算結果に倍率を掛ける">×</button>`;
   let html = `<tr class="subtotal-row" data-subtotal-id="${esc(line.lineId)}" data-subtotal-stage="first" ${dragAttrs}>
-    <td class="ec-sep no-print"></td><td class="subtotal-label">小計</td>
+    <td class="ec-sep no-print">${addButton}</td><td class="subtotal-label">小計</td>
     ${baseCell(subtotal, 'rateReason', '小計の倍率を掛けた理由')}
     <td class="subtotal-rate-cell">${rateCell('rate', '小計の倍率')}</td>
     <td class="subtotal-eq">=</td><td class="subtotal-value">${fmtNum(first)}</td>
-    <td class="ec-del no-print"><div class="subtotal-actions">${addButton}${actions}</div></td>
+    <td class="ec-del no-print"><div class="subtotal-actions">${actions}</div></td>
   </tr>`;
   if (hasSecond) {
     html += `<tr class="subtotal-row subtotal-second-row" data-subtotal-id="${esc(line.lineId)}" data-subtotal-stage="second">

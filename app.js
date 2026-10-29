@@ -3184,6 +3184,8 @@ function moveCatalogLine(lineId, delta) {
 // ============================================================
 
 function renderEstimateTab() {
+  const printLayout = document.getElementById("estimate-print-layout");
+  if (printLayout) printLayout.value = getEstimatePrintLayout();
   if (typeof syncRenovationSourceNotes === "function") syncRenovationSourceNotes();
   renderProjectInfo();
   renderUnitTabs();
@@ -3573,6 +3575,38 @@ const EST_PRINT_SINGLE_ROW_LIMIT = 30; // 単一項目: 1列あたりの表示�
 const EST_PRINT_MULTI_ROW_LIMIT = 35;  // 複数項目: 従来の1列上限を維持
 const RENOVATION_INTERNAL_ROW_LIMIT = 40; // 社内情報は縮小表記のため明細より多く収容できる
 
+function getEstimatePrintLayout() {
+  return localStorage.getItem("ban_estimate_print_layout") === "compact" ? "compact" : "normal";
+}
+
+function setEstimatePrintLayout(value) {
+  localStorage.setItem("ban_estimate_print_layout", value === "compact" ? "compact" : "normal");
+}
+
+// 各4列（A4では2列）を外側の表の1行にまとめる。
+// ブラウザの印刷組版が実際の高さで改ページするため、長い理由やヘッダーも考慮される。
+// 全体合計をtheadに置き、項目の並び順は左→右→次段を維持する。
+function compactEstimatePrintRows(section) {
+  const pages = [...section.querySelectorAll(":scope > .est-print-page")];
+  if (!pages.length) return;
+  const table = document.createElement("table");
+  table.className = "est-print-page est-compact-print";
+  const head = table.createTHead().insertRow().insertCell();
+  const banner = pages[0].querySelector(".global-totals-print");
+  if (banner) head.appendChild(banner);
+  const body = table.createTBody();
+  pages[0].before(table);
+  pages.forEach(page => {
+    const rowGroup = page.querySelector(".est-print-row");
+    if (rowGroup) {
+      const row = body.insertRow();
+      if (page.classList.contains("has-renovation-print")) row.classList.add("has-renovation-print");
+      row.insertCell().appendChild(rowGroup);
+    }
+    page.remove();
+  });
+}
+
 function estimatePrintRowWeight(html) {
   if (html.includes('sep-row') || html.includes('comment-row')) return 0.2;
   // 小計と再計算は同じ列にまとめ、2行分の高さを確保する。
@@ -3888,6 +3922,7 @@ function renderEstimateLinesForPrint() {
 
     // 列グリッド
     const colsDiv = document.createElement("div");
+    colsDiv.className = "est-print-row";
     colsDiv.style.cssText = "display:flex;width:100%;gap:2px;align-items:flex-start;";
 
     for (let c = 0; c < numCols; c++) {
@@ -3948,6 +3983,7 @@ function renderEstimateLinesForPrint() {
     section.insertBefore(pageDiv, empty);
   }
 
+  if (getEstimatePrintLayout() === "compact") compactEstimatePrintRows(section);
   _shrinkPrintCells(section, printColumnCount >= 3 ? 1527 : 733); // A3横404mm≈1527px / A4縦194mm≈733px
 }
 

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>盤見積もりアプリ</title>
-  <link rel="stylesheet" href="style.css?v=20261029c">
+  <link rel="stylesheet" href="style.css?v=20261029d">
 </head>
 <body>
 
@@ -100,6 +100,12 @@
       </select>
       <button class="btn btn-secondary btn-sm" onclick="copyCurrentEstimate()">コピー</button>
       <button class="btn btn-danger btn-sm" onclick="deleteCurrentEstimate()">削除</button>
+      <label class="estimate-print-layout">印刷配置
+        <select id="estimate-print-layout" onchange="setEstimatePrintLayout(this.value)">
+          <option value="normal">通常：横並び</option>
+          <option value="compact">省スペース：下段へ自動配置</option>
+        </select>
+      </label>
     </div>
 
     <!-- プロジェクト情報 -->
@@ -159,7 +165,7 @@
 <script src="data-cubicle.js?v=20260326e"></script>
 <script src="data-renovation.js?v=20261027c"></script>
 <script src="data-user-defaults.js?v=20261028a"></script>
-<script src="app.js?v=20261029d"></script>
+<script src="app.js?v=20261029e"></script>
 <script src="renovation.js?v=20261028k"></script>
 </body>
 </html>

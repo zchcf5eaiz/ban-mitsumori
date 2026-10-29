@@ -231,6 +231,11 @@ tr[draggable="true"]:active { cursor: grabbing; }
 }
 .comment-input:focus { outline: 1px solid #63b3ed; border-color: #63b3ed; }
 
+.estimate-print-layout { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-left: auto; font-size: 12px; }
+.est-compact-print { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
+.est-compact-print > thead > tr > td { padding: 0; }
+.est-compact-print > tbody > tr > td { padding: 0 0 12px; vertical-align: top; }
+.est-compact-print > tbody > tr:last-child > td { padding-bottom: 0; }
 .subtotal-row { background: #edf2f7 !important; font-weight: 700; border-top: 2px solid #4a5568; }
 .subtotal-row td { padding: 4px 8px; }
 .subtotal-label { text-align: center !important; white-space: nowrap; color: #2d3748; }
@@ -1540,6 +1545,9 @@ tr[draggable="true"]:active { cursor: grabbing; }
 }
 
 @media print {
+  .est-compact-print { break-inside: auto; page-break-inside: auto; }
+  .est-compact-print > thead { display: table-header-group; }
+  .est-compact-print > tbody > tr { break-inside: avoid; page-break-inside: avoid; }
   .subtotal-second-row .subtotal-label { font-size: 6px; }
   @page { size: A4 portrait; margin: 8mm; }
   body { background: #fff; font-size: 10px; }

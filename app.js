@@ -3125,11 +3125,7 @@ function buildCatalogEstimateRows(unit) {
     }
     if (line.type === "subtotal") {
       const subtotal = calcSubtotal(unit.lines, index);
-      const result = Math.ceil(subtotal * line.rate);
-      return `<tr class="subtotal-row"><td class="ec-sep"></td><td class="subtotal-label">小計</td>` +
-        `<td class="subtotal-sum" colspan="2">${fmtNum(subtotal)}</td>` +
-        `<td class="subtotal-rate-cell"><span class="subtotal-rate-input">&times;<input type="text" inputmode="decimal" data-numeric-input value="${line.rate}" onchange="onCatalogSubtotalRate('${line.lineId}',this.value)"></span></td>` +
-        `<td class="subtotal-eq">=</td><td class="subtotal-value">${fmtNum(result)}</td><td class="ec-del">${actions}</td></tr>`;
+      return buildSubtotalRows(line, subtotal, actions);
     }
 
     itemNo++;
@@ -3168,11 +3164,6 @@ function onCatalogLinePrice(lineId, value) {
 
 function onCatalogComment(lineId, value) {
   onCommentText(lineId, value);
-  renderCatalogEstimatePanels();
-}
-
-function onCatalogSubtotalRate(lineId, value) {
-  onSubtotalRate(lineId, value);
   renderCatalogEstimatePanels();
 }
 
@@ -3496,19 +3487,8 @@ function _buildLineRows(lines) {
     }
     if (line.type === "subtotal") {
       const sub = calcSubtotal(lines, i);
-      const result = Math.ceil(sub * line.rate);
-      return `<tr class="subtotal-row" ${dragAttrs}>
-        <td class="ec-sep no-print"></td>
-        <td class="subtotal-label">小計</td>
-        <td class="subtotal-sum" colspan="2">${fmtNum(sub)}</td>
-        <td class="subtotal-rate-cell"><span class="subtotal-rate-input">&times;<input type="text" inputmode="decimal" data-numeric-input value="${line.rate}"
-          onchange="onSubtotalRate('${line.lineId}',this.value)"></span><span class="subtotal-rate-text" style="display:none">&times; ${line.rate}</span></td>
-        <td class="subtotal-eq">=</td>
-        <td class="subtotal-value">${fmtNum(result)}</td>
-        <td class="ec-del no-print">
-          <button class="btn btn-danger btn-sm" onclick="removeLine('${line.lineId}')">&times;</button>
-        </td>
-      </tr>`;
+      const actions = `<button class="btn btn-danger btn-sm" onclick="removeLine('${line.lineId}')" title="小計を削除">&times;</button>`;
+      return buildSubtotalRows(line, sub, actions, dragAttrs);
     }
     if (line.type === "comment") {
       return `<tr class="comment-row" ${dragAttrs}>
@@ -3593,12 +3573,20 @@ const EST_PRINT_SINGLE_ROW_LIMIT = 30; // 単一項目: 1列あたりの表示�
 const EST_PRINT_MULTI_ROW_LIMIT = 35;  // 複数項目: 従来の1列上限を維持
 const RENOVATION_INTERNAL_ROW_LIMIT = 40; // 社内情報は縮小表記のため明細より多く収容できる
 
+function estimatePrintRowWeight(html) {
+  if (html.includes('sep-row') || html.includes('comment-row')) return 0.2;
+  // 小計と再計算は同じ列にまとめ、2行分の高さを確保する。
+  const rows = html.includes('subtotal-second-row') ? 2 : 1;
+  const reasons = (html.match(/class="subtotal-reason-text has-reason"/g) || []).length;
+  return rows + reasons;
+}
+
 function renovationDetailPrintChunks(unit, rowLimit) {
   const rows = _buildLineRows(unit.lines);
   const chunks = [[]];
   const weights = [1]; // 各列の項目名ヘッダー分
   rows.forEach(html => {
-    const weight = (html.includes("sep-row") || html.includes("comment-row")) ? 0.2 : 1;
+    const weight = estimatePrintRowWeight(html);
     let ci = chunks.length - 1;
     if (chunks[ci].length && weights[ci] + weight > rowLimit + 0.01) {
       chunks.push([]);
@@ -3669,9 +3657,8 @@ function renderEstimateLinesForPrint() {
     empty.style.display = "none";
     const rowsHtml = _buildLineRows(lines);
     const theadHtml = _estTheadHtml();
-    const SEP_WEIGHT = 0.2;
     const unitHdrHtml = `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${esc(units[0].unitName)}</td></tr>`;
-    const rowWeights = rowsHtml.map(h => (h.includes('sep-row') || h.includes('comment-row')) ? SEP_WEIGHT : 1.0);
+    const rowWeights = rowsHtml.map(estimatePrintRowWeight);
     const perCol = EST_PRINT_SINGLE_ROW_LIMIT;
     const perPage = perCol * 2;
     section.style.cssText = "display:block; overflow:visible;";
@@ -3764,7 +3751,6 @@ function renderEstimateLinesForPrint() {
   empty.style.display = "none";
   section.style.cssText = "display:block; overflow:visible;";
   const theadHtml = _estTheadHtml();
-  const SEP_WEIGHT = 0.2;
   const perCol = EST_PRINT_MULTI_ROW_LIMIT;
   const printColumnCount = estimatePrintColumnCount(units);
   const numCols = printColumnCount <= 2 ? 2 : 4;
@@ -3827,7 +3813,7 @@ function renderEstimateLinesForPrint() {
         });
         colWeights[ci] += 1.0;
         rows.forEach(h => {
-          const w = (h.includes('sep-row') || h.includes('comment-row')) ? SEP_WEIGHT : 1.0;
+          const w = estimatePrintRowWeight(h);
           curCols[ci].push({ type: 'row', html: h, weight: w });
           colWeights[ci] += w;
         });
@@ -3861,7 +3847,7 @@ function renderEstimateLinesForPrint() {
 
     // 明細行（列が溢れたら右へ）
     for (const h of rowsHtml) {
-      const w = (h.includes('sep-row') || h.includes('comment-row')) ? SEP_WEIGHT : 1.0;
+      const w = estimatePrintRowWeight(h);
       addSlot({ type: 'row', html: h, weight: w });
     }
 
@@ -4187,11 +4173,122 @@ function calcSubtotal(lines, subtotalIndex) {
   return sum;
 }
 
-function onSubtotalRate(lineId, val) {
-  const line = _findLineAnyUnit(lineId);
-  if (line) line.rate = parseFloat(val) || 1.0;
+function subtotalRate(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return 1;
+  const rate = Number(value);
+  return Number.isFinite(rate) && rate >= 0 ? rate : 1;
+}
+
+function hasSubtotalMultiplier(line) {
+  return line.secondRate !== undefined && line.secondRate !== null;
+}
+
+function calcSubtotalResult(subtotal, line) {
+  const first = Math.ceil(subtotal * subtotalRate(line.rate));
+  return hasSubtotalMultiplier(line) ? Math.ceil(first * subtotalRate(line.secondRate)) : first;
+}
+
+function buildSubtotalRows(line, subtotal, actions, dragAttrs = "") {
+  const first = Math.ceil(subtotal * subtotalRate(line.rate));
+  const hasSecond = hasSubtotalMultiplier(line);
+  const baseCell = (amount, field, label) => {
+    const reason = String(line[field] || "");
+    return `<td class="subtotal-base-cell" colspan="2">
+      <input type="text" class="subtotal-reason-input no-print" aria-label="${label}" placeholder="掛けた理由（任意）" value="${escAttr(reason)}"
+        oninput="onSubtotalReason('${line.lineId}',this.value,'${field}')">
+      <span class="subtotal-reason-text${reason.trim() ? ' has-reason' : ''}">${esc(reason)}</span>
+      <span class="subtotal-sum">${fmtNum(amount)}</span>
+    </td>`;
+  };
+  const rateCell = (field, label) => {
+    const rate = subtotalRate(line[field]);
+    return `<span class="subtotal-rate-input">&times;<input type="text" inputmode="decimal" data-numeric-input aria-label="${label}" value="${rate}"
+      onchange="onSubtotalRate('${line.lineId}',this.value,'${field}')"></span><span class="subtotal-rate-text" style="display:none">&times; ${rate}</span>`;
+  };
+  const addButton = hasSecond ? "" : `<button type="button" class="btn btn-secondary btn-sm subtotal-more" onclick="addSubtotalMultiplier('${line.lineId}')" title="小計の計算結果にさらに倍率を掛ける">さらに×</button>`;
+  let html = `<tr class="subtotal-row" data-subtotal-id="${esc(line.lineId)}" data-subtotal-stage="first" ${dragAttrs}>
+    <td class="ec-sep no-print"></td><td class="subtotal-label">小計</td>
+    ${baseCell(subtotal, 'rateReason', '小計の倍率を掛けた理由')}
+    <td class="subtotal-rate-cell">${rateCell('rate', '小計の倍率')}</td>
+    <td class="subtotal-eq">=</td><td class="subtotal-value">${fmtNum(first)}</td>
+    <td class="ec-del no-print"><div class="subtotal-actions">${addButton}${actions}</div></td>
+  </tr>`;
+  if (hasSecond) {
+    html += `<tr class="subtotal-row subtotal-second-row" data-subtotal-id="${esc(line.lineId)}" data-subtotal-stage="second">
+      <td class="ec-sep no-print"></td><td class="subtotal-label">再計算</td>
+      ${baseCell(first, 'secondRateReason', '2段目の倍率を掛けた理由')}
+      <td class="subtotal-rate-cell">${rateCell('secondRate', '小計の結果に掛ける倍率')}</td>
+      <td class="subtotal-eq">=</td><td class="subtotal-value">${fmtNum(calcSubtotalResult(subtotal, line))}</td>
+      <td class="ec-del no-print"><button type="button" class="btn btn-secondary btn-sm" onclick="removeSubtotalMultiplier('${line.lineId}')" title="2段目の倍率だけを解除">解除</button></td>
+    </tr>`;
+  }
+  return html;
+}
+
+function refreshSubtotalViews() {
   if (document.getElementById("tab-estimate")?.classList.contains("active")) renderEstimateLines();
   renderTotals();
+  renderCatalogEstimatePanels();
+}
+
+function refreshSubtotalAmounts() {
+  const amounts = new Map();
+  for (const unit of currentEstimate.units) {
+    unit.lines.forEach((line, index) => {
+      if (line.type !== "subtotal") return;
+      const base = calcSubtotal(unit.lines, index);
+      amounts.set(line.lineId, {
+        base,
+        first: Math.ceil(base * subtotalRate(line.rate)),
+        final: calcSubtotalResult(base, line),
+      });
+    });
+  }
+  document.querySelectorAll("[data-subtotal-id]").forEach(row => {
+    const amount = amounts.get(row.dataset.subtotalId);
+    if (!amount) return;
+    const second = row.dataset.subtotalStage === "second";
+    row.querySelector(".subtotal-sum").textContent = fmtNum(second ? amount.first : amount.base);
+    row.querySelector(".subtotal-value").textContent = fmtNum(second ? amount.final : amount.first);
+  });
+}
+
+function onSubtotalRate(lineId, val, field = "rate") {
+  if (field !== "rate" && field !== "secondRate") return;
+  const line = _findLineAnyUnit(lineId);
+  if (!line || line.type !== "subtotal") return;
+  line[field] = subtotalRate(val);
+  refreshSubtotalViews();
+}
+
+function onSubtotalReason(lineId, value, field) {
+  if (field !== "rateReason" && field !== "secondRateReason") return;
+  const line = _findLineAnyUnit(lineId);
+  if (!line || line.type !== "subtotal") return;
+  line[field] = value;
+  const stage = field === "rateReason" ? "first" : "second";
+  document.querySelectorAll("[data-subtotal-id]").forEach(row => {
+    if (row.dataset.subtotalId !== lineId || row.dataset.subtotalStage !== stage) return;
+    const input = row.querySelector(".subtotal-reason-input");
+    if (input && input.value !== value) input.value = value;
+    const text = row.querySelector(".subtotal-reason-text");
+    text.textContent = value;
+    text.classList.toggle("has-reason", Boolean(value.trim()));
+  });
+}
+
+function addSubtotalMultiplier(lineId) {
+  const line = _findLineAnyUnit(lineId);
+  if (!line || line.type !== "subtotal" || hasSubtotalMultiplier(line)) return;
+  line.secondRate = 1;
+  refreshSubtotalViews();
+}
+
+function removeSubtotalMultiplier(lineId) {
+  const line = _findLineAnyUnit(lineId);
+  if (!line || line.type !== "subtotal") return;
+  delete line.secondRate;
+  refreshSubtotalViews();
 }
 
 // ============================================================
@@ -4411,7 +4508,7 @@ function calcLinesGrandTotal(lines) {
     if (line.type === "item" || line.type === "custom") {
       blockSum += line.qty * line.unitPrice;
     } else if (line.type === "subtotal") {
-      total += Math.ceil(blockSum * line.rate);
+      total += calcSubtotalResult(blockSum, line);
       blockSum = 0;
     }
   }
@@ -4435,6 +4532,7 @@ function calcGrandTotal() { return calcLinesGrandTotal(activeUnit().lines); }
 function calcListPrice() { return calcUnitPricing(activeUnit()).list; }
 
 function renderTotals() {
+  refreshSubtotalAmounts();
   const unit = activeUnit();
   const pricing = calcUnitPricing(unit);
   document.getElementById("total-grand").textContent = fmtNum(pricing.raw);

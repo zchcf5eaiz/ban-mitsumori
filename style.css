@@ -235,10 +235,17 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .subtotal-row td { padding: 4px 8px; }
 .subtotal-label { text-align: center !important; color: #2d3748; }
 .subtotal-sum { text-align: right !important; font-family: monospace; color: #4a5568; }
+.subtotal-base-cell { text-align: right !important; }
+.subtotal-base-cell .subtotal-reason-input { display: block; width: 100%; min-width: 0; box-sizing: border-box; margin-bottom: 3px; padding: 3px 4px; text-align: left; font-size: 11px; font-weight: 400; border: 1px solid #cbd5e0; border-radius: 3px; background: #fff; }
+.subtotal-reason-text { display: none; }
 .subtotal-rate-cell { text-align: center !important; white-space: nowrap; color: #718096; }
 .subtotal-rate-cell input { width: 55px; text-align: center; font-weight: 700; }
 .subtotal-eq { text-align: center !important; color: #718096; font-size: 0.9em; }
 .subtotal-value { text-align: right; font-family: monospace; color: #2b6cb0; }
+.subtotal-actions { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.subtotal-more { padding: 3px 5px; font-size: 10px; }
+.subtotal-second-row { border-top: 1px dashed #94a3b8; background: #e6f2ff !important; }
+.subtotal-second-row .subtotal-label { white-space: nowrap; font-size: 10px; }
 .btn-insert-subtotal {
   background: none; border: 1px solid #a0aec0; color: #4a5568;
   cursor: pointer; font-size: 0.7rem; padding: 1px 4px; border-radius: 3px;
@@ -1533,6 +1540,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
 }
 
 @media print {
+  .subtotal-second-row .subtotal-label { font-size: 6px; }
   @page { size: A4 portrait; margin: 8mm; }
   body { background: #fff; font-size: 10px; }
   .app-header { position: static; }
@@ -1620,6 +1628,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
   .subtotal-row { background: #edf2f7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .subtotal-rate-input { display: none !important; }
   .subtotal-rate-text { display: inline !important; }
+  .subtotal-reason-text.has-reason { display: block; white-space: normal; overflow-wrap: anywhere; text-align: left; font: 8px/1.2 sans-serif; color: #2d3748; }
   .totals-table .net-row td { background: #e8f5e9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .totals-table td { padding: 3px 8px; font-size: 9px; }
   .notes-section { padding: 6px 10px; }

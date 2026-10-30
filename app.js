@@ -59,7 +59,28 @@ const matrixBasePrices = {};
 function loadMaster() {
   try {
     const d = localStorage.getItem(STORAGE_MASTER);
-    if (d) return JSON.parse(d);
+    if (d) {
+      let saved = JSON.parse(d);
+      if (Array.isArray(saved)) {
+        const defaultById = new Map(DEFAULT_MASTER_ITEMS.map(item => [item.id, item]));
+        // 試作時に分かれていたDS/DCSを共通表へ移行する。
+        saved = saved
+          .filter(item => !/^ADC\d+$/.test(item.id) && item.id !== "ADS03")
+          .map(item => {
+            const currentDefault = defaultById.get(item.id);
+            if (/^ADS\d+$/.test(item.id) && item.name === "DS" && currentDefault) {
+              return JSON.parse(JSON.stringify(currentDefault));
+            }
+            return item;
+          });
+        // 既存PCの編集価格を維持したまま、後から追加された初期品目だけ補完する。
+        const savedIds = new Set(saved.map(item => item.id));
+        for (const defaultItem of DEFAULT_MASTER_ITEMS) {
+          if (!savedIds.has(defaultItem.id)) saved.push(JSON.parse(JSON.stringify(defaultItem)));
+        }
+        return saved;
+      }
+    }
   } catch {}
   return JSON.parse(JSON.stringify(DEFAULT_MASTER_ITEMS));
 }
@@ -829,7 +850,17 @@ function renderMasterTable() {
         for (const n of ns) allSingleNames.add(n);
       }
       const singleZoneMerged = [];
-      for (const md of mergedDefs) {
+      let lgPrimaryGridOpen = false;
+      for (let mdi = 0; mdi < mergedDefs.length; mdi++) {
+        const md = mergedDefs[mdi];
+        if (cg.id === "A" && mdi === 0) {
+          html += `<div class="cat-lg-primary-grid">`;
+          lgPrimaryGridOpen = true;
+        }
+        if (cg.id === "A" && mdi === 2 && lgPrimaryGridOpen) {
+          html += `</div>`;
+          lgPrimaryGridOpen = false;
+        }
         if (singleZoneDefs.length > 0 && md.singleZone) {
           singleZoneMerged.push(md);
         } else {
@@ -838,6 +869,7 @@ function renderMasterTable() {
         for (const g of md.groups) mergedNames.add(g.nameGroup);
         if (md.hideNames) for (const n of md.hideNames) mergedNames.add(n);
       }
+      if (lgPrimaryGridOpen) html += `</div>`;
       // 単品ゾーン描画
       if (singleZoneDefs.length > 0) {
         let singleBlockNum = 0;
@@ -2330,6 +2362,15 @@ const MERGED_MATRICES = {
       ],
       accent: true,
       singleZone: true,
+    },
+    {
+      title: "DS・DCS",
+      rows: ["30A", "60A", "100A", "200A"],
+      groups: [
+        { label: "DS・DCS", nameGroup: "DS・DCS", cols: ["2P", "3P", "4P"] },
+      ],
+      highlightCols: ["3P"],
+      accent: true,
     }
   ]
 };

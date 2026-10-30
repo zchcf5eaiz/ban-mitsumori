@@ -502,6 +502,11 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .pbox-tools-grid > .pbox-calc { width: 100%; max-width: none; }
 .pbox-tools-grid > .pbox-calc-options { grid-column: span 2; }
 
+/* 分電盤の主幹・分岐は、横長表示で一組として扱う。通常幅では従来どおり縦並び。 */
+.cat-lg-primary-grid {
+  display: contents;
+}
+
 /* カテゴリ内テーブル 2段レイアウト */
 .cat-tables-stack {
   display: flex;
@@ -796,6 +801,135 @@ tr[draggable="true"]:active { cursor: grabbing; }
 }
 .mg-matrix-row {
   display: flex; align-items: flex-start; gap: 0;
+}
+
+/* LG 34GL750相当の横長画面: 余白を表の整理に使い、選択中パネルは一定幅に保つ。 */
+@media screen and (min-width: 2100px) {
+  .catalog-workspace {
+    grid-template-columns: 76px minmax(0, 1fr) 600px;
+    gap: 12px;
+    padding: 10px 12px 14px;
+  }
+  .catalog-main {
+    padding: 2px 2px 14px;
+  }
+  .catalog-toc {
+    padding: 5px;
+  }
+  .catalog-toc button {
+    padding: 5px 2px;
+  }
+  .cat-block {
+    margin-bottom: 14px;
+  }
+  .cat-tables {
+    padding: 8px;
+    gap: 8px;
+  }
+  #master-cat-A > .cat-tables > .cat-lg-primary-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  #master-cat-A .cat-lg-primary-grid > .name-group-wide,
+  #master-cat-A .cat-lg-primary-grid .mg-matrix {
+    width: 100%;
+    min-width: 0;
+  }
+  #master-cat-A > .cat-tables > .name-group-wide {
+    flex: 1 1 calc(50% - 4px);
+    width: calc(50% - 4px);
+    min-width: 0;
+    margin: 0;
+  }
+  #master-cat-A > .cat-tables > .name-group-wide .mg-matrix {
+    width: 100%;
+  }
+  #master-cat-A > .cat-tables > .cubicle-single-zone {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+  #master-cat-A > .cat-tables > .cubicle-single-zone .cat-single-grid3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 8px;
+  }
+  #master-cat-C > .cat-tables > .name-group-wide,
+  #master-cat-C > .cat-tables > .name-group-wide .mg-matrix {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+  }
+  #master-cat-F > .cat-tables > .name-group:not(.name-group-wide) {
+    flex: 0 0 calc(25% - 4px);
+    min-width: 220px;
+  }
+  #master-cat-F > .cat-tables > .cat-inline-img {
+    flex: 1 1 calc(75% - 4px);
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    background: #f7fafc;
+  }
+  #master-cat-F > .cat-tables > .cat-inline-img img {
+    width: min(100%, 900px);
+    max-width: 900px;
+  }
+
+  /* キュービクルもLG幅では内容量に合わせて横幅を配分する。 */
+  #cubicle-content .cubicle-hpair {
+    display: grid;
+    gap: 8px;
+    align-items: start;
+  }
+  #cubicle-content .cubicle-hpair-col {
+    width: 100%;
+    min-width: 0;
+  }
+  #cubicle-content .cubicle-hpair-col > .name-group,
+  #cubicle-content .cubicle-hpair-col > .name-group-wide,
+  #cubicle-content .cubicle-hpair-col .mg-table,
+  #cubicle-content .cubicle-hpair-col .mg-matrix {
+    width: 100%;
+    min-width: 0;
+  }
+  #cubicle-cat-K1 .cubicle-hpair {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+  #cubicle-cat-K4 .cubicle-hpair {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+  }
+  #cubicle-cat-K5 .cubicle-hpair {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  #cubicle-cat-K6 .cubicle-hpair {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.45fr) minmax(0, .6fr);
+  }
+  #cubicle-cat-K3 > .cat-tables > .name-group-wide,
+  #cubicle-cat-K7 > .cat-tables > .name-group-wide,
+  #cubicle-cat-K8 > .cat-tables > .name-group-wide,
+  #cubicle-cat-K3 > .cat-tables > .name-group-wide .mg-matrix,
+  #cubicle-cat-K7 > .cat-tables > .name-group-wide .mg-matrix,
+  #cubicle-cat-K8 > .cat-tables > .name-group-wide .mg-matrix {
+    width: 100%;
+    min-width: 0;
+  }
+  #cubicle-cat-K5 > .cat-tables > .name-group-wide {
+    flex: 0 0 calc(50% - 4px);
+    width: calc(50% - 4px);
+    min-width: 0;
+  }
+  #cubicle-cat-K5 > .cat-tables > .name-group-wide .mg-matrix {
+    width: 100%;
+  }
+
 }
 .mg-footer-table {
   border-left: none;

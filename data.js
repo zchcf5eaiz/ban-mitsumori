@@ -358,6 +358,7 @@ const DEFAULT_MASTER_ITEMS = [
   { id: "ADS10", category: "A", name: "DS・DCS", spec: "200A 2P", unit: "台", basePrice: 145, note: "" },
   { id: "ADS11", category: "A", name: "DS・DCS", spec: "200A 3P", unit: "台", basePrice: 217, note: "" },
   { id: "ADS12", category: "A", name: "DS・DCS", spec: "200A 4P", unit: "台", basePrice: 268, note: "" },
+  { id: "ADS13", category: "A", name: "DS・DCS", spec: "300A 3P", unit: "台", basePrice: 408, note: "" },
   { id: "C001", category: "B", name: "リモコンリレー/トランス", spec: "RRy（片切）", unit: "個", basePrice: 16, note: "" },
   { id: "C002", category: "B", name: "リモコンリレー/トランス", spec: "RRy（両切）", unit: "個", basePrice: 29, note: "" },
   { id: "C003", category: "B", name: "リモコンリレー/トランス", spec: "RTr", unit: "台", basePrice: 41, note: "" },

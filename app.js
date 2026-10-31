@@ -2365,7 +2365,7 @@ const MERGED_MATRICES = {
     },
     {
       title: "DS・DCS",
-      rows: ["30A", "60A", "100A", "200A"],
+      rows: ["30A", "60A", "100A", "200A", "300A"],
       groups: [
         { label: "DS・DCS", nameGroup: "DS・DCS", cols: ["2P", "3P", "4P"] },
       ],

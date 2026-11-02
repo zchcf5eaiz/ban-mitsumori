@@ -1898,10 +1898,12 @@ function createAndActivateRenovationUnit(initialState = null) {
   if (reuseCurrent) {
     current.unitName = unitName;
     current.renovation = initialState || createRenovationState();
+    if (typeof current.includeInOverallTotals !== "boolean") current.includeInOverallTotals = true;
   } else {
     currentEstimate.units.push({
       unitId: genId(), unitName, lines: [],
       listRate: DEFAULT_RATES.listRate, netRate: DEFAULT_RATES.netRate,
+      includeInOverallTotals: true,
       renovation: initialState || createRenovationState(),
     });
     activeUnitIndex = currentEstimate.units.length - 1;

@@ -499,6 +499,7 @@ function createNewEstimate() {
       lines: [],
       listRate: DEFAULT_RATES.listRate,
       netRate: DEFAULT_RATES.netRate,
+      includeInOverallTotals: true,
     }],
     notes: "",
   };
@@ -584,13 +585,22 @@ function migrateEstimate(e) {
       lines: migrated.lines || [],
       listRate: migrated.listRate != null ? migrated.listRate : DEFAULT_RATES.listRate,
       netRate: migrated.netRate != null ? migrated.netRate : DEFAULT_RATES.netRate,
+      includeInOverallTotals: true,
     }];
     delete migrated.lines;
     delete migrated.listRate;
     delete migrated.netRate;
   }
-  for (const unit of migrated.units) unit.lines = migrateEstimateLines(unit.lines);
+  for (const unit of migrated.units) {
+    unit.lines = migrateEstimateLines(unit.lines);
+    // 旧データは従来どおり、すべて全体合計の対象として扱う。
+    if (typeof unit.includeInOverallTotals !== "boolean") unit.includeInOverallTotals = true;
+  }
   return migrated;
+}
+
+function unitIncludedInOverallTotals(unit) {
+  return unit?.includeInOverallTotals !== false;
 }
 
 /** 見積行は追加時の名称・仕様を優先し、マスタ更新による別商品表示を防ぐ。 */
@@ -3282,6 +3292,7 @@ function addUnit() {
     lines: [],
     listRate: prev ? prev.listRate : DEFAULT_RATES.listRate,
     netRate: prev ? prev.netRate : DEFAULT_RATES.netRate,
+    includeInOverallTotals: true,
   });
   activeUnitIndex = currentEstimate.units.length - 1;
   _revealActiveUnitAfterRender = true;
@@ -3324,6 +3335,7 @@ function deleteUnit(event, idx) {
     currentEstimate.units.push({
       unitId: genId(), unitName: "項目1", lines: [],
       listRate: DEFAULT_RATES.listRate, netRate: DEFAULT_RATES.netRate,
+      includeInOverallTotals: true,
     });
   }
   if (activeUnitIndex >= currentEstimate.units.length) {
@@ -3341,6 +3353,31 @@ function renameUnit(event, idx) {
     unit.unitName = newName.trim();
     renderEstimateTab();
   }
+}
+
+function copyUnitWithinEstimate(event, idx) {
+  event.stopPropagation();
+  const sourceUnit = currentEstimate.units[idx];
+  if (!sourceUnit) return;
+  const copy = cloneUnitForEstimate(sourceUnit);
+  // コピー直後は、依頼どおり全体合計の対象をデフォルトにする。
+  copy.includeInOverallTotals = true;
+  currentEstimate.units.splice(idx + 1, 0, copy);
+  activeUnitIndex = idx + 1;
+  _revealActiveUnitAfterRender = true;
+  rebuildClickCounts();
+  renderEstimateTab();
+  showToast(`「${sourceUnit.unitName}」を同じ見積内にコピーしました`);
+}
+
+function setUnitIncludedInOverallTotals(event, idx, included) {
+  event.stopPropagation();
+  const unit = currentEstimate.units[idx];
+  if (!unit) return;
+  unit.includeInOverallTotals = !!included;
+  renderEstimateLines();
+  renderTotals();
+  showToast(`「${unit.unitName}」を全体合計の${included ? "対象" : "対象外"}にしました`);
 }
 
 function renderProjectInfo() {
@@ -3393,8 +3430,10 @@ function renderEstimateLines() {
   for (let i = 0; i < units.length; i++) {
     const unit = units[i];
     const isActive = i === activeUnitIndex;
+    const isIncludedInOverall = unitIncludedInOverallTotals(unit);
     const col = document.createElement("div");
-    col.className = "unit-col" + (isActive ? " unit-col-active" : "");
+    col.className = "unit-col" + (isActive ? " unit-col-active" : "") +
+      (isIncludedInOverall ? "" : " unit-col-overall-excluded");
 
     // 列ヘッダー（クリックで追加先切替）
     const hdr = document.createElement("div");
@@ -3402,10 +3441,15 @@ function renderEstimateLines() {
     hdr.innerHTML = `
       <span class="unit-col-name" onclick="activateUnit(${i})">${esc(unit.unitName)}</span>
       <span class="unit-active-badge">${isActive ? "← 追加先" : ""}</span>
+      <label class="unit-overall-toggle${isIncludedInOverall ? "" : " excluded"}" title="全体の定価・NET合計への反映" onclick="event.stopPropagation()">
+        <input type="checkbox" ${isIncludedInOverall ? "checked" : ""} onchange="setUnitIncludedInOverallTotals(event,${i},this.checked)">
+        <span>${isIncludedInOverall ? "全体合計" : "合計対象外"}</span>
+      </label>
       ${units.length > 1 ? `
         <button class="unit-col-btn unit-col-move" onclick="moveUnit(event,${i},-1)" title="左へ移動" aria-label="${escAttr(unit.unitName)}を左へ移動"${i === 0 ? " disabled" : ""}>◀</button>
         <button class="unit-col-btn unit-col-move" onclick="moveUnit(event,${i},1)" title="右へ移動" aria-label="${escAttr(unit.unitName)}を右へ移動"${i === units.length - 1 ? " disabled" : ""}>▶</button>
       ` : ""}
+      <button class="unit-col-btn unit-col-copy" onclick="copyUnitWithinEstimate(event,${i})" title="この項目を同じ見積内にコピー" aria-label="${escAttr(unit.unitName)}をコピー">⧉</button>
       <button class="unit-col-btn" onclick="renameUnit(event,${i})" title="名前変更">✏</button>
       ${units.length > 1 || unit.renovation?.enabled ? `<button class="unit-col-btn unit-col-del" onclick="deleteUnit(event,${i})" title="削除">&times;</button>` : ""}
     `;
@@ -3452,7 +3496,7 @@ function renderEstimateLines() {
     col.appendChild(uf);
     if (unit?.renovation?.enabled && typeof renovationInternalCardHtml === "function") {
       const pair = document.createElement("div");
-      pair.className = "renovation-screen-pair";
+      pair.className = "renovation-screen-pair" + (isIncludedInOverall ? "" : " unit-overall-excluded");
       pair.appendChild(col);
       const internalCol = document.createElement("aside");
       internalCol.className = "renovation-screen-internal-col";
@@ -3616,6 +3660,19 @@ const EST_PRINT_SINGLE_ROW_LIMIT = 30; // 単一項目: 1列あたりの表示�
 const EST_PRINT_MULTI_ROW_LIMIT = 35;  // 複数項目: 従来の1列上限を維持
 const RENOVATION_INTERNAL_ROW_LIMIT = 40; // 社内情報は縮小表記のため明細より多く収容できる
 
+function printUnitHeading(unit, suffix = "") {
+  const excluded = !unitIncludedInOverallTotals(unit);
+  return `${esc(unit.unitName)}${esc(suffix)}` + (excluded
+    ? ` <span class="unit-print-overall-excluded">全体合計対象外</span>`
+    : "");
+}
+
+function printUnitExclusionBadge(unit) {
+  return unitIncludedInOverallTotals(unit)
+    ? ""
+    : ` <span class="unit-print-overall-excluded">全体合計対象外</span>`;
+}
+
 function getEstimatePrintLayout() {
   return localStorage.getItem("ban_estimate_print_layout") === "compact" ? "compact" : "normal";
 }
@@ -3732,7 +3789,7 @@ function renderEstimateLinesForPrint() {
     empty.style.display = "none";
     const rowsHtml = _buildLineRows(lines);
     const theadHtml = _estTheadHtml();
-    const unitHdrHtml = `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${esc(units[0].unitName)}</td></tr>`;
+    const unitHdrHtml = `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${printUnitHeading(units[0])}</td></tr>`;
     const rowWeights = rowsHtml.map(estimatePrintRowWeight);
     const perCol = EST_PRINT_SINGLE_ROW_LIMIT;
     const perPage = perCol * 2;
@@ -3777,13 +3834,13 @@ function renderEstimateLinesForPrint() {
         if (pageIndex > 0) pageDiv.style.pageBreakBefore = "always";
         slots.slice(start, start + columnsPerPage).forEach(slot => {
           if (slot.type === "detail") {
-            const heading = `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${esc(units[0].unitName)}${slot.index ? "（続き）" : ""}</td></tr>`;
+            const heading = `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${printUnitHeading(units[0], slot.index ? "（続き）" : "")}</td></tr>`;
             pageDiv.appendChild(_makeTable(slot.rows, true, heading));
           } else {
             const internalCol = document.createElement("div");
             internalCol.className = "renovation-internal-print-column";
             internalCol.style.cssText = "width:100%;max-width:none;min-width:0;";
-            internalCol.innerHTML = `<div class="renovation-internal-print-title">社内用・改修計算情報${slot.index ? "（続き）" : ""}</div>${slot.html}`;
+            internalCol.innerHTML = `<div class="renovation-internal-print-title">社内用・改修計算情報${slot.index ? "（続き）" : ""}${printUnitExclusionBadge(units[0])}</div>${slot.html}`;
             pageDiv.appendChild(internalCol);
           }
         });
@@ -3834,9 +3891,11 @@ function renderEstimateLinesForPrint() {
   // 全体合計を計算
   let gList = 0, gNet = 0;
   for (const u of units) {
+    if (!unitIncludedInOverallTotals(u)) continue;
     const unitPricing = calcUnitPricing(u);
     gList += unitPricing.list; gNet += unitPricing.net;
   }
+  const includedUnitCount = units.filter(unitIncludedInOverallTotals).length;
 
   // ハイブリッド方式: 各ユニットは必ず列の先頭から開始（1ユニット=1列）
   // ユニット内で行数が列上限を超えたら右の列に流れる（新聞フロー）
@@ -3883,7 +3942,7 @@ function renderEstimateLinesForPrint() {
       plan.detailColumns.forEach((rows, detailIndex) => {
         curCols[ci].push({
           type: 'row',
-          html: `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${esc(u.unitName)}${detailIndex ? "（続き）" : ""}</td></tr>`,
+          html: `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${printUnitHeading(u, detailIndex ? "（続き）" : "")}</td></tr>`,
           weight: 1.0
         });
         colWeights[ci] += 1.0;
@@ -3906,7 +3965,7 @@ function renderEstimateLinesForPrint() {
         advanceCol();
       });
       plan.internalColumns.forEach((html, internalIndex) => {
-        curCols[ci].push({ type: 'renovation-internal-html', html, index: internalIndex, weight: perCol });
+        curCols[ci].push({ type: 'renovation-internal-html', html, index: internalIndex, excludedFromOverall: !unitIncludedInOverallTotals(u), weight: perCol });
         colWeights[ci] = perCol;
         if (internalIndex < plan.internalColumns.length - 1 || ui < units.length - 1) advanceCol();
       });
@@ -3916,7 +3975,7 @@ function renderEstimateLinesForPrint() {
     // ユニットヘッダー
     addSlot({
       type: 'row',
-      html: `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${esc(u.unitName)}</td></tr>`,
+      html: `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${printUnitHeading(u)}</td></tr>`,
       weight: 1.0
     });
 
@@ -3958,7 +4017,7 @@ function renderEstimateLinesForPrint() {
     const gBanner = document.createElement("div");
     gBanner.className = "global-totals-print";
     gBanner.style.cssText = "display:flex;gap:32px;font-size:12px;font-weight:bold;padding:6px 12px;border:2px solid #1e3a5f;background:#1e3a5f;color:#fff;margin-bottom:5px;-webkit-print-color-adjust:exact;print-color-adjust:exact;";
-    gBanner.innerHTML = `<span>定価合計: <span style="font-size:14px;">${fmtNum(gList)}</span> 円</span><span style="color:#fde68a;">NET合計: <span style="font-size:14px;">${fmtNum(gNet)}</span> 円</span>`;
+    gBanner.innerHTML = `<span>対象 ${includedUnitCount}/${units.length}項目</span><span>定価合計: <span style="font-size:14px;">${fmtNum(gList)}</span> 円</span><span style="color:#fde68a;">NET合計: <span style="font-size:14px;">${fmtNum(gNet)}</span> 円</span>`;
     pageDiv.appendChild(gBanner);
 
     // 列グリッド
@@ -4011,7 +4070,7 @@ function renderEstimateLinesForPrint() {
           const internal = document.createElement("div");
           internal.className = "renovation-internal-print-column";
           const internalHtml = slot.type === 'renovation-internal-html' ? slot.html : renovationInternalCardHtml(slot.unit);
-          internal.innerHTML = `<div class="renovation-internal-print-title">社内用・改修計算情報${slot.index ? "（続き）" : ""}</div>${internalHtml}`;
+          internal.innerHTML = `<div class="renovation-internal-print-title">社内用・改修計算情報${slot.index ? "（続き）" : ""}${slot.excludedFromOverall ? ` <span class="unit-print-overall-excluded">全体合計対象外</span>` : ""}</div>${internalHtml}`;
           colContainer.appendChild(internal);
         } else {
           rowBuf.push(slot.html);
@@ -4642,17 +4701,19 @@ function renderTotals() {
   if (units.length > 1) {
     let gList = 0, gNet = 0;
     for (const u of units) {
+      if (!unitIncludedInOverallTotals(u)) continue;
       const unitPricing = calcUnitPricing(u);
       gList += unitPricing.list; gNet += unitPricing.net;
     }
+    const includedCount = units.filter(unitIncludedInOverallTotals).length;
     table.insertAdjacentHTML("beforeend", `
       <tr class="global-total-row" style="border-top:2px solid #999;">
-        <td class="label-cell" style="font-size:11px;color:#555;">全体 定価合計</td>
+        <td class="label-cell" style="font-size:11px;color:#555;">全体 定価合計 <small>対象 ${includedCount}/${units.length}項目</small></td>
         <td class="rate-cell"></td>
         <td class="value-cell" style="font-weight:bold;">${fmtNum(gList)}</td>
       </tr>
       <tr class="global-total-row net-row">
-        <td class="label-cell" style="font-size:11px;color:#555;">全体 NET合計</td>
+        <td class="label-cell" style="font-size:11px;color:#555;">全体 NET合計 <small>対象 ${includedCount}/${units.length}項目</small></td>
         <td class="rate-cell"></td>
         <td class="value-cell" style="font-weight:bold;color:#744210;">${fmtNum(gNet)}</td>
       </tr>
@@ -4894,6 +4955,7 @@ function cloneUnitForEstimate(sourceUnit, ignoredUnit = null) {
   const copy = JSON.parse(JSON.stringify(sourceUnit));
   copy.unitId = genId();
   copy.unitName = uniqueCopiedUnitName(copy.unitName, ignoredUnit);
+  copy.includeInOverallTotals = true;
   if (copy.renovation?.enabled) {
     const equipmentIdMap = new Map();
     (copy.renovation.equipment || []).forEach(row => {
@@ -5090,6 +5152,7 @@ function renderSummary(ids) {
     let listPrice = 0, netRaw = 0;
     if (est.units) {
       for (const u of est.units) {
+        if (!unitIncludedInOverallTotals(u)) continue;
         const unitPricing = calcUnitPricing(u);
         listPrice += unitPricing.list;
         netRaw += unitPricing.net;
@@ -5363,16 +5426,25 @@ document.addEventListener("DOMContentLoaded", () => {
 .multi-unit-container{display:flex;gap:12px;overflow-x:auto;align-items:flex-start;padding-bottom:8px;}
 .unit-col{flex:0 0 auto;min-width:320px;border:2px solid #e2e8f0;border-radius:6px;overflow:hidden;}
 .unit-col-active{border-color:#4299e1;}
-.unit-col-header{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f7fafc;border-bottom:1px solid #e2e8f0;cursor:pointer;}
+.unit-col-header{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:5px 8px;background:#f7fafc;border-bottom:1px solid #e2e8f0;cursor:pointer;}
 .unit-col-active .unit-col-header{background:#ebf8ff;border-color:#bee3f8;}
 .unit-col-name{font-weight:600;font-size:13px;flex:1;}
 .unit-active-badge{font-size:11px;color:#4299e1;white-space:nowrap;}
+.unit-overall-toggle{order:20;display:flex;align-items:center;gap:4px;margin-left:auto;padding:2px 5px;border:1px solid #9ae6b4;border-radius:4px;background:#f0fff4;color:#276749;cursor:pointer;font-size:10px;font-weight:700;white-space:nowrap;}
+.unit-overall-toggle input{width:13px;height:13px;margin:0;accent-color:#38a169;cursor:pointer;}
+.unit-overall-toggle.excluded{border-color:#cbd5e0;background:#edf2f7;color:#718096;}
 .unit-col-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:1px 3px;color:#718096;}
 .unit-col-btn:hover{color:#2d3748;}
 .unit-col-btn:disabled{cursor:default;opacity:.25;color:#a0aec0;}
 .unit-col-move{font-size:11px;line-height:1;padding:4px;}
+.unit-col-copy{color:#2b6cb0;font-size:15px;}
 .unit-col-del{color:#e53e3e!important;}
 .unit-col-del:hover{color:#c53030!important;}
+.unit-col-overall-excluded{border-color:#a0aec0;background:#edf2f7;}
+.unit-col-overall-excluded>.estimate-table,.unit-col-overall-excluded>.unit-col-empty,.unit-col-overall-excluded>.unit-col-footer{opacity:.42;filter:grayscale(.35);}
+.unit-col-overall-excluded>.unit-col-header{background:#e2e8f0;border-color:#cbd5e0;}
+.renovation-screen-pair.unit-overall-excluded>.renovation-screen-internal-col{opacity:.42;filter:grayscale(.35);}
+.unit-print-overall-excluded{display:inline-block;margin-left:5px;padding:0 4px;border:1px solid #718096;border-radius:2px;background:#edf2f7;color:#4a5568;font-size:7px;font-weight:700;vertical-align:middle;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 .unit-col-empty{padding:12px;color:#999;font-size:12px;}
 .unit-col-empty.drop-target{background:#ebf8ff;border:2px dashed #4299e1;color:#2b6cb0;}
 .unit-col-footer{border-top:2px solid #e2e8f0;background:#f7fafc;font-size:12px;}

@@ -413,7 +413,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .catalog-estimate-table thead { position: sticky; top: 0; z-index: 2; }
 .catalog-estimate-table thead th { padding: 5px 3px; font-size: 10px; }
 .catalog-estimate-table tbody td { padding: 4px 3px; font-size: 10px; }
-.catalog-estimate-table .col-sep { width: 12px; }
+.catalog-estimate-table .col-sep { width: 48px; }
 .catalog-estimate-table .col-no { width: 24px; }
 .catalog-estimate-table .col-name { width: 24%; }
 .catalog-estimate-table .col-spec { width: 20%; }
@@ -425,6 +425,10 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .catalog-estimate-table .ec-price input, .catalog-estimate-table .ec-qty input { min-width: 0; }
 .catalog-estimate-table .catalog-table-actions { margin: 0; justify-content: center; flex-wrap: nowrap; }
 .catalog-estimate-table .catalog-table-actions button { min-width: 20px; padding: 0 3px; font-size: 10px; }
+.catalog-estimate-table .catalog-row-insert-tools { display: flex; align-items: center; justify-content: center; gap: 0; white-space: nowrap; }
+.catalog-estimate-table .catalog-row-insert-tools .btn-sep,
+.catalog-estimate-table .catalog-row-insert-tools .btn-cmt,
+.catalog-estimate-table .catalog-row-insert-tools .btn-insert-subtotal { min-width: 0; margin: 0; padding: 2px; font-size: 9px; }
 .catalog-line {
   margin-bottom: 6px;
   padding: 6px;

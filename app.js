@@ -3091,7 +3091,7 @@ let _catalogPanelRenderedUnitKey = null;
 let _catalogPanelRenderedLineCount = 0;
 let _catalogPanelRenderGeneration = 0;
 
-function renderCatalogEstimatePanels() {
+function renderCatalogEstimatePanels(options = {}) {
   const panelIds = ["master-estimate-panel", "cubicle-estimate-panel"];
   const unit = activeUnit();
   const nextUnitKey = unit.unitId || `${currentEstimate.id}:${activeUnitIndex}`;
@@ -3109,7 +3109,7 @@ function renderCatalogEstimatePanels() {
     });
   }
 
-  const scrollToBottom = _catalogPanelRenderedUnitKey === nextUnitKey &&
+  const scrollToBottom = !options.preserveScroll && _catalogPanelRenderedUnitKey === nextUnitKey &&
     unit.lines.length > _catalogPanelRenderedLineCount;
   _catalogPanelRenderedUnitKey = nextUnitKey;
   _catalogPanelRenderedLineCount = unit.lines.length;
@@ -3170,7 +3170,9 @@ function buildCatalogEstimateRows(unit) {
       return `<tr class="sep-row"><td colspan="7">区切り線</td><td class="ec-del">${actions}</td></tr>`;
     }
     if (line.type === "comment") {
-      return `<tr class="comment-row"><td class="ec-sep"></td><td colspan="6" class="ec-comment-cell">` +
+      return `<tr class="comment-row"><td class="ec-sep"><div class="catalog-row-insert-tools">` +
+        `<button class="btn-sep" onclick="insertSep('${line.lineId}')" title="下に区切り線を挿入">▶</button>` +
+        `<button class="btn-cmt" onclick="insertComment('${line.lineId}')" title="下にコメント行を挿入">💬</button></div></td><td colspan="6" class="ec-comment-cell">` +
         `<input type="text" class="comment-input" value="${escAttr(line.text || "")}" onchange="onCatalogComment('${line.lineId}',this.value)" placeholder="コメントを入力..."></td>` +
         `<td class="ec-del">${actions}</td></tr>`;
     }
@@ -3195,7 +3197,11 @@ function buildCatalogEstimateRows(unit) {
       spec = display.spec;
       srcBadge = display.isCubicle ? '<span class="src-cubicle">Q</span>' : '';
     }
-    return `<tr><td class="ec-sep"></td><td class="ec-no">${itemNo}</td><td class="ec-name">${srcBadge}${esc(name)}</td>` +
+    return `<tr><td class="ec-sep"><div class="catalog-row-insert-tools">` +
+      `<button class="btn-sep" onclick="insertSep('${line.lineId}')" title="下に区切り線を挿入">▶</button>` +
+      `<button class="btn-cmt" onclick="insertComment('${line.lineId}')" title="下にコメント行を挿入">💬</button>` +
+      `<button class="btn-insert-subtotal" onclick="insertSubtotal('${line.lineId}')" title="小計・掛率行を挿入">Σ</button>` +
+      `</div></td><td class="ec-no">${itemNo}</td><td class="ec-name">${srcBadge}${esc(name)}</td>` +
       `<td class="ec-spec">${esc(spec)}</td>` +
       `<td class="ec-price"><input type="text" inputmode="decimal" data-numeric-input value="${line.unitPrice}" onchange="onCatalogLinePrice('${line.lineId}',this.value)" onfocus="this.select()"></td>` +
       `<td class="ec-qty"><input type="number" min="0" step="1" value="${line.qty}" onchange="onCatalogLineQty('${line.lineId}',this.value)" onfocus="this.select()"></td>` +
@@ -3205,17 +3211,17 @@ function buildCatalogEstimateRows(unit) {
 
 function onCatalogLineQty(lineId, value) {
   onLineQty(lineId, value);
-  renderCatalogEstimatePanels();
+  renderCatalogEstimatePanels({ preserveScroll: true });
 }
 
 function onCatalogLinePrice(lineId, value) {
   onLinePrice(lineId, value);
-  renderCatalogEstimatePanels();
+  renderCatalogEstimatePanels({ preserveScroll: true });
 }
 
 function onCatalogComment(lineId, value) {
   onCommentText(lineId, value);
-  renderCatalogEstimatePanels();
+  renderCatalogEstimatePanels({ preserveScroll: true });
 }
 
 function moveCatalogLine(lineId, delta) {
@@ -4271,6 +4277,7 @@ function insertSep(afterLineId) {
     if (idx >= 0) { u.lines.splice(idx + 1, 0, { type: "sep", lineId: genId() }); break; }
   }
   renderEstimateLines();
+  renderCatalogEstimatePanels({ preserveScroll: true });
 }
 
 function insertComment(afterLineId) {
@@ -4279,6 +4286,7 @@ function insertComment(afterLineId) {
     if (idx >= 0) { u.lines.splice(idx + 1, 0, { type: "comment", lineId: genId(), text: "" }); break; }
   }
   renderEstimateLines();
+  renderCatalogEstimatePanels({ preserveScroll: true });
 }
 
 function onCommentText(lineId, val) {
@@ -4296,6 +4304,7 @@ function insertSubtotal(afterLineId) {
   }
   renderEstimateLines();
   renderTotals();
+  renderCatalogEstimatePanels({ preserveScroll: true });
 }
 
 function calcSubtotal(lines, subtotalIndex) {

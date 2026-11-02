@@ -1683,6 +1683,13 @@ tr[draggable="true"]:active { cursor: grabbing; }
 }
 
 @media print {
+  .unit-print-excluded {
+    opacity: .52;
+    filter: grayscale(1);
+    background: #e5e7eb !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
   .est-compact-print { break-inside: auto; page-break-inside: auto; }
   .est-compact-print > thead { display: table-header-group; }
   .est-compact-print > tbody > tr { break-inside: avoid; page-break-inside: avoid; }

@@ -3836,6 +3836,7 @@ function renderEstimateLinesForPrint() {
       for (let start = 0, pageIndex = 0; start < slots.length; start += columnsPerPage, pageIndex++) {
         const pageDiv = document.createElement("div");
         pageDiv.className = "est-print-page renovation-print-columns has-renovation-print";
+        if (!unitIncludedInOverallTotals(units[0])) pageDiv.classList.add("unit-print-excluded");
         pageDiv.style.cssText = `display:grid;grid-template-columns:repeat(${columnsPerPage},minmax(0,1fr));gap:2px;align-items:start;`;
         if (pageIndex > 0) pageDiv.style.pageBreakBefore = "always";
         slots.slice(start, start + columnsPerPage).forEach(slot => {
@@ -3861,6 +3862,7 @@ function renderEstimateLinesForPrint() {
       const wTotal = weightsSlice.reduce((a, b) => a + b, 0);
       const pageDiv = document.createElement("div");
       pageDiv.className = "est-print-page";
+      if (!unitIncludedInOverallTotals(units[0])) pageDiv.classList.add("unit-print-excluded");
       pageDiv.style.cssText = "display:flex; flex-wrap:wrap; gap:2px; align-items:flex-start;";
       if (p > 0) pageDiv.style.pageBreakBefore = "always";
       let firstTable = true;
@@ -3928,6 +3930,7 @@ function renderEstimateLinesForPrint() {
 
   for (let ui = 0; ui < units.length; ui++) {
     const u = units[ui];
+    const excludedFromOverall = !unitIncludedInOverallTotals(u);
     const rowsHtml = _buildLineRows(u.lines);
     const unitPricing = calcUnitPricing(u);
     const raw = unitPricing.raw;
@@ -3949,17 +3952,19 @@ function renderEstimateLinesForPrint() {
         curCols[ci].push({
           type: 'row',
           html: `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${printUnitHeading(u, detailIndex ? "（続き）" : "")}</td></tr>`,
+          excludedFromOverall,
           weight: 1.0
         });
         colWeights[ci] += 1.0;
         rows.forEach(h => {
           const w = estimatePrintRowWeight(h);
-          curCols[ci].push({ type: 'row', html: h, weight: w });
+          curCols[ci].push({ type: 'row', html: h, excludedFromOverall, weight: w });
           colWeights[ci] += w;
         });
         if (detailIndex === plan.detailColumns.length - 1) {
           curCols[ci].push({
             type: 'footer', raw, listP, netP,
+            excludedFromOverall,
             rawLabel: "社内原価合計",
             listLabel: "採用定価",
             netLabel: "提出NET",
@@ -3971,7 +3976,7 @@ function renderEstimateLinesForPrint() {
         advanceCol();
       });
       plan.internalColumns.forEach((html, internalIndex) => {
-        curCols[ci].push({ type: 'renovation-internal-html', html, index: internalIndex, excludedFromOverall: !unitIncludedInOverallTotals(u), weight: perCol });
+        curCols[ci].push({ type: 'renovation-internal-html', html, index: internalIndex, excludedFromOverall, weight: perCol });
         colWeights[ci] = perCol;
         if (internalIndex < plan.internalColumns.length - 1 || ui < units.length - 1) advanceCol();
       });
@@ -3982,13 +3987,14 @@ function renderEstimateLinesForPrint() {
     addSlot({
       type: 'row',
       html: `<tr class="unit-header-row"><td colspan="8" style="font-weight:bold;font-size:10px;padding:3px 4px;background:#dbeafe;border-top:2px solid #2563eb;border-bottom:1px solid #93c5fd;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${printUnitHeading(u)}</td></tr>`,
+      excludedFromOverall,
       weight: 1.0
     });
 
     // 明細行（列が溢れたら右へ）
     for (const h of rowsHtml) {
       const w = estimatePrintRowWeight(h);
-      addSlot({ type: 'row', html: h, weight: w });
+      addSlot({ type: 'row', html: h, excludedFromOverall, weight: w });
     }
 
     // フッターは独立divとして保存（テーブル行にしない）
@@ -3996,6 +4002,7 @@ function renderEstimateLinesForPrint() {
     if (colWeights[ci] + fw > perCol + 0.01 && colWeights[ci] > 0) advanceCol();
     curCols[ci].push({
       type: 'footer', raw, listP, netP,
+      excludedFromOverall,
       rawLabel: unitPricing.isRenovation ? "社内原価合計" : "積算合計",
       listLabel: unitPricing.isRenovation ? "採用定価" : "定価",
       netLabel: unitPricing.isRenovation ? "提出NET" : "NET",
@@ -4037,6 +4044,9 @@ function renderEstimateLinesForPrint() {
       // 列コンテナ（table + footerを縦に並べる）
       const colContainer = document.createElement("div");
       colContainer.style.cssText = `flex:0 0 ${colW};min-width:0;max-width:${colW};display:flex;flex-direction:column;`;
+      if (colSlots.length && colSlots.every(slot => slot.excludedFromOverall)) {
+        colContainer.classList.add("unit-print-excluded");
+      }
 
       // rowスロットをまとめてtableに、footerスロットはdivに
       let rowBuf = [];

@@ -821,6 +821,8 @@ const DEFAULT_CUBICLE_ITEMS = [
   { id: "K5035", category: "K6", name: "低圧配電盤(パネルなし)", spec: "750kVA 3φ(440V)", unit: "面", basePrice: 597, note: "" },
   { id: "K5036", category: "K6", name: "低圧配電盤(パネルなし)", spec: "1000kVA 3φ(210V)", unit: "面", basePrice: 1863, note: "" },
   { id: "K5037", category: "K6", name: "低圧配電盤(パネルなし)", spec: "1000kVA 3φ(440V)", unit: "面", basePrice: 912, note: "" },
+  { id: "K5038", category: "K6", name: "低圧配電盤(パネルなし)", spec: "1500kVA 3φ(210V)", unit: "面", basePrice: 2315, note: "" },
+  { id: "K5039", category: "K6", name: "低圧配電盤(パネルなし)", spec: "1500kVA 3φ(440V)", unit: "面", basePrice: 1124, note: "" },
 
   // --- パネル ---
   { id: "K5050", category: "K6", name: "パネル", spec: "W500", unit: "面", basePrice: 149, note: "H:2300(t3.2)×ベースH:50(塗装付)" },
@@ -1916,7 +1918,7 @@ const CUBICLE_MATRIX_GROUPS = {
   },
   "低圧配電盤(パネルなし)": {
     title: "低圧配電盤（パネルなし）",
-    rows: ["50kVA以下", "75kVA", "100kVA", "150kVA", "200kVA", "300kVA", "500kVA", "750kVA", "1000kVA"],
+    rows: ["50kVA以下", "75kVA", "100kVA", "150kVA", "200kVA", "300kVA", "500kVA", "750kVA", "1000kVA", "1500kVA"],
     cols: ["1φ", "3φ(210V)", "3φ(440V)"],
     comments: [
       { heading: "【標準パターン内訳】", lines: [

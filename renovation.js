@@ -835,6 +835,13 @@ function renovationInternalCardHtml(unit) {
     `</div></section>`;
 }
 
+function renovationInternalEquipmentRowWeight(item) {
+  if (item?.type === "sep") return 0.2;
+  // TRは本体行に加えて3社比較表を持つ。通常行として数えると、列生成後に
+  // Chromeが用紙途中で強制分断するため、実際の高さに近い7行相当とする。
+  return renovationIsTrEquipment(item) ? 7 : 1;
+}
+
 /** 印刷用の社内計算情報を、A4相当の高さごとの列HTMLへ分割する。 */
 function renovationInternalPrintColumns(unit, rowLimit = 35) {
   const state = getRenovationState(unit);
@@ -908,7 +915,7 @@ function renovationInternalPrintColumns(unit, rowLimit = 35) {
   addBlock(totalTable(totalRow("機器", pricing.equipmentList, pricing.equipmentNet, pricing.equipmentCost, "renovation-internal-key-cost")), 2);
   addDetails("機器内訳", "各単価", state.equipment.map(item => ({
     html: renovationInternalEquipmentDetailHtml(item, detailRow),
-    weight: item.type === "sep" ? 0.2 : renovationIsTrEquipment(item) ? 5 : 1,
+    weight: renovationInternalEquipmentRowWeight(item),
   })));
   addBlock(totalTable(totalRow("材料費", pricing.materialList, pricing.materialNet, pricing.materialCost, "renovation-internal-key-cost")), 2);
   addDetails("材料内訳", "各単価／空欄登録は係数計算", state.materials.map(item => {

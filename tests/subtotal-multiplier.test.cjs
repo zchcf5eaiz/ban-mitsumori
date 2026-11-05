@@ -23,7 +23,7 @@ function createApp() {
     window: { addEventListener() {} },
     setTimeout() {}, clearTimeout() {},
   });
-  for (const file of ['data.js', 'data-cubicle.js', 'data-user-defaults.js', 'app.js']) {
+  for (const file of ['data.js', 'data-cubicle.js', 'data-renovation.js', 'data-user-defaults.js', 'app.js', 'renovation.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), context, { filename: file });
   }
   vm.runInContext('refreshSubtotalViews = () => {};', context);
@@ -149,6 +149,24 @@ test('印刷の段組みで小計と再計算を分断せず、2行分で改列�
   assert.equal(chunks.length, 2);
   assert.equal(chunks[1].length, 1);
   assert.equal((chunks[1][0].match(/<tr /g) || []).length, 2);
+});
+
+test('改修印刷はA3用の安全な列上限で分割し、通常印刷の上限は維持する', () => {
+  const run = createApp();
+  const lines = Array.from({length: 60}, (_, index) => ({
+    type: 'custom', lineId: `item-${index}`, name: `試験品${index}`, unitPrice: 100, qty: 1,
+  }));
+  const result = run(`({
+    normalSingle: EST_PRINT_SINGLE_ROW_LIMIT,
+    normalMulti: EST_PRINT_MULTI_ROW_LIMIT,
+    renovation: EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT,
+    renovationInternal: RENOVATION_INTERNAL_ROW_LIMIT,
+    chunks: renovationDetailPrintChunks({lines:${JSON.stringify(lines)}}, EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT).length
+  })`);
+  assert.deepEqual(result, {normalSingle: 30, normalMulti: 35, renovation: 40, renovationInternal: 40, chunks: 2});
+  assert.equal(run('renovationInternalEquipmentRowWeight({type:"sep"})'), 0.2);
+  assert.equal(run('renovationInternalEquipmentRowWeight({category:"Tr1φ"})'), 7);
+  assert.equal(run('renovationInternalEquipmentRowWeight({category:"VCB"})'), 1);
 });
 
 test('数量・単価変更後は入力欄を作り直さず両段の表示金額を更新する', () => {

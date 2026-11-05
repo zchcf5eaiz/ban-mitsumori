@@ -3670,7 +3670,10 @@ function _estTheadHtml() {
 
 const EST_PRINT_SINGLE_ROW_LIMIT = 30; // 単一項目: 1列あたりの表示高さ換算上限
 const EST_PRINT_MULTI_ROW_LIMIT = 35;  // 複数項目: 従来の1列上限を維持
-const RENOVATION_INTERNAL_ROW_LIMIT = 40; // 社内情報は縮小表記のため明細より多く収容できる
+// A3横の改修印刷は、ブラウザに途中分断させる前に用紙内へ収まる列へ分ける。
+// 明細と社内情報では行の実高が違うため、それぞれ専用の上限を持つ。
+const EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT = 40;
+const RENOVATION_INTERNAL_ROW_LIMIT = 40;
 
 function printUnitHeading(unit, suffix = "") {
   const excluded = !unitIncludedInOverallTotals(unit);
@@ -3755,11 +3758,10 @@ function renovationPrintColumnPlan(unit, detailRowLimit, internalRowLimit = deta
 // 改修項目は内容量に応じて「明細列＋社内情報列」をそれぞれ1～複数列使う。
 // 項目数ではなく実際に印刷する列数でA4/A3を判定する。
 function estimatePrintColumnCount(units = currentEstimate.units) {
-  const detailRowLimit = units.length === 1 ? EST_PRINT_SINGLE_ROW_LIMIT : EST_PRINT_MULTI_ROW_LIMIT - 4.5;
   const internalRowLimit = RENOVATION_INTERNAL_ROW_LIMIT;
   return units.reduce((count, unit) => {
     if (!unit?.renovation?.enabled) return count + 1;
-    const plan = renovationPrintColumnPlan(unit, detailRowLimit, internalRowLimit);
+    const plan = renovationPrintColumnPlan(unit, EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT, internalRowLimit);
     return count + plan.detailColumns.length + plan.internalColumns.length;
   }, 0);
 }
@@ -3833,7 +3835,7 @@ function renderEstimateLinesForPrint() {
     // 改修は明細列を先に、社内計算情報列を後に並べる。
     // 3列以上必要な場合はA3横（4列枠）へ自動切替する。
     if (units[0]?.renovation?.enabled && typeof renovationInternalCardHtml === "function") {
-      const plan = renovationPrintColumnPlan(units[0], perCol, RENOVATION_INTERNAL_ROW_LIMIT);
+      const plan = renovationPrintColumnPlan(units[0], EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT, RENOVATION_INTERNAL_ROW_LIMIT);
       const slots = [
         ...plan.detailColumns.map((rows, index) => ({ type: "detail", rows, index })),
         ...plan.internalColumns.map((html, index) => ({ type: "internal", html, index })),
@@ -3945,7 +3947,7 @@ function renderEstimateLinesForPrint() {
 
     // 改修は「明細（必要列数）」の後に「社内情報（必要列数）」を連続配置する。
     if (u?.renovation?.enabled && typeof renovationInternalCardHtml === "function") {
-      const plan = renovationPrintColumnPlan(u, perCol - 4.5, RENOVATION_INTERNAL_ROW_LIMIT);
+      const plan = renovationPrintColumnPlan(u, EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT, RENOVATION_INTERNAL_ROW_LIMIT);
       const requiredColumns = plan.detailColumns.length + plan.internalColumns.length;
       const hasPageContent = curCols.some(column => column.length > 0);
       if (hasPageContent && (colWeights[ci] > 0 || requiredColumns > numCols - ci)) {
@@ -4027,7 +4029,7 @@ function renderEstimateLinesForPrint() {
     const page = pages[p];
     const pageDiv = document.createElement("div");
     pageDiv.className = "est-print-page";
-    if (page.some(column => column.some(slot => slot.type === "renovation-internal"))) {
+    if (page.some(column => column.some(slot => slot.type === "renovation-internal-html"))) {
       pageDiv.classList.add("has-renovation-print");
     }
     if (p > 0) pageDiv.style.pageBreakBefore = "always";
@@ -4152,7 +4154,7 @@ window.addEventListener("beforeprint", () => {
       ta.style.display = "none";
       const div = document.createElement("div");
       div.id = "notes-print-div";
-      div.style.cssText = "font-size:8px; white-space:pre-wrap; word-break:break-all; border:1px solid #cbd5e0; border-radius:3px; padding:6px 8px; font-family:inherit; line-height:1.5;";
+      div.style.cssText = "font-size:7px; white-space:pre-wrap; word-break:break-all; border:1px solid #cbd5e0; border-radius:3px; padding:3px 5px; font-family:inherit; line-height:1.2;";
       div.textContent = ta.value;
       ta.parentNode.insertBefore(div, ta.nextSibling);
     }

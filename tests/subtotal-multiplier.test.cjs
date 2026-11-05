@@ -170,7 +170,7 @@ test('改修印刷はA3用の安全な列上限で分割し、通常印刷の上
   });
   assert.equal(run('renovationInternalEquipmentRowWeight({type:"sep"})'), 0.2);
   assert.equal(run('renovationInternalEquipmentRowWeight({category:"Tr1φ"})'), 7);
-  assert.equal(run('renovationInternalEquipmentRowWeight({category:"Tr1φ"}, 5)'), 5);
+  assert.equal(run('renovationInternalEquipmentRowWeight({category:"Tr1φ"}, 3.5)'), 3.5);
   assert.equal(run('renovationInternalEquipmentRowWeight({category:"VCB"})'), 1);
 });
 
@@ -188,11 +188,46 @@ test('改修の社内情報は1ページ目を保ち、2ページ目以降だけ
     const staged = renovationInternalPrintColumns(
       unit,
       40,
-      (item, index) => renovationInternalEquipmentRowWeight(item, index < 2 ? 7 : 5)
+      (item, index) => renovationInternalEquipmentRowWeight(item, index < 2 ? 7 : 3.5)
     ).length;
     return {fixed, staged};
   })()`);
   assert.ok(result.staged < result.fixed, JSON.stringify(result));
+});
+
+test('3.8差額振分はExcelと同じ基準額比率で、最後の諸経費に丸め差を調整する', () => {
+  const run = createApp();
+  const result = run(`(() => {
+    const unit = createNewEstimate().units[0];
+    unit.renovation = createRenovationState();
+    const state = unit.renovation;
+    state.presentationMethod = 'allocation';
+    state.quoteMethod = 'govt';
+    state.listPricingFactor = 1.05;
+    state.siteSurveyList = 100000;
+    state.equipment = [{lineId:'eq', category:'VCB', name:'VCB', qty:1,
+      listPrice:1000000, netPrice:500000, costPrice:400000}];
+    state.materials = [{lineId:'mat', name:'材料', qty:1, costPrice:100000,
+      netPrice:120000, listPrice:144000}];
+    state.labor.hourlyRate = 10000;
+    state.labor.factor = 1;
+    state.labor.hours = 10;
+    state.labor.people = 1;
+    state.renovationListFactor = 1.5;
+    const pricing = calcRenovationPricing(unit);
+    const denominator = Object.values(pricing.distributionBases).reduce((sum, value) => sum + value, 0);
+    return {pricing, denominator};
+  })()`);
+  const {pricing, denominator} = result;
+  assert.equal(pricing.distributionBases.material, pricing.materialList);
+  assert.equal(pricing.distributionBases.survey, 100000);
+  assert.equal(pricing.distributionBases.renovation, pricing.renovationList);
+  assert.equal(pricing.distributionBases.overhead, pricing.candidates.bara.overhead);
+  for (const key of ['material', 'survey', 'renovation']) {
+    const expected = Math.ceil((pricing.distributionDifference * pricing.distributionBases[key] / denominator) / 1000) * 1000;
+    assert.equal(pricing.allocations[key], expected);
+  }
+  assert.equal(Object.values(pricing.allocations).reduce((sum, value) => sum + value, 0), pricing.distributionDifference);
 });
 
 test('数量・単価変更後は入力欄を作り直さず両段の表示金額を更新する', () => {

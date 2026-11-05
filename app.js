@@ -3676,7 +3676,9 @@ const EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT = 40;
 const RENOVATION_INTERNAL_ROW_LIMIT = 40;
 const RENOVATION_INTERNAL_CONTINUATION_ROW_LIMIT = 40;
 const RENOVATION_INTERNAL_TR_ROW_WEIGHT = 7;
-const RENOVATION_INTERNAL_CONTINUATION_TR_ROW_WEIGHT = 5;
+// 続きページは見積書ヘッダーが無く、TR比較表も印刷時にかなり圧縮される。
+// 実際の印字高さに合わせ、固定5行分ではなく3.5行分として詰める。
+const RENOVATION_INTERNAL_CONTINUATION_TR_ROW_WEIGHT = 3.5;
 
 function printUnitHeading(unit, suffix = "") {
   const excluded = !unitIncludedInOverallTotals(unit);

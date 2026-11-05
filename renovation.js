@@ -691,18 +691,20 @@ function calcRenovationPricing(unit) {
   const distributionDifference = formulaList - equipmentList;
   const distributionFeasible = distributionDifference >= 0;
   const distributionOverrun = Math.max(0, -distributionDifference);
+  // Excel「3.8振分」の E54:E57 に相当する振分基準額。
+  // バラ定価係数を変えると overhead が動き、4項目の構成比も変わる。
+  const distributionBases = {
+    material: materialList,
+    survey: Number(state.siteSurveyList) || 0,
+    renovation: renovationList,
+    overhead: candidates.bara.overhead,
+  };
 
   const allocations = {};
   if (state.presentationMethod === "allocation" && distributionFeasible) {
     const difference = distributionDifference;
-    const bases = {
-      material: materialList,
-      survey: Number(state.siteSurveyList) || 0,
-      renovation: renovationList,
-      overhead: candidates.bara.overhead,
-    };
-    const denominator = Object.values(bases).reduce((total, value) => total + value, 0) || 1;
-    const entries = Object.entries(bases);
+    const denominator = Object.values(distributionBases).reduce((total, value) => total + value, 0) || 1;
+    const entries = Object.entries(distributionBases);
     let allocated = 0;
     entries.forEach(([key, value], index) => {
       const remaining = Math.max(0, difference - allocated);
@@ -735,7 +737,7 @@ function calcRenovationPricing(unit) {
     equipmentList, equipmentNet, equipmentCost,
     materialCost, materialNet, materialList, labor, laborCost, renovationList, directList, directNet,
     trList, trNet, trCost,
-    distributionDifference, distributionFeasible, distributionOverrun,
+    distributionDifference, distributionFeasible, distributionOverrun, distributionBases,
     calculationMethodLabel: RENOVATION_METHODS[state.method]?.label || "改修",
     quoteMethodLabel: RENOVATION_QUOTE_METHODS[state.quoteMethod]?.label || "実定価ベース（バラ）",
     presentationMethodLabel: RENOVATION_PRESENTATIONS[state.presentationMethod]?.label || "一式",
@@ -2397,6 +2399,19 @@ function renderRenovationTab() {
   }).join("");
   const overheadNet = Math.max(0, pricing.net - pricing.directNet);
   const overheadLabel = isDistribution ? "振分対象差額" : "諸経費（定価差額）";
+  const distributionBalanceHtml = state.presentationMethod === "allocation" && pricing.distributionFeasible ? (() => {
+    const labels = { material: "材料費", survey: "現地調査費", renovation: "改修費", overhead: "諸経費" };
+    const denominator = Object.values(pricing.distributionBases || {}).reduce((sum, value) => sum + (Number(value) || 0), 0) || 1;
+    const rows = Object.keys(labels).map(key => {
+      const base = Number(pricing.distributionBases?.[key]) || 0;
+      const ratio = base / denominator;
+      return `<tr><td>${labels[key]}</td><td>${fmtNum(base)}</td><td>${(ratio * 100).toFixed(2)}%</td><td>${fmtNum(pricing.allocations?.[key] || 0)}</td></tr>`;
+    }).join("");
+    return `<div class="renovation-distribution-balance"><div class="renovation-distribution-balance-heading">` +
+      `<strong>差額振分のバランス</strong><span>係数を変えると比率と調整後価格が更新されます</span></div>` +
+      `<table><thead><tr><th>項目</th><th>振分基準額</th><th>比率</th><th>調整後</th></tr></thead><tbody>${rows}</tbody>` +
+      `<tfoot><tr><th>合計</th><th>${fmtNum(denominator)}</th><th>100.00%</th><th>${fmtNum(pricing.distributionDifference)}</th></tr></tfoot></table></div>`;
+  })() : "";
   const materialCategories = renovationMaterialCategories();
   if (!materialCategories.some(category => category.id === renovationMaterialCategoryId)) {
     renovationMaterialCategoryId = materialCategories[0]?.id || "";
@@ -2458,13 +2473,13 @@ function renderRenovationTab() {
       `<label>改修費 社内原価<input type="number" min="0" value="${state.labor.cost}" onchange="updateRenovationNumber('labor.cost',this.value)"><small>粗利率の計算に使用</small></label>` +
       `</div><div class="renovation-calculated-cost renovation-calculated-cost-three"><span>改修費 定価</span><b>${fmtNum(pricing.renovationList)}</b><span>改修費 NET</span><b>${fmtNum(pricing.labor)}</b><span>社内原価</span><b>${fmtNum(pricing.laborCost)}</b></div></section>` +
     `<section><div class="renovation-section-title">6. 諸経費・計算係数</div><div class="renovation-cost-inputs renovation-factor-inputs">` +
-      `<label class="renovation-factor">バラ定価係数<input type="number" min="0" step="0.01" value="${state.listPricingFactor}" onchange="updateRenovationNumber('listPricingFactor',this.value)"><small>基本1.20。諸経費とのバランスに応じて自由に変更</small></label>` +
+      `<label class="renovation-factor renovation-balance-factor">差額振分バランス係数<span>（バラ定価係数）</span><input type="number" min="0" step="0.01" value="${state.listPricingFactor}" onchange="updateRenovationNumber('listPricingFactor',this.value)"><small>Excelの「定価（バラ方式）」隣のセル。基本1.20、見積ごとに自由に調整</small></label>` +
       `<label class="renovation-factor">NET計算係数<input type="number" value="${RENOVATION_NET_FACTOR}" disabled><small>常に1.20で固定</small></label>` +
       `<label class="renovation-factor">TR別計算係数<input type="number" min="0" step="0.01" value="${state.transformerFactor}" onchange="updateRenovationNumber('transformerFactor',this.value)"><small>「TR別計算」を選んだ時だけ使用</small></label>` +
       `<label>材料 NET係数<input type="number" min="0" step="0.01" value="${state.materialNetFactor}" onchange="updateRenovationNumber('materialNetFactor',this.value)"><small>未登録NETは仕入×この係数</small></label>` +
       `<label>材料 定価係数<input type="number" min="0" step="0.01" value="${state.materialListFactor}" onchange="updateRenovationNumber('materialListFactor',this.value)"></label>` +
       `<label>改修費 定価係数<input type="number" min="0" step="0.01" value="${state.renovationListFactor}" onchange="updateRenovationNumber('renovationListFactor',this.value)"></label>` +
-      `</div><div class="renovation-calculated-cost renovation-overhead-box"><span>${overheadLabel}（採用定価－直接費）</span><b>${fmtNum(pricing.overhead)}</b><span>NET差額（採用NET－直接NET）</span><b>${fmtNum(overheadNet)}</b></div></section></div>` +
+      `</div>${distributionBalanceHtml}<div class="renovation-calculated-cost renovation-overhead-box"><span>${overheadLabel}（採用定価－直接費）</span><b>${fmtNum(pricing.overhead)}</b><span>NET差額（採用NET－直接NET）</span><b>${fmtNum(overheadNet)}</b></div></section></div>` +
     `<div class="renovation-side"><div class="renovation-pattern-panel"><div class="renovation-pattern-heading"><strong>見積条件の選択</strong><span>上から順に選びます</span></div>` +
       `<div class="renovation-pattern-subtitle"><b>①</b> TRの扱い</div>` +
       `<div class="renovation-methods">${Object.entries(RENOVATION_METHODS).map(([key, method]) =>

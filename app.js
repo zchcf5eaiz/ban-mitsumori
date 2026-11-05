@@ -3574,6 +3574,7 @@ function _buildLineRows(lines) {
     if (line.type === "sep") {
       return `<tr class="sep-row" ${dragAttrs}>
         <td colspan="8">
+          <span class="sep-drag-grip no-print" title="ドラッグして並べ替え">⠿</span>
           <button class="btn-sep-del no-print" onclick="removeLine('${line.lineId}')" title="区切り線を削除">&times;</button>
         </td>
       </tr>`;
@@ -3586,8 +3587,10 @@ function _buildLineRows(lines) {
     if (line.type === "comment") {
       return `<tr class="comment-row" ${dragAttrs}>
         <td class="ec-sep no-print">
-          <button class="btn-sep" onclick="insertSep('${line.lineId}')" title="下に区切り線を挿入">▶</button>
-          <button class="btn-cmt" onclick="insertComment('${line.lineId}')" title="下にコメント行を挿入">💬</button>
+          <div class="catalog-row-insert-tools"><span class="line-drag-grip" title="ドラッグして並べ替え">⠿</span>
+            <button class="btn-sep" onclick="insertSep('${line.lineId}')" title="下に区切り線を挿入">▶</button>
+            <button class="btn-cmt" onclick="insertComment('${line.lineId}')" title="下にコメント行を挿入">💬</button>
+          </div>
         </td>
         <td colspan="7" class="ec-comment-cell">
           <input type="text" class="comment-input" value="${escAttr(line.text || '')}"
@@ -3601,7 +3604,10 @@ function _buildLineRows(lines) {
     if (line.renovationGenerated) {
       const sub = line.qty * line.unitPrice;
       return `<tr class="renovation-generated-row" ${dragAttrs}>
-        <td class="ec-sep no-print"><span class="line-drag-grip" title="ドラッグして並べ替え">⠿</span></td><td class="ec-no">${itemNo}</td>
+        <td class="ec-sep no-print"><div class="catalog-row-insert-tools"><span class="line-drag-grip" title="ドラッグして並べ替え">⠿</span>
+          <button class="btn-sep" onclick="insertSep('${line.lineId}')" title="下に区切り線を挿入">▶</button>
+          <button class="btn-cmt" onclick="insertComment('${line.lineId}')" title="下にコメント行を挿入">💬</button>
+        </div></td><td class="ec-no">${itemNo}</td>
         <td class="ec-name">${esc(line.name || "改修工事")}</td><td class="ec-spec">${esc(line.spec || "")}</td>
         <td class="ec-price">${fmtNum(line.unitPrice)}</td><td class="ec-qty">${line.qty}</td>
         <td class="ec-subtotal">${fmtNum(sub)}</td><td class="ec-del no-print"><small>改修タブで編集</small></td>
@@ -4225,7 +4231,11 @@ function removeLine(lineId) {
   for (const u of currentEstimate.units) {
     const idx = u.lines.findIndex(x => x.lineId === lineId);
     if (idx >= 0) {
-      if (u.lines[idx].renovationGenerated) { showToast("改修明細は改修タブで編集してください"); return; }
+      if (u.lines[idx].renovationGenerated) {
+        if (typeof removeRenovationAuxiliaryFromEstimate === "function" && removeRenovationAuxiliaryFromEstimate(lineId)) break;
+        showToast("機器・金額の明細は改修タブで編集してください");
+        return;
+      }
       u.lines.splice(idx, 1); break;
     }
   }
@@ -4282,6 +4292,14 @@ function inferCustomSelectionKey(line) {
 }
 
 function insertSep(afterLineId) {
+  const target = _findLineAnyUnit(afterLineId);
+  if (target?.renovationGenerated && typeof addRenovationAuxiliaryFromEstimate === "function") {
+    if (addRenovationAuxiliaryFromEstimate(afterLineId, "sep")) {
+      renderEstimateLines();
+      renderCatalogEstimatePanels({ preserveScroll: true });
+      return;
+    }
+  }
   for (const u of currentEstimate.units) {
     const idx = u.lines.findIndex(x => x.lineId === afterLineId);
     if (idx >= 0) { u.lines.splice(idx + 1, 0, { type: "sep", lineId: genId() }); break; }
@@ -4291,6 +4309,15 @@ function insertSep(afterLineId) {
 }
 
 function insertComment(afterLineId) {
+  const target = _findLineAnyUnit(afterLineId);
+  if (target?.renovationGenerated && typeof addRenovationAuxiliaryFromEstimate === "function") {
+    const addedLineId = addRenovationAuxiliaryFromEstimate(afterLineId, "comment");
+    if (addedLineId) {
+      renderEstimateLines();
+      renderCatalogEstimatePanels({ preserveScroll: true });
+      return;
+    }
+  }
   for (const u of currentEstimate.units) {
     const idx = u.lines.findIndex(x => x.lineId === afterLineId);
     if (idx >= 0) { u.lines.splice(idx + 1, 0, { type: "comment", lineId: genId(), text: "" }); break; }
@@ -4301,7 +4328,12 @@ function insertComment(afterLineId) {
 
 function onCommentText(lineId, val) {
   const line = _findLineAnyUnit(lineId);
-  if (line) { line.text = val; }
+  if (!line) return;
+  if (line.renovationGenerated && typeof updateRenovationAuxiliaryFromEstimate === "function") {
+    updateRenovationAuxiliaryFromEstimate(lineId, val);
+    return;
+  }
+  line.text = val;
 }
 
 function insertSubtotal(afterLineId) {

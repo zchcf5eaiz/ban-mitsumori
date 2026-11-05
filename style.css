@@ -188,6 +188,10 @@ tr[draggable="true"] { cursor: grab; }
 tr[draggable="true"]:active { cursor: grabbing; }
 .line-drag-grip { display:inline-flex; align-items:center; justify-content:center; width:18px; height:24px; color:#57708f; font-size:15px; font-weight:700; cursor:grab; user-select:none; }
 .line-drag-grip:active { cursor:grabbing; color:#1d4f86; }
+.ec-sep .catalog-row-insert-tools { display:flex; align-items:center; justify-content:center; gap:0; white-space:nowrap; }
+.ec-sep .catalog-row-insert-tools .line-drag-grip { width:15px; font-size:12px; }
+.ec-sep .catalog-row-insert-tools .btn-sep,
+.ec-sep .catalog-row-insert-tools .btn-cmt { padding:2px 1px; font-size:9px; }
 .dragging { opacity: 0.4; }
 .drag-over-top td { box-shadow: inset 0 2px 0 0 #3182ce; }
 .drag-over-bottom td { box-shadow: inset 0 -2px 0 0 #3182ce; }
@@ -205,6 +209,8 @@ tr[draggable="true"]:active { cursor: grabbing; }
   background: #2d3748 !important; height: 3px; padding: 0 !important;
   border: none !important; position: relative;
 }
+.sep-drag-grip { position:absolute; left:4px; top:50%; transform:translateY(-50%); z-index:1; color:#d6e3ef; font-size:12px; line-height:1; cursor:grab; user-select:none; }
+.sep-drag-grip:active { cursor:grabbing; }
 .btn-sep {
   background: none; border: none; cursor: pointer; font-size: 0.7rem;
   color: #a0aec0; padding: 2px 4px; line-height: 1;
@@ -1468,6 +1474,9 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-selection-drag-grip { display:inline-flex; flex:0 0 16px; align-items:center; justify-content:center; align-self:stretch; min-height:24px; color:#6b7f94; font-size:14px; font-weight:700; cursor:grab; user-select:none; touch-action:none; }
 .renovation-selection-drag-grip:hover { color:#1d5c91; background:#e7f1fa; }
 .renovation-selection-drag-grip:active { cursor:grabbing; }
+.renovation-row-insert-tools { display:inline-flex; flex:0 0 auto; flex-direction:column; gap:1px; }
+.renovation-row-insert-tools button { width:19px; height:15px; padding:0; border:0; border-radius:2px; background:transparent; color:#6b7f94; font-size:9px; line-height:15px; cursor:pointer; }
+.renovation-row-insert-tools button:hover { background:#dcecf9; color:#1d5c91; }
 .renovation-selection-row.selection-drag-over-top > td { box-shadow:inset 0 3px 0 #2879b9; }
 .renovation-selection-row.selection-drag-over-bottom > td { box-shadow:inset 0 -3px 0 #2879b9; }
 .renovation-equipment-name-editor { display:grid; gap:3px; min-width:150px; }

@@ -1460,7 +1460,23 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-material-catalog .renovation-material-buttons { display:grid; grid-template-columns:1fr; max-height:none; overflow:visible; }
 .renovation-material-catalog .renovation-material-card { width:100%; box-sizing:border-box; }
 .renovation-material-catalog .renovation-material-add { flex:1; min-width:0; }
-.renovation-selection-subtitle { padding:6px 9px; border-bottom:1px solid #dbe4ee; background:#edf4fb; color:#24496f; font-size:11px; font-weight:700; }
+.renovation-selection-subtitle { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 9px; border-bottom:1px solid #dbe4ee; background:#edf4fb; color:#24496f; font-size:11px; font-weight:700; }
+.renovation-selection-tools { display:flex; gap:4px; }
+.renovation-selection-tools button { border:1px solid #9fb7cf; border-radius:3px; background:#fff; color:#24496f; padding:2px 6px; font-size:9px; font-weight:600; cursor:pointer; }
+.renovation-selection-item-cell { display:flex; align-items:center; gap:4px; min-width:0; }
+.renovation-selection-material-label { min-width:110px; }
+.renovation-selection-drag-grip { display:inline-flex; flex:0 0 16px; align-items:center; justify-content:center; align-self:stretch; min-height:24px; color:#6b7f94; font-size:14px; font-weight:700; cursor:grab; user-select:none; touch-action:none; }
+.renovation-selection-drag-grip:hover { color:#1d5c91; background:#e7f1fa; }
+.renovation-selection-drag-grip:active { cursor:grabbing; }
+.renovation-selection-row.selection-drag-over-top > td { box-shadow:inset 0 3px 0 #2879b9; }
+.renovation-selection-row.selection-drag-over-bottom > td { box-shadow:inset 0 -3px 0 #2879b9; }
+.renovation-equipment-name-editor { display:grid; gap:3px; min-width:150px; }
+.renovation-table-wrap .renovation-equipment-name-editor input { width:100%; min-width:0; text-align:left; }
+.renovation-table-wrap .renovation-equipment-name-editor small { margin:0; color:#4b6480; font-weight:700; }
+.renovation-table-wrap input.renovation-equipment-comment-input { width:100%; text-align:left; }
+.renovation-equipment-comment-row td { background:#fffbea; }
+.renovation-equipment-separator-row td { padding:3px 5px; background:#f8fafc; }
+.renovation-equipment-separator-line { display:block; flex:1; height:3px; background:#334e68; }
 .renovation-selection-subtotal { display:flex; justify-content:flex-end; align-items:center; gap:14px; padding:5px 9px; border-top:1px solid #dbe4ee; border-bottom:1px solid #c7d5e3; background:#f7fafc; color:#334e68; font-size:10px; }
 .renovation-selection-subtotal strong { margin-right:auto; color:#173b60; }
 .renovation-selection-subtotal b { margin-left:3px; color:#102f4e; font-size:11px; }
@@ -1663,6 +1679,9 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .renovation-pattern-metrics b { color:#174f34; font-size:8px; }
 .renovation-pattern-badge { display:inline-block; margin-left:5px; padding:1px 4px; border-radius:8px; background:#2f855a; color:#fff; font-size:7px; line-height:1.3; vertical-align:1px; }
 .renovation-internal-empty { color:#94a3b8; text-align:center !important; }
+.renovation-internal-comment-row td { background:#fffbea; color:#5f511f; text-align:left !important; }
+.renovation-internal-separator-row td { padding:3px 4px !important; background:#f8fafc; }
+.renovation-internal-separator-row span { display:block; height:2px; background:#334e68; }
 :root { --estimate-unit-column-width:520px; }
 .multi-unit-container > .unit-col { width:var(--estimate-unit-column-width); box-sizing:border-box; }
 .renovation-screen-pair { flex:0 0 auto; display:grid; grid-template-columns:var(--estimate-unit-column-width) var(--estimate-unit-column-width); gap:8px; align-items:start; }

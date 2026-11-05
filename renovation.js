@@ -743,6 +743,17 @@ function calcRenovationPricing(unit) {
   };
 }
 
+function renovationInternalEquipmentDetailHtml(item, detailRow) {
+  if (item?.type === "sep") {
+    return `<tr class="renovation-internal-separator-row"><td colspan="5"><span></span></td></tr>`;
+  }
+  if (item?.type === "comment") {
+    return `<tr class="renovation-internal-comment-row"><td colspan="5">${esc(item.text || "")}</td></tr>`;
+  }
+  return detailRow(item, Number(item.listPrice) || 0, Number(item.netPrice) || 0, Number(item.costPrice) || 0) +
+    renovationInternalTrComparisonRow(item);
+}
+
 /** 改修1項目分の社内計算情報。画面表示と印刷の隣接列で共用する。 */
 function renovationInternalCardHtml(unit) {
   const state = getRenovationState(unit);
@@ -759,12 +770,8 @@ function renovationInternalCardHtml(unit) {
   const detailRow = (item, list, net, cost) => `<tr>` +
     `<td><strong>${item.manufacturer ? `${esc(item.manufacturer)}｜` : ""}${esc(item.name || "未名称")}</strong>${item.spec ? `<small>${esc(item.spec)}</small>` : ""}</td>` +
     `<td>${fmtNum(item.qty)}</td><td>${fmtNum(list)}</td><td>${fmtNum(net)}</td><td>${fmtNum(cost)}</td></tr>`;
-  const equipmentRows = state.equipment.map(item => detailRow(
-    item,
-    Number(item.listPrice) || 0,
-    Number(item.netPrice) || 0,
-    Number(item.costPrice) || 0
-  ) + renovationInternalTrComparisonRow(item)).join("") || `<tr><td colspan="5" class="renovation-internal-empty">選択なし</td></tr>`;
+  const equipmentRows = state.equipment.map(item => renovationInternalEquipmentDetailHtml(item, detailRow)).join("") ||
+    `<tr><td colspan="5" class="renovation-internal-empty">選択なし</td></tr>`;
   const materialRows = state.materials.map(item => {
     const cost = Number(item.costPrice ?? item.unitPrice) || 0;
     const net = item.netPrice == null ? cost * state.materialNetFactor : Number(item.netPrice) || 0;
@@ -900,9 +907,8 @@ function renovationInternalPrintColumns(unit, rowLimit = 35) {
 
   addBlock(totalTable(totalRow("機器", pricing.equipmentList, pricing.equipmentNet, pricing.equipmentCost, "renovation-internal-key-cost")), 2);
   addDetails("機器内訳", "各単価", state.equipment.map(item => ({
-    html: detailRow(item, Number(item.listPrice) || 0, Number(item.netPrice) || 0, Number(item.costPrice) || 0) +
-      renovationInternalTrComparisonRow(item),
-    weight: renovationIsTrEquipment(item) ? 5 : 1,
+    html: renovationInternalEquipmentDetailHtml(item, detailRow),
+    weight: item.type === "sep" ? 0.2 : renovationIsTrEquipment(item) ? 5 : 1,
   })));
   addBlock(totalTable(totalRow("材料費", pricing.materialList, pricing.materialNet, pricing.materialCost, "renovation-internal-key-cost")), 2);
   addDetails("材料内訳", "各単価／空欄登録は係数計算", state.materials.map(item => {
@@ -964,13 +970,22 @@ function syncRenovationQuoteLine(unit = activeUnit()) {
       `／材料NET×${state.materialNetFactor}・材料定価×${state.materialListFactor}・改修×${state.renovationListFactor}`;
     add("summary", unit.unitName || "改修工事", spec, 1, pricing.list);
   } else {
-    state.equipment.forEach((row, index) => add(
-      `equipment:${row.lineId || index}`,
-      row.name || "機器",
-      row.spec || row.category || "",
-      row.qty,
-      row.listPrice
-    ));
+    state.equipment.forEach((row, index) => {
+      const key = `equipment:${row.lineId || index}`;
+      if (row.type === "sep") {
+        generated.push({
+          lineId: previousIds.get(key) || genId(), type: "sep", renovationGenerated: true,
+          renovationKey: key,
+        });
+      } else if (row.type === "comment") {
+        generated.push({
+          lineId: previousIds.get(key) || genId(), type: "comment", renovationGenerated: true,
+          renovationKey: key, text: row.text || "",
+        });
+      } else {
+        add(key, row.name || "機器", row.spec || row.category || "", row.qty, row.listPrice);
+      }
+    });
 
     if ((presentation === "allocation" || presentation === "matsuoka") && pricing.distributionFeasible) {
       const labels = {
@@ -1026,7 +1041,8 @@ function captureRenovationViewPosition() {
     windowY: window.scrollY,
     equipmentTop: root?.querySelector("#renovation-catalog-list")?.scrollTop || 0,
     materialTop: root?.querySelector(".renovation-material-catalog-scroll")?.scrollTop || 0,
-    selectionTop: root?.querySelector(".renovation-work .renovation-table-wrap")?.scrollTop || 0,
+    selectionTops: Array.from(root?.querySelectorAll(".renovation-work .renovation-table-wrap") || [])
+      .map(element => element.scrollTop),
   };
 }
 
@@ -1035,10 +1051,12 @@ function restoreRenovationViewPosition(position) {
   const root = document.getElementById("renovation-root");
   const equipment = root?.querySelector("#renovation-catalog-list");
   const material = root?.querySelector(".renovation-material-catalog-scroll");
-  const selection = root?.querySelector(".renovation-work .renovation-table-wrap");
+  const selections = root?.querySelectorAll(".renovation-work .renovation-table-wrap") || [];
   if (equipment) equipment.scrollTop = position.equipmentTop;
   if (material) material.scrollTop = position.materialTop;
-  if (selection) selection.scrollTop = position.selectionTop;
+  selections.forEach((selection, index) => {
+    selection.scrollTop = position.selectionTops?.[index] || 0;
+  });
   window.scrollTo(position.windowX, position.windowY);
 }
 
@@ -1102,27 +1120,140 @@ function updateRenovationNumber(path, value) {
   refreshRenovation();
 }
 
+function placeNewRenovationEquipmentInLineOrder(state, lineId) {
+  if (!Array.isArray(state?.lineOrder) || !lineId) return;
+  const key = `equipment:${lineId}`;
+  const lastEquipmentIndex = state.lineOrder.reduce(
+    (last, current, index) => String(current).startsWith("equipment:") ? index : last,
+    -1
+  );
+  state.lineOrder.splice(lastEquipmentIndex + 1, 0, key);
+}
+
+/** 選択内容側で変更した機器順を、見積作成の改修明細順にも反映する。 */
+function syncRenovationEquipmentLineOrder(state) {
+  if (!state || !Array.isArray(state.lineOrder)) return;
+  const equipmentKeys = state.equipment.map((row, index) => `equipment:${row.lineId || index}`);
+  let equipmentIndex = 0;
+  state.lineOrder = state.lineOrder
+    .map(key => String(key).startsWith("equipment:") ? (equipmentKeys[equipmentIndex++] || null) : key)
+    .filter(Boolean);
+  if (equipmentIndex < equipmentKeys.length) {
+    const remaining = equipmentKeys.slice(equipmentIndex);
+    const lastEquipmentIndex = state.lineOrder.reduce(
+      (last, key, index) => String(key).startsWith("equipment:") ? index : last,
+      -1
+    );
+    state.lineOrder.splice(lastEquipmentIndex + 1, 0, ...remaining);
+  }
+}
+
+let renovationSelectionDragKind = "";
+let renovationSelectionDragLineId = "";
+
+function startRenovationSelectionDrag(event, kind, lineId) {
+  if (kind !== "equipment" && kind !== "material") return;
+  renovationSelectionDragKind = kind;
+  renovationSelectionDragLineId = lineId;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", `${kind}:${lineId}`);
+  requestAnimationFrame(() => event.target.closest(".renovation-selection-row")?.classList.add("dragging"));
+}
+
+function overRenovationSelectionDrag(event, kind) {
+  if (!renovationSelectionDragLineId || renovationSelectionDragKind !== kind) return;
+  const row = event.target.closest(".renovation-selection-row");
+  if (!row || row.dataset.selectionLineId === renovationSelectionDragLineId) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  document.querySelectorAll(".renovation-selection-row.selection-drag-over-top,.renovation-selection-row.selection-drag-over-bottom")
+    .forEach(item => item.classList.remove("selection-drag-over-top", "selection-drag-over-bottom"));
+  const rect = row.getBoundingClientRect();
+  row.classList.add(event.clientY < rect.top + rect.height / 2
+    ? "selection-drag-over-top"
+    : "selection-drag-over-bottom");
+}
+
+function leaveRenovationSelectionDrag(event) {
+  const row = event.target.closest(".renovation-selection-row");
+  if (row && !row.contains(event.relatedTarget)) {
+    row.classList.remove("selection-drag-over-top", "selection-drag-over-bottom");
+  }
+}
+
+function dropRenovationSelectionRow(event, kind, targetLineId) {
+  event.preventDefault();
+  const state = getRenovationState();
+  const sourceLineId = renovationSelectionDragLineId;
+  if (!state || renovationSelectionDragKind !== kind || !sourceLineId || sourceLineId === targetLineId) {
+    endRenovationSelectionDrag();
+    return;
+  }
+  const rows = kind === "equipment" ? state.equipment : state.materials;
+  const sourceIndex = rows.findIndex(row => row.lineId === sourceLineId);
+  const targetIndexBeforeRemoval = rows.findIndex(row => row.lineId === targetLineId);
+  if (sourceIndex < 0 || targetIndexBeforeRemoval < 0) {
+    endRenovationSelectionDrag();
+    return;
+  }
+  const targetRow = event.target.closest(".renovation-selection-row");
+  const rect = targetRow?.getBoundingClientRect();
+  const insertAfter = rect ? event.clientY >= rect.top + rect.height / 2 : false;
+  const [moved] = rows.splice(sourceIndex, 1);
+  let targetIndex = rows.findIndex(row => row.lineId === targetLineId);
+  if (insertAfter) targetIndex += 1;
+  rows.splice(targetIndex, 0, moved);
+  if (kind === "equipment") syncRenovationEquipmentLineOrder(state);
+  endRenovationSelectionDrag();
+  refreshRenovation();
+}
+
+function endRenovationSelectionDrag() {
+  renovationSelectionDragKind = "";
+  renovationSelectionDragLineId = "";
+  document.querySelectorAll(".renovation-selection-row.dragging,.renovation-selection-row.selection-drag-over-top,.renovation-selection-row.selection-drag-over-bottom")
+    .forEach(item => item.classList.remove("dragging", "selection-drag-over-top", "selection-drag-over-bottom"));
+}
+
 function addRenovationEquipment(id) {
   const state = getRenovationState();
   const item = getRenovationMasterItem(id);
   if (!state || !item) return;
-  const found = state.equipment.find(row => row.itemId === id && row.listPrice === item.listPrice && row.costPrice === item.costPrice);
-  if (found) found.qty += 1;
-  else state.equipment.push({
+  const row = {
     lineId: genId(), itemId: id, name: item.name, spec: item.spec || "", categoryId: item.categoryId, category: item.category,
     manufacturer: renovationEquipmentManufacturer(item),
     qty: item.defaultQty || 1, listPrice: item.listPrice || 0, netPrice: item.netPrice || 0,
     costPrice: item.costPrice || 0, note: item.note || "", priceLabel: item.priceLabel || "", effectiveDate: item.effectiveDate || null,
     ...(renovationUsesTrComparison(item) ? { manufacturerPrices: renovationTrComparisonPrices(item) } : {}),
-  });
+  };
+  state.equipment.push(row);
+  placeNewRenovationEquipmentInLineOrder(state, row.lineId);
   refreshRenovation();
 }
 
 function updateRenovationEquipment(lineId, field, value) {
   const row = getRenovationState()?.equipment.find(item => item.lineId === lineId);
   if (!row) return;
-  row[field] = field === "note" ? String(value || "") : Math.max(0, Number(value) || 0);
+  row[field] = ["name", "spec", "note", "text"].includes(field)
+    ? String(value || "")
+    : Math.max(0, Number(value) || 0);
   refreshRenovation();
+}
+
+function addRenovationEquipmentAuxiliary(type) {
+  const state = getRenovationState();
+  if (!state || (type !== "comment" && type !== "sep")) return;
+  const row = type === "comment"
+    ? { lineId: genId(), type: "comment", text: "" }
+    : { lineId: genId(), type: "sep" };
+  state.equipment.push(row);
+  placeNewRenovationEquipmentInLineOrder(state, row.lineId);
+  refreshRenovation();
+  if (type === "comment") {
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-renovation-equipment-comment="${row.lineId}"]`)?.focus();
+    });
+  }
 }
 
 function removeRenovationEquipment(lineId) {
@@ -1943,6 +2074,7 @@ function renderRenovationCatalog() {
   const masterItems = renovationEquipmentItems();
   const selectedQuantities = new Map();
   (getRenovationState()?.equipment || []).forEach(row => {
+    if (!row.itemId) return;
     selectedQuantities.set(row.itemId, (selectedQuantities.get(row.itemId) || 0) + (Number(row.qty) || 0));
   });
   const items = masterItems.filter(item => renovationEquipmentDisplayCategoryId(item) === renovationCategoryId);
@@ -2026,17 +2158,44 @@ function renderRenovationTab() {
   syncRenovationQuoteLine(unit);
   syncRenovationSourceNotes();
   const pricing = calcRenovationPricing(unit);
-  const equipmentRows = state.equipment.map(row => `<tr><td><strong>${row.manufacturer ? `${esc(row.manufacturer)}｜` : ""}${esc(row.name)}</strong><small>${esc(row.spec || row.category)}</small></td>` +
-    `<td><input type="number" min="0" step="1" value="${row.qty}" onchange="updateRenovationEquipment('${row.lineId}','qty',this.value)"></td>` +
-    `<td><input type="number" min="0" step="1" value="${row.listPrice}" onchange="updateRenovationEquipment('${row.lineId}','listPrice',this.value)"></td>` +
-    `<td><input type="number" min="0" step="1" value="${row.netPrice}" onchange="updateRenovationEquipment('${row.lineId}','netPrice',this.value)"></td>` +
-    `<td><input type="number" min="0" step="1" value="${row.costPrice}" onchange="updateRenovationEquipment('${row.lineId}','costPrice',this.value)"></td>` +
-    `<td><input class="renovation-note-input" type="text" value="${escAttr(row.note || "")}" onchange="updateRenovationEquipment('${row.lineId}','note',this.value)"></td>` +
-    `<td>${fmtNum(row.qty * row.costPrice)}</td>` +
-    `<td><button class="renovation-delete" onclick="removeRenovationEquipment('${row.lineId}')">×</button></td></tr>`).join("");
+  const equipmentRows = state.equipment.map(row => {
+    const dragAttrs = `data-selection-line-id="${escAttr(row.lineId)}" ` +
+      `ondragover="overRenovationSelectionDrag(event,'equipment')" ondragleave="leaveRenovationSelectionDrag(event)" ` +
+      `ondrop="dropRenovationSelectionRow(event,'equipment','${row.lineId}')"`;
+    const dragGrip = `<span class="renovation-selection-drag-grip" draggable="true" ` +
+      `ondragstart="startRenovationSelectionDrag(event,'equipment','${row.lineId}')" ` +
+      `ondragend="endRenovationSelectionDrag()" title="ドラッグして並び替え">⠿</span>`;
+    if (row.type === "sep") {
+      return `<tr class="renovation-selection-row renovation-equipment-separator-row" ${dragAttrs}><td colspan="7"><div class="renovation-selection-item-cell">${dragGrip}<span class="renovation-equipment-separator-line"></span></div></td>` +
+        `<td><button class="renovation-delete" onclick="removeRenovationEquipment('${row.lineId}')">×</button></td></tr>`;
+    }
+    if (row.type === "comment") {
+      return `<tr class="renovation-selection-row renovation-equipment-comment-row" ${dragAttrs}><td colspan="7"><div class="renovation-selection-item-cell">${dragGrip}<input class="renovation-equipment-comment-input" type="text" ` +
+        `data-renovation-equipment-comment="${escAttr(row.lineId)}" value="${escAttr(row.text || "")}" placeholder="コメントを入力..." ` +
+        `onchange="updateRenovationEquipment('${row.lineId}','text',this.value)"></div></td>` +
+        `<td><button class="renovation-delete" onclick="removeRenovationEquipment('${row.lineId}')">×</button></td></tr>`;
+    }
+    return `<tr class="renovation-selection-row" ${dragAttrs}><td><div class="renovation-selection-item-cell">${dragGrip}<div class="renovation-equipment-name-editor">` +
+      `${row.manufacturer ? `<small>${esc(row.manufacturer)}｜</small>` : ""}` +
+      `<input type="text" value="${escAttr(row.name || "")}" placeholder="機器名" onchange="updateRenovationEquipment('${row.lineId}','name',this.value)">` +
+      `<input type="text" value="${escAttr(row.spec || "")}" placeholder="型式・仕様" onchange="updateRenovationEquipment('${row.lineId}','spec',this.value)"></div></div></td>` +
+      `<td><input type="number" min="0" step="1" value="${row.qty}" onchange="updateRenovationEquipment('${row.lineId}','qty',this.value)"></td>` +
+      `<td><input type="number" min="0" step="1" value="${row.listPrice}" onchange="updateRenovationEquipment('${row.lineId}','listPrice',this.value)"></td>` +
+      `<td><input type="number" min="0" step="1" value="${row.netPrice}" onchange="updateRenovationEquipment('${row.lineId}','netPrice',this.value)"></td>` +
+      `<td><input type="number" min="0" step="1" value="${row.costPrice}" onchange="updateRenovationEquipment('${row.lineId}','costPrice',this.value)"></td>` +
+      `<td><input class="renovation-note-input" type="text" value="${escAttr(row.note || "")}" onchange="updateRenovationEquipment('${row.lineId}','note',this.value)"></td>` +
+      `<td>${fmtNum(row.qty * row.costPrice)}</td>` +
+      `<td><button class="renovation-delete" onclick="removeRenovationEquipment('${row.lineId}')">×</button></td></tr>`;
+  }).join("");
   const materialRows = state.materials.map(row => {
     const capacity = renovationMaterialCapacity(row);
-    return `<tr><td>${esc(row.name)}<small>${esc(row.spec)}${row.unit ? ` ／ ${esc(row.unit)}` : ""}</small>${capacity ? `<small class="renovation-capacity">${esc(capacity.detail)}</small>` : ""}${row.note ? `<small class="renovation-item-note">備考：${esc(row.note)}</small>` : ""}</td>` +
+    const dragAttrs = `data-selection-line-id="${escAttr(row.lineId)}" ` +
+      `ondragover="overRenovationSelectionDrag(event,'material')" ondragleave="leaveRenovationSelectionDrag(event)" ` +
+      `ondrop="dropRenovationSelectionRow(event,'material','${row.lineId}')"`;
+    const dragGrip = `<span class="renovation-selection-drag-grip" draggable="true" ` +
+      `ondragstart="startRenovationSelectionDrag(event,'material','${row.lineId}')" ` +
+      `ondragend="endRenovationSelectionDrag()" title="ドラッグして並び替え">⠿</span>`;
+    return `<tr class="renovation-selection-row" ${dragAttrs}><td><div class="renovation-selection-item-cell">${dragGrip}<div class="renovation-selection-material-label">${esc(row.name)}<small>${esc(row.spec)}${row.unit ? ` ／ ${esc(row.unit)}` : ""}</small>${capacity ? `<small class="renovation-capacity">${esc(capacity.detail)}</small>` : ""}${row.note ? `<small class="renovation-item-note">備考：${esc(row.note)}</small>` : ""}</div></div></td>` +
     `<td><input type="number" min="0" step="1" value="${row.qty}" onchange="updateRenovationMaterial('${row.lineId}','qty',this.value)" title="上下ボタンは1刻み。小数は直接入力できます"></td>` +
     `<td><input type="number" min="0" step="1" value="${row.listPrice ?? ""}" placeholder="係数" onchange="updateRenovationMaterial('${row.lineId}','listPrice',this.value)"></td>` +
     `<td><input type="number" min="0" step="1" value="${row.netPrice ?? ""}" placeholder="係数" onchange="updateRenovationMaterial('${row.lineId}','netPrice',this.value)"></td>` +
@@ -2099,7 +2258,9 @@ function renderRenovationTab() {
       renovationNotesHtml(materialNotes, `${activeMaterialCategory?.label || "材料"}の元表メモ`) +
       `</div></section>` +
     `<div class="renovation-work"><section><div class="renovation-section-title">3. 選択内容・費用調整</div>` +
-      `<div class="renovation-selection-subtitle">選択した機器</div>` +
+      `<div class="renovation-selection-subtitle"><span>選択した機器</span><span class="renovation-selection-tools">` +
+        `<button onclick="addRenovationEquipmentAuxiliary('comment')">＋ コメント</button>` +
+        `<button onclick="addRenovationEquipmentAuxiliary('sep')">＋ 水平線</button></span></div>` +
       `<div class="renovation-table-wrap"><table><thead><tr><th>機器</th><th>数量</th><th>定価</th><th>NET</th><th>仕入</th><th>備考</th><th>仕入計</th><th></th></tr></thead><tbody>${equipmentRows || `<tr><td colspan="8" class="renovation-empty">左の機器一覧から追加してください。</td></tr>`}</tbody></table></div>` +
       `<div class="renovation-selection-subtotal"><strong>機器小計</strong><span>定価 <b>${fmtNum(pricing.equipmentList)}</b></span><span>NET <b>${fmtNum(pricing.equipmentNet)}</b></span><span>仕入 <b>${fmtNum(pricing.equipmentCost)}</b></span></div>` +
       `<div class="renovation-selection-subtitle">選択した材料</div>` +

@@ -92,7 +92,7 @@ test('空欄・無効値を安全に扱い、0倍は有効にする', () => {
 
 test('保存・JSON読込時の移行で2段目の倍率と金額を保持する', () => {
   const run = createApp();
-  const estimate = {units:[{unitId:'u',unitName:'試験',lines:[item(100),subtotal(1.2,0.8)],listRate:1.5,netRate:0.33}]};
+  const estimate = {units:[{unitId:'u',unitName:'試験',lines:[item(100),subtotal(1.2,0.8)],listRate:1.5,netRate:0.33,includeInOverallTotals:true}]};
   const restored = run(`migrateEstimate(JSON.parse(JSON.stringify(${JSON.stringify(estimate)})))`);
   assert.deepEqual(restored, estimate);
   assert.equal(run(`calcLinesGrandTotal(${JSON.stringify(restored.units[0].lines)})`), 96);

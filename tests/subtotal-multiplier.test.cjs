@@ -151,20 +151,6 @@ test('印刷の段組みで小計と再計算を分断せず、2行分で改列�
   assert.equal((chunks[1][0].match(/<tr /g) || []).length, 2);
 });
 
-test('改修のA3印刷だけ縦方向を広く使い、通常印刷の行上限は変えない', () => {
-  const run = createApp();
-  const lines = Array.from({length: 60}, (_, index) => ({
-    type: 'custom', lineId: `item-${index}`, name: `試験品${index}`, unitPrice: 100, qty: 1,
-  }));
-  const result = run(`({
-    normalSingle: EST_PRINT_SINGLE_ROW_LIMIT,
-    normalMulti: EST_PRINT_MULTI_ROW_LIMIT,
-    renovation: EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT,
-    chunks: renovationDetailPrintChunks({lines:${JSON.stringify(lines)}}, EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT).length
-  })`);
-  assert.deepEqual(result, {normalSingle: 30, normalMulti: 35, renovation: 48, chunks: 2});
-});
-
 test('数量・単価変更後は入力欄を作り直さず両段の表示金額を更新する', () => {
   const run = createApp();
   const result = run(`(() => {

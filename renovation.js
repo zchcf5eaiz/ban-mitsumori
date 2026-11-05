@@ -1079,6 +1079,23 @@ function refreshRenovation() {
   requestAnimationFrame(() => restoreRenovationViewPosition(viewPosition));
 }
 
+/** 追加した選択行が、固定スクロール領域の中で見える位置まで移動する。 */
+function revealRenovationSelectionRow(lineId) {
+  if (!lineId) return;
+  requestAnimationFrame(() => {
+    const row = document.querySelector(`.renovation-selection-row[data-selection-line-id="${lineId}"]`);
+    const container = row?.closest(".renovation-table-wrap");
+    if (!row || !container) return;
+    const rowRect = row.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    if (rowRect.bottom > containerRect.bottom) {
+      container.scrollTop += rowRect.bottom - containerRect.bottom + 2;
+    } else if (rowRect.top < containerRect.top) {
+      container.scrollTop -= containerRect.top - rowRect.top + 2;
+    }
+  });
+}
+
 function setRenovationMethod(method) {
   const state = getRenovationState();
   if (!state || !RENOVATION_METHODS[method]) return;
@@ -1278,6 +1295,25 @@ function addRenovationEquipment(id) {
   state.equipment.push(row);
   placeNewRenovationEquipmentInLineOrder(state, row.lineId);
   refreshRenovation();
+  revealRenovationSelectionRow(row.lineId);
+}
+
+function copyRenovationEquipment(lineId) {
+  const state = getRenovationState();
+  const source = state?.equipment.find(row => row.lineId === lineId);
+  if (!state || !source || source.type === "comment" || source.type === "sep") return;
+  const copy = {
+    ...source,
+    lineId: genId(),
+    ...(source.manufacturerPrices
+      ? { manufacturerPrices: JSON.parse(JSON.stringify(source.manufacturerPrices)) }
+      : {}),
+  };
+  state.equipment.push(copy);
+  placeNewRenovationEquipmentInLineOrder(state, copy.lineId);
+  refreshRenovation();
+  revealRenovationSelectionRow(copy.lineId);
+  showToast("機器を一番下にコピーしました");
 }
 
 function updateRenovationEquipment(lineId, field, value) {
@@ -2285,20 +2321,24 @@ function renderRenovationTab() {
     const dragGrip = `<span class="renovation-selection-drag-grip" draggable="true" ` +
       `ondragstart="startRenovationSelectionDrag(event,'equipment','${row.lineId}')" ` +
       `ondragend="endRenovationSelectionDrag()" title="ドラッグして並び替え">⠿</span>`;
-    const insertTools = `<span class="renovation-row-insert-tools">` +
+    const auxiliaryTools = `<span class="renovation-row-insert-tools">` +
       `<button onclick="addRenovationEquipmentAuxiliaryAfter('${row.lineId}','sep')" title="この行の下に水平線を追加">▶</button>` +
       `<button onclick="addRenovationEquipmentAuxiliaryAfter('${row.lineId}','comment')" title="この行の下にコメントを追加">💬</button></span>`;
+    const equipmentTools = `<span class="renovation-row-insert-tools">` +
+      `<button onclick="addRenovationEquipmentAuxiliaryAfter('${row.lineId}','sep')" title="この行の下に水平線を追加">▶</button>` +
+      `<button onclick="addRenovationEquipmentAuxiliaryAfter('${row.lineId}','comment')" title="この行の下にコメントを追加">💬</button>` +
+      `<button onclick="copyRenovationEquipment('${row.lineId}')" title="この機器を一番下にコピー">⧉</button></span>`;
     if (row.type === "sep") {
-      return `<tr class="renovation-selection-row renovation-equipment-separator-row" ${dragAttrs}><td colspan="7"><div class="renovation-selection-item-cell">${dragGrip}${insertTools}<span class="renovation-equipment-separator-line"></span></div></td>` +
+      return `<tr class="renovation-selection-row renovation-equipment-separator-row" ${dragAttrs}><td colspan="7"><div class="renovation-selection-item-cell">${dragGrip}${auxiliaryTools}<span class="renovation-equipment-separator-line"></span></div></td>` +
         `<td><button class="renovation-delete" onclick="removeRenovationEquipment('${row.lineId}')">×</button></td></tr>`;
     }
     if (row.type === "comment") {
-      return `<tr class="renovation-selection-row renovation-equipment-comment-row" ${dragAttrs}><td colspan="7"><div class="renovation-selection-item-cell">${dragGrip}${insertTools}<input class="renovation-equipment-comment-input" type="text" ` +
+      return `<tr class="renovation-selection-row renovation-equipment-comment-row" ${dragAttrs}><td colspan="7"><div class="renovation-selection-item-cell">${dragGrip}${auxiliaryTools}<input class="renovation-equipment-comment-input" type="text" ` +
         `data-renovation-equipment-comment="${escAttr(row.lineId)}" value="${escAttr(row.text || "")}" placeholder="コメントを入力..." ` +
         `onchange="updateRenovationEquipment('${row.lineId}','text',this.value)"></div></td>` +
         `<td><button class="renovation-delete" onclick="removeRenovationEquipment('${row.lineId}')">×</button></td></tr>`;
     }
-    return `<tr class="renovation-selection-row" ${dragAttrs}><td><div class="renovation-selection-item-cell">${dragGrip}${insertTools}<div class="renovation-equipment-name-editor">` +
+    return `<tr class="renovation-selection-row" ${dragAttrs}><td><div class="renovation-selection-item-cell">${dragGrip}${equipmentTools}<div class="renovation-equipment-name-editor">` +
       `${row.manufacturer ? `<small>${esc(row.manufacturer)}｜</small>` : ""}` +
       `<input type="text" value="${escAttr(row.name || "")}" placeholder="機器名" onchange="updateRenovationEquipment('${row.lineId}','name',this.value)">` +
       `<input type="text" value="${escAttr(row.spec || "")}" placeholder="型式・仕様" onchange="updateRenovationEquipment('${row.lineId}','spec',this.value)"></div></div></td>` +

@@ -3186,7 +3186,7 @@ function buildCatalogEstimateRows(unit) {
       return `<tr class="renovation-generated-row"><td class="ec-sep"></td><td class="ec-no">${itemNo}</td>` +
         `<td class="ec-name">${esc(line.name || "改修工事")}</td><td class="ec-spec">${esc(line.spec || "")}</td>` +
         `<td class="ec-price">${fmtNum(line.unitPrice)}</td><td class="ec-qty">${line.qty}</td>` +
-        `<td class="ec-subtotal">${fmtNum(line.qty * line.unitPrice)}</td><td class="ec-del"><small>改修タブで編集</small></td></tr>`;
+        `<td class="ec-subtotal">${fmtNum(line.qty * line.unitPrice)}</td><td class="ec-del"></td></tr>`;
     }
     let name = line.name || "(カスタム)";
     let spec = line.spec || "";
@@ -3610,7 +3610,7 @@ function _buildLineRows(lines) {
         </div></td><td class="ec-no">${itemNo}</td>
         <td class="ec-name">${esc(line.name || "改修工事")}</td><td class="ec-spec">${esc(line.spec || "")}</td>
         <td class="ec-price">${fmtNum(line.unitPrice)}</td><td class="ec-qty">${line.qty}</td>
-        <td class="ec-subtotal">${fmtNum(sub)}</td><td class="ec-del no-print"><small>改修タブで編集</small></td>
+        <td class="ec-subtotal">${fmtNum(sub)}</td><td class="ec-del no-print"></td>
       </tr>`;
     }
     let name, spec, srcBadge;

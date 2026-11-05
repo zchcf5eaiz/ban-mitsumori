@@ -835,15 +835,19 @@ function renovationInternalCardHtml(unit) {
     `</div></section>`;
 }
 
-function renovationInternalEquipmentRowWeight(item) {
+function renovationInternalEquipmentRowWeight(item, trWeight = 7) {
   if (item?.type === "sep") return 0.2;
   // TRは本体行に加えて3社比較表を持つ。通常行として数えると、列生成後に
   // Chromeが用紙途中で強制分断するため、実際の高さに近い7行相当とする。
-  return renovationIsTrEquipment(item) ? 7 : 1;
+  return renovationIsTrEquipment(item) ? trWeight : 1;
 }
 
 /** 印刷用の社内計算情報を、A4相当の高さごとの列HTMLへ分割する。 */
-function renovationInternalPrintColumns(unit, rowLimit = 35) {
+function renovationInternalPrintColumns(
+  unit,
+  rowLimit = 35,
+  equipmentRowWeight = item => renovationInternalEquipmentRowWeight(item)
+) {
   const state = getRenovationState(unit);
   const pricing = calcRenovationPricing(unit);
   if (!state || !pricing) return [];
@@ -855,10 +859,14 @@ function renovationInternalPrintColumns(unit, rowLimit = 35) {
   const presentation = RENOVATION_PRESENTATIONS[state.presentationMethod]?.label || "一式";
   const columns = [[]];
   const weights = [0];
+  const columnLimit = index => {
+    const value = typeof rowLimit === "function" ? rowLimit(index) : rowLimit;
+    return Math.max(1, Number(value) || 35);
+  };
   const nextColumn = () => { columns.push([]); weights.push(0); };
   const addBlock = (html, weight) => {
     const ci = columns.length - 1;
-    if (weights[ci] > 0 && weights[ci] + weight > rowLimit) nextColumn();
+    if (weights[ci] > 0 && weights[ci] + weight > columnLimit(ci)) nextColumn();
     columns[columns.length - 1].push(html);
     weights[weights.length - 1] += weight;
   };
@@ -878,13 +886,14 @@ function renovationInternalPrintColumns(unit, rowLimit = 35) {
     let continued = false;
     while (index < sourceRows.length) {
       let ci = columns.length - 1;
-      if (weights[ci] > rowLimit - 3) { nextColumn(); ci++; }
-      const capacity = Math.max(1, Math.floor(rowLimit - weights[ci] - 2));
+      if (weights[ci] > columnLimit(ci) - 3) { nextColumn(); ci++; }
+      const capacity = Math.max(1, Math.floor(columnLimit(ci) - weights[ci] - 2));
       const chunk = [];
       let chunkWeight = 0;
       while (index < sourceRows.length) {
         const entry = sourceRows[index];
-        const entryWeight = Math.max(1, Number(entry.weight) || 1);
+        const rawWeight = typeof entry.weight === "function" ? entry.weight(ci) : entry.weight;
+        const entryWeight = Math.max(1, Number(rawWeight) || 1);
         if (chunk.length && chunkWeight + entryWeight > capacity) break;
         if (!chunk.length && entryWeight > capacity && weights[ci] > 0) {
           nextColumn();
@@ -915,7 +924,7 @@ function renovationInternalPrintColumns(unit, rowLimit = 35) {
   addBlock(totalTable(totalRow("機器", pricing.equipmentList, pricing.equipmentNet, pricing.equipmentCost, "renovation-internal-key-cost")), 2);
   addDetails("機器内訳", "各単価", state.equipment.map(item => ({
     html: renovationInternalEquipmentDetailHtml(item, detailRow),
-    weight: renovationInternalEquipmentRowWeight(item),
+    weight: columnIndex => equipmentRowWeight(item, columnIndex),
   })));
   addBlock(totalTable(totalRow("材料費", pricing.materialList, pricing.materialNet, pricing.materialCost, "renovation-internal-key-cost")), 2);
   addDetails("材料内訳", "各単価／空欄登録は係数計算", state.materials.map(item => {

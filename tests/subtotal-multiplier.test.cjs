@@ -161,12 +161,38 @@ test('改修印刷はA3用の安全な列上限で分割し、通常印刷の上
     normalMulti: EST_PRINT_MULTI_ROW_LIMIT,
     renovation: EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT,
     renovationInternal: RENOVATION_INTERNAL_ROW_LIMIT,
+    renovationInternalContinuation: RENOVATION_INTERNAL_CONTINUATION_ROW_LIMIT,
     chunks: renovationDetailPrintChunks({lines:${JSON.stringify(lines)}}, EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT).length
   })`);
-  assert.deepEqual(result, {normalSingle: 30, normalMulti: 35, renovation: 40, renovationInternal: 40, chunks: 2});
+  assert.deepEqual(result, {
+    normalSingle: 30, normalMulti: 35, renovation: 40,
+    renovationInternal: 40, renovationInternalContinuation: 40, chunks: 2,
+  });
   assert.equal(run('renovationInternalEquipmentRowWeight({type:"sep"})'), 0.2);
   assert.equal(run('renovationInternalEquipmentRowWeight({category:"Tr1φ"})'), 7);
+  assert.equal(run('renovationInternalEquipmentRowWeight({category:"Tr1φ"}, 5)'), 5);
   assert.equal(run('renovationInternalEquipmentRowWeight({category:"VCB"})'), 1);
+});
+
+test('改修の社内情報は1ページ目を保ち、2ページ目以降だけ遅く折り返す', () => {
+  const run = createApp();
+  const result = run(`(() => {
+    const unit = createNewEstimate().units[0];
+    unit.renovation = createRenovationState();
+    unit.renovation.equipment = Array.from({length:30}, (_, index) => ({
+      lineId:'eq-' + index, category:'Tr1φ', name:'TR' + index,
+      spec:'200kVA 6600/210V', manufacturer:'試験', qty:1,
+      listPrice:100, netPrice:50, costPrice:40
+    }));
+    const fixed = renovationInternalPrintColumns(unit, 40).length;
+    const staged = renovationInternalPrintColumns(
+      unit,
+      40,
+      (item, index) => renovationInternalEquipmentRowWeight(item, index < 2 ? 7 : 5)
+    ).length;
+    return {fixed, staged};
+  })()`);
+  assert.ok(result.staged < result.fixed, JSON.stringify(result));
 });
 
 test('数量・単価変更後は入力欄を作り直さず両段の表示金額を更新する', () => {

@@ -3674,6 +3674,9 @@ const EST_PRINT_MULTI_ROW_LIMIT = 35;  // 複数項目: 従来の1列上限を�
 // 明細と社内情報では行の実高が違うため、それぞれ専用の上限を持つ。
 const EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT = 40;
 const RENOVATION_INTERNAL_ROW_LIMIT = 40;
+const RENOVATION_INTERNAL_CONTINUATION_ROW_LIMIT = 40;
+const RENOVATION_INTERNAL_TR_ROW_WEIGHT = 7;
+const RENOVATION_INTERNAL_CONTINUATION_TR_ROW_WEIGHT = 5;
 
 function printUnitHeading(unit, suffix = "") {
   const excluded = !unitIncludedInOverallTotals(unit);
@@ -3747,10 +3750,27 @@ function renovationDetailPrintChunks(unit, rowLimit) {
   return result.length ? result : [[]];
 }
 
-function renovationPrintColumnPlan(unit, detailRowLimit, internalRowLimit = detailRowLimit) {
+function renovationPrintColumnPlan(
+  unit,
+  detailRowLimit,
+  internalRowLimit = detailRowLimit,
+  continuationInternalRowLimit = internalRowLimit,
+  columnsPerPage = 4
+) {
   const detailColumns = renovationDetailPrintChunks(unit, detailRowLimit);
+  const detailRemainder = detailColumns.length % columnsPerPage;
+  const firstPageInternalColumns = detailRemainder === 0 ? 0 : columnsPerPage - detailRemainder;
   const internalColumns = typeof renovationInternalPrintColumns === "function"
-    ? renovationInternalPrintColumns(unit, internalRowLimit)
+    ? renovationInternalPrintColumns(
+        unit,
+        index => index < firstPageInternalColumns ? internalRowLimit : continuationInternalRowLimit,
+        (item, index) => renovationInternalEquipmentRowWeight(
+          item,
+          index < firstPageInternalColumns
+            ? RENOVATION_INTERNAL_TR_ROW_WEIGHT
+            : RENOVATION_INTERNAL_CONTINUATION_TR_ROW_WEIGHT
+        )
+      )
     : [renovationInternalCardHtml(unit)];
   return { detailColumns, internalColumns };
 }
@@ -3761,7 +3781,12 @@ function estimatePrintColumnCount(units = currentEstimate.units) {
   const internalRowLimit = RENOVATION_INTERNAL_ROW_LIMIT;
   return units.reduce((count, unit) => {
     if (!unit?.renovation?.enabled) return count + 1;
-    const plan = renovationPrintColumnPlan(unit, EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT, internalRowLimit);
+    const plan = renovationPrintColumnPlan(
+      unit,
+      EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT,
+      internalRowLimit,
+      RENOVATION_INTERNAL_CONTINUATION_ROW_LIMIT
+    );
     return count + plan.detailColumns.length + plan.internalColumns.length;
   }, 0);
 }
@@ -3835,7 +3860,12 @@ function renderEstimateLinesForPrint() {
     // 改修は明細列を先に、社内計算情報列を後に並べる。
     // 3列以上必要な場合はA3横（4列枠）へ自動切替する。
     if (units[0]?.renovation?.enabled && typeof renovationInternalCardHtml === "function") {
-      const plan = renovationPrintColumnPlan(units[0], EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT, RENOVATION_INTERNAL_ROW_LIMIT);
+      const plan = renovationPrintColumnPlan(
+        units[0],
+        EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT,
+        RENOVATION_INTERNAL_ROW_LIMIT,
+        RENOVATION_INTERNAL_CONTINUATION_ROW_LIMIT
+      );
       const slots = [
         ...plan.detailColumns.map((rows, index) => ({ type: "detail", rows, index })),
         ...plan.internalColumns.map((html, index) => ({ type: "internal", html, index })),
@@ -3947,7 +3977,13 @@ function renderEstimateLinesForPrint() {
 
     // 改修は「明細（必要列数）」の後に「社内情報（必要列数）」を連続配置する。
     if (u?.renovation?.enabled && typeof renovationInternalCardHtml === "function") {
-      const plan = renovationPrintColumnPlan(u, EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT, RENOVATION_INTERNAL_ROW_LIMIT);
+      const plan = renovationPrintColumnPlan(
+        u,
+        EST_PRINT_RENOVATION_DETAIL_ROW_LIMIT,
+        RENOVATION_INTERNAL_ROW_LIMIT,
+        RENOVATION_INTERNAL_CONTINUATION_ROW_LIMIT,
+        numCols
+      );
       const requiredColumns = plan.detailColumns.length + plan.internalColumns.length;
       const hasPageContent = curCols.some(column => column.length > 0);
       if (hasPageContent && (colWeights[ci] > 0 || requiredColumns > numCols - ci)) {

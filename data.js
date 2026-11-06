@@ -2097,7 +2097,27 @@ const DEFAULT_MASTER_ITEMS = [
   { id: "J02G", category: "J", name: "空調盤SR-1(コインタイマー)", spec: "扉", unit: "枚", basePrice: 25, note: "", _qty: "1"},
   { id: "J02J", category: "J", name: "空調盤SR-1(コインタイマー)", spec: "窓", unit: "個", basePrice: 25, note: "", _qty: "1"},
   { id: "J02H", category: "J", name: "空調盤SR-1(コインタイマー)", spec: "鍵", unit: "個", basePrice: 25, note: "", _qty: "1"},
-  { id: "J02I", category: "J", name: "空調盤SR-1(コインタイマー)", spec: "各務原", unit: "式", basePrice: 100, note: "", _qty: "1", _memo: "各務原のみ"}
+  { id: "J02I", category: "J", name: "空調盤SR-1(コインタイマー)", spec: "各務原", unit: "式", basePrice: 100, note: "", _qty: "1", _memo: "各務原のみ"},
+  { id: "J060", category: "J", name: "トンネル6", spec: "WH", unit: "個", basePrice: 60, note: "", _qty: "1", _memo: "" },
+  { id: "J061", category: "J", name: "トンネル6", spec: "UVR", unit: "個", basePrice: 98, note: "", _qty: "1", _memo: "" },
+  { id: "J062", category: "J", name: "トンネル6", spec: "WL", unit: "個", basePrice: 14, note: "", _qty: "1", _memo: "" },
+  { id: "J063", category: "J", name: "トンネル6", spec: "VM・AM", unit: "個", basePrice: 39, note: "", _qty: "2", _memo: "" },
+  { id: "J064", category: "J", name: "トンネル6", spec: "CT", unit: "個", basePrice: 15, note: "", _qty: "2", _memo: "" },
+  { id: "J065", category: "J", name: "トンネル6", spec: "SPD分離器付", unit: "個", basePrice: 245, note: "", _qty: "1", _memo: "" },
+  { id: "J066", category: "J", name: "トンネル6", spec: "主幹", unit: "個", basePrice: 100, note: "", _qty: "1", _memo: "" },
+  { id: "J067", category: "J", name: "トンネル6", spec: "E2P", unit: "個", basePrice: 58, note: "", _qty: "14", _memo: "トンネルの負荷は2Pでも3Pの価格" },
+  { id: "J068", category: "J", name: "トンネル6", spec: "M2P", unit: "個", basePrice: 31, note: "", _qty: "1", _memo: "" },
+  { id: "J069", category: "J", name: "トンネル6", spec: "MC20A", unit: "個", basePrice: 54, note: "", _qty: "6", _memo: "" },
+  { id: "J06A", category: "J", name: "トンネル6", spec: "TB", unit: "個", basePrice: 20, note: "", _qty: "3", _memo: "" },
+  { id: "J06B", category: "J", name: "トンネル6", spec: "C", unit: "個", basePrice: 8, note: "", _qty: "1", _memo: "" },
+  { id: "J06C", category: "J", name: "トンネル6", spec: "調光スペース", unit: "式", basePrice: 150, note: "", _qty: "1", _memo: "" },
+  { id: "J06D", category: "J", name: "トンネル6", spec: "FL", unit: "個", basePrice: 28, note: "", _qty: "1", _memo: "" },
+  { id: "J06E", category: "J", name: "トンネル6", spec: "DrSW", unit: "個", basePrice: 15, note: "", _qty: "1", _memo: "" },
+  { id: "J06F", category: "J", name: "トンネル6", spec: "SH", unit: "個", basePrice: 41, note: "", _qty: "1", _memo: "" },
+  { id: "J06G", category: "J", name: "トンネル6", spec: "サーモSW", unit: "個", basePrice: 28, note: "", _qty: "1", _memo: "" },
+  { id: "J06H", category: "J", name: "トンネル6", spec: "M2P", unit: "個", basePrice: 31, note: "", _qty: "1", _memo: "" },
+  { id: "J06I", category: "J", name: "トンネル6", spec: "屋外BOX W100D700", unit: "面", basePrice: 5447, note: "", _qty: "1", _memo: "1513×1.2（屋根形状）×3（亜鉛溶射）" },
+  { id: "J06J", category: "J", name: "トンネル6", spec: "扉", unit: "枚", basePrice: 25, note: "", _qty: "2", _memo: "" }
 ];
 
 // 空調盤SR-1 グループコメントのデフォルト定義

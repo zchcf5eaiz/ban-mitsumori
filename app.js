@@ -806,8 +806,16 @@ const SPECIAL_ESTIMATE_IMAGE_BLOCKS = [
   { name: "トンネル7", image: "tunnel-7.png" },
 ];
 
-function renderSpecialEstimateImageBlocks() {
-  return SPECIAL_ESTIMATE_IMAGE_BLOCKS.map(block => `
+function renderSpecialEstimateImageBlocks(nameGroups) {
+  return SPECIAL_ESTIMATE_IMAGE_BLOCKS.map(block => {
+    const estimateGroup = nameGroups.find(group => group.name === block.name);
+    const estimateTable = estimateGroup
+      ? renderNameGroup(estimateGroup, MATRIX_GROUPS)
+      : `<div class="special-estimate-pending-table">
+          <div class="special-estimate-pending-table-title">${esc(block.name)}</div>
+          <div class="special-estimate-pending-table-body">積算項目は次の指示で設定</div>
+        </div>`;
+    return `
     <section class="cat-subgroup special-estimate-priced-card tunnel-estimate-card">
       <div class="cat-sub-heading">${esc(block.name)}</div>
       <div class="cat-subgroup-inner cat-sr1-row">
@@ -823,12 +831,10 @@ function renderSpecialEstimateImageBlocks() {
             <div class="special-estimate-pending-field">コメントは次の指示で設定</div>
           </div>
         </div>
-        <div class="cat-sr1-table special-estimate-pending-table">
-          <div class="special-estimate-pending-table-title">${esc(block.name)}</div>
-          <div class="special-estimate-pending-table-body">積算項目は次の指示で設定</div>
-        </div>
+        <div class="cat-sr1-table">${estimateTable}</div>
       </div>
-    </section>`).join("");
+    </section>`;
+  }).join("");
 }
 
 function showSpecialEstimateImage(src, title) {
@@ -1092,6 +1098,7 @@ function renderMasterTable() {
           html += `</div></div>`;
           continue;
         }
+        if (cg.id === "J" && SPECIAL_ESTIMATE_IMAGE_BLOCKS.some(block => block.name === ng.name)) continue;
         const hp = hPairMap[ng.name];
         if (hp) {
           const key = hp.join("|");
@@ -1160,7 +1167,7 @@ function renderMasterTable() {
           html += `<div class="cat-inline-img"><img src="img/jakuden-list.png" alt="弱電端子盤リスト" style="max-width:600px"></div>`;
         }
       }
-      if (cg.id === "J") html += renderSpecialEstimateImageBlocks();
+      if (cg.id === "J") html += renderSpecialEstimateImageBlocks(nameGroups);
       html += `</div></div>`;
     }
   }
@@ -2576,7 +2583,7 @@ function renderNameGroup(ng, matrixDefs, blockNum) {
   const ag = ACCENT_GROUPS[cat];
   const accentClass = ag && (ag === "*" || ag.has(ng.name)) ? " mg-table-accent" : "";
   const showNote = (ng.name === "フロートスイッチ");
-  const showQtyNote = (ng.name === "空調盤SR-1" || ng.name === "空調盤SR-1(コインタイマー)");
+  const showQtyNote = cat === "J" && ng.items.some(item => item._qty != null);
   const showTotalCol = ng.items.length > 0 && ng.items[0]._qty != null && !showQtyNote;
   const numPrefix = blockNum ? `<span class="mg-block-num">${blockNum}</span> ` : "";
   let h = `<div class="name-group${accentClass}">`;

@@ -796,6 +796,71 @@ function jumpToCatalogCategory(id) {
   block.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+const SPECIAL_ESTIMATE_IMAGE_BLOCKS = [
+  { name: "トンネル1", image: "tunnel-1.png" },
+  { name: "トンネル2", image: "tunnel-2.png" },
+  { name: "トンネル3", image: "tunnel-3.png" },
+  { name: "トンネル4", image: "tunnel-4.png" },
+  { name: "トンネル5", image: "tunnel-5.png" },
+  { name: "トンネル6", image: "tunnel-6.png" },
+  { name: "トンネル7", image: "tunnel-7.png" },
+];
+
+function renderSpecialEstimateImageBlocks() {
+  return SPECIAL_ESTIMATE_IMAGE_BLOCKS.map(block => `
+    <section class="cat-subgroup special-estimate-priced-card tunnel-estimate-card">
+      <div class="cat-sub-heading">${esc(block.name)}</div>
+      <div class="cat-subgroup-inner cat-sr1-row">
+        <div class="cat-sr1-img">
+          <button type="button" class="special-estimate-image-button"
+            onclick="showSpecialEstimateImage('img/${escAttr(block.image)}','${escAttr(block.name)}')"
+            title="${escAttr(block.name)}を拡大表示">
+            <img src="img/${escAttr(block.image)}" alt="${escAttr(block.name)} 図面" loading="lazy">
+            <span class="special-estimate-zoom-label">クリックで拡大</span>
+          </button>
+          <div class="special-estimate-pending-comment">
+            <label>コメント:</label>
+            <div class="special-estimate-pending-field">コメントは次の指示で設定</div>
+          </div>
+        </div>
+        <div class="cat-sr1-table special-estimate-pending-table">
+          <div class="special-estimate-pending-table-title">${esc(block.name)}</div>
+          <div class="special-estimate-pending-table-body">積算項目は次の指示で設定</div>
+        </div>
+      </div>
+    </section>`).join("");
+}
+
+function showSpecialEstimateImage(src, title) {
+  const overlay = document.createElement("div");
+  overlay.className = "special-image-overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", title + " 拡大図");
+  overlay.innerHTML = `
+    <div class="special-image-dialog">
+      <div class="special-image-dialog-header">
+        <strong>${esc(title)}</strong>
+        <button type="button" class="special-image-close" aria-label="閉じる">×</button>
+      </div>
+      <div class="special-image-scroll"><img src="${escAttr(src)}" alt="${escAttr(title)} 拡大図"></div>
+    </div>`;
+  let onKeyDown;
+  const close = () => {
+    document.removeEventListener("keydown", onKeyDown);
+    overlay.remove();
+  };
+  overlay.addEventListener("click", event => { if (event.target === overlay) close(); });
+  overlay.querySelector(".special-image-close").addEventListener("click", close);
+  onKeyDown = event => {
+    if (event.key !== "Escape") return;
+    close();
+  };
+  document.addEventListener("keydown", onKeyDown);
+  document.body.appendChild(overlay);
+  overlay.querySelector(".special-image-close").focus();
+}
+
 // 管理表（盤）レンダリング — PDFマトリクス形式
 // ============================================================
 
@@ -894,7 +959,7 @@ function renderMasterTable() {
       }
       html += `</div></div>`;
     } else {
-      html += `<div class="${catTablesClass}">`;
+      html += `<div class="${catTablesClass}${cg.id === "J" ? " special-estimate-grid" : ""}">`;
       // カテゴリIの場合、カスタム入力テーブルを表示
       if (cg.id === "I") {
         html += renderCustomInputTable();
@@ -1015,7 +1080,7 @@ function renderMasterTable() {
         if ((ng.name === "空調盤SR-1" || ng.name === "空調盤SR-1(コインタイマー)") && cg.id === "J") {
           const imgFile = ng.name === "空調盤SR-1" ? "SR-1.png" : "SR-1-coin.png";
           const cmtVal = sr1Comments[ng.name] || "";
-          html += `<div class="cat-subgroup"><div class="cat-sub-heading">${esc(ng.name)}</div><div class="cat-subgroup-inner cat-sr1-row">`;
+          html += `<div class="cat-subgroup special-estimate-priced-card"><div class="cat-sub-heading">${esc(ng.name)}</div><div class="cat-subgroup-inner cat-sr1-row">`;
           html += `<div class="cat-sr1-img"><img src="img/${imgFile}" alt="${esc(ng.name)} 図面">`;
           html += `<div style="margin-top:8px;"><label style="font-weight:bold;font-size:13px;">コメント:</label>`;
           const cmtRows = Math.max(2, (cmtVal.match(/\n/g) || []).length + 1);
@@ -1095,6 +1160,7 @@ function renderMasterTable() {
           html += `<div class="cat-inline-img"><img src="img/jakuden-list.png" alt="弱電端子盤リスト" style="max-width:600px"></div>`;
         }
       }
+      if (cg.id === "J") html += renderSpecialEstimateImageBlocks();
       html += `</div></div>`;
     }
   }

@@ -607,6 +607,171 @@ tr[draggable="true"]:active { cursor: grabbing; }
   flex: 1 1 auto;
   min-width: 0;
 }
+
+/* J. 特殊仕様積算例 — 図面を主役にしたワイドレイアウト */
+.special-estimate-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+  align-items: start;
+}
+.special-estimate-priced-card {
+  grid-column: 1 / -1;
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 2px 8px rgba(30, 64, 104, 0.08);
+}
+.special-estimate-priced-card .cat-sr1-row {
+  display: grid;
+  grid-template-columns: minmax(520px, 1.55fr) minmax(320px, 0.9fr);
+  gap: 14px;
+}
+.special-estimate-priced-card .cat-sr1-img,
+.special-estimate-priced-card .cat-sr1-table {
+  min-width: 0;
+}
+.special-estimate-priced-card .cat-sr1-img img {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: auto;
+}
+.tunnel-estimate-card { grid-column: 1 / -1; }
+.special-estimate-image-button {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: #eef2f6;
+  cursor: zoom-in;
+}
+.special-estimate-image-button img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.414 / 1;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid #d9e1ea;
+}
+.special-estimate-pending-comment { margin-top: 8px; }
+.special-estimate-pending-comment label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.special-estimate-pending-field {
+  min-height: 36px;
+  padding: 8px;
+  box-sizing: border-box;
+  border: 1px dashed #aebdcb;
+  border-radius: 3px;
+  background: #f8fafc;
+  color: #718096;
+  font-size: 0.8rem;
+}
+.special-estimate-pending-table {
+  min-height: 150px;
+  border: 1px dashed #aebdcb;
+  background: #fff;
+}
+.special-estimate-pending-table-title {
+  padding: 7px 9px;
+  border-bottom: 1px solid #cbd5e0;
+  background: #dce9f5;
+  color: #1e4068;
+  font-weight: 700;
+}
+.special-estimate-pending-table-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 110px;
+  padding: 12px;
+  box-sizing: border-box;
+  color: #718096;
+  font-size: 0.82rem;
+  text-align: center;
+}
+.special-estimate-zoom-label {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(30, 64, 104, 0.86);
+  color: #fff;
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+.special-estimate-image-button:hover img,
+.special-estimate-image-button:focus-visible img {
+  border-color: #2b78c5;
+  box-shadow: 0 0 0 2px rgba(43, 120, 197, 0.18);
+}
+.special-image-overlay {
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(10, 22, 36, 0.82);
+}
+.special-image-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(96vw, 1680px);
+  height: 94vh;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+}
+.special-image-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+  padding: 8px 12px 8px 16px;
+  background: #1e4068;
+  color: #fff;
+}
+.special-image-close {
+  width: 36px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 4px;
+  background: transparent;
+  color: #fff;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.special-image-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+  background: #e9eef4;
+  text-align: center;
+}
+.special-image-scroll img {
+  width: auto;
+  max-width: none;
+  min-width: min(100%, 1200px);
+  height: auto;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+}
+@media (max-width: 1500px) {
+  .special-estimate-grid { grid-template-columns: 1fr; }
+  .special-estimate-priced-card { grid-column: auto; }
+  .special-estimate-priced-card .cat-sr1-row { grid-template-columns: 1fr; }
+}
 .cat-inline-img {
   flex: 0 0 auto;
 }

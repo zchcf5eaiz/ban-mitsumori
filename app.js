@@ -15,6 +15,22 @@ const STORAGE_CUBICLE_PRICES = "ban_cubicle_prices_v1";
 const STORAGE_GROUP_TOTALS   = "ban_group_totals_v1";
 const STORAGE_SR1_COMMENTS   = "ban_sr1_comments_v2";
 const STORAGE_TRSPACE_LP     = "ban_trspace_lp_v1";
+const STORAGE_CONTROL_TR_REVISION = "ban_control_tr_revision_v1";
+const STORAGE_CONTROL_TR_HISTORY  = "ban_control_tr_history_v1";
+
+const CONTROL_TR_PRICE_REVISION = 1;
+const CONTROL_TR_PRICE_CHANGE = Object.freeze([
+  { id: "B050", spec: "50VA", oldPrice: 38, newPrice: 76 },
+  { id: "B05s", spec: "100VA", oldPrice: 46, newPrice: 92 },
+  { id: "B052", spec: "200VA", oldPrice: 35, newPrice: 70 },
+  { id: "B053", spec: "300VA", oldPrice: 84, newPrice: 168 },
+  { id: "B054", spec: "500VA", oldPrice: 124, newPrice: 248 },
+  { id: "B055", spec: "1kVA", oldPrice: 170, newPrice: 340 },
+  { id: "B056", spec: "2kVA", oldPrice: 262, newPrice: 524 },
+  { id: "B057", spec: "3kVA", oldPrice: 372, newPrice: 744 },
+  { id: "B058", spec: "5kVA", oldPrice: 594, newPrice: 1188 },
+  { id: "B059", spec: "7.5kVA", oldPrice: 900, newPrice: 1800 },
+]);
 
 // データバージョン: この値を上げるとlocalStorageのマスタを破棄してデフォルトに戻す
 const DATA_VERSION = 14;
@@ -92,6 +108,62 @@ function saveMaster() {
     if (item.basePrice) prices[item.id] = item.basePrice;
   }
   localStorage.setItem(STORAGE_PRICES, JSON.stringify(prices));
+}
+
+function migrateControlTransformerPrices() {
+  const appliedRevision = parseInt(localStorage.getItem(STORAGE_CONTROL_TR_REVISION) || "0", 10);
+  if (appliedRevision >= CONTROL_TR_PRICE_REVISION) return;
+  for (const change of CONTROL_TR_PRICE_CHANGE) {
+    const item = masterItems.find(row => row.id === change.id);
+    if (item) item.basePrice = change.newPrice;
+  }
+  const history = [{
+    effectiveDate: "2026-11-06",
+    label: "価格改定（直流電源装置を除き2倍）",
+    changes: CONTROL_TR_PRICE_CHANGE.map(change => ({ ...change })),
+  }];
+  localStorage.setItem(STORAGE_CONTROL_TR_HISTORY, JSON.stringify(history));
+  localStorage.setItem(STORAGE_CONTROL_TR_REVISION, String(CONTROL_TR_PRICE_REVISION));
+  saveMaster();
+}
+
+function showControlTransformerPriceHistory(itemId) {
+  const item = masterItems.find(row => row.id === itemId && row.name === "制御用Tr");
+  if (!item) return;
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(STORAGE_CONTROL_TR_HISTORY) || "[]"); } catch {}
+  if (!history.length) {
+    history = [{
+      effectiveDate: "2026-11-06",
+      label: "価格改定（直流電源装置を除き2倍）",
+      changes: CONTROL_TR_PRICE_CHANGE,
+    }];
+  }
+  let historyRows = history.flatMap(entry => (entry.changes || [])
+    .filter(change => change.id === itemId)
+    .map(change => ({ ...change, effectiveDate: entry.effectiveDate, label: entry.label })));
+  if (!historyRows.length) {
+    historyRows = [{
+      id: item.id,
+      spec: item.spec,
+      oldPrice: item.basePrice,
+      newPrice: item.basePrice,
+      effectiveDate: "2026-11-06",
+      label: "価格改定対象外（変更なし）",
+    }];
+  }
+  const rows = historyRows.map(change =>
+    `<tr><td>${esc(change.effectiveDate || change.label || "時期不明")}</td>` +
+    `<td>${esc(change.spec || "")}</td><td>${fmtNum(change.oldPrice)}</td>` +
+    `<td>${fmtNum(change.newPrice)}</td><td>${esc(change.label || "")}</td></tr>`
+  ).join("");
+  const overlay = document.createElement("div");
+  overlay.className = "renovation-modal-overlay";
+  overlay.onclick = event => { if (event.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="renovation-modal"><button class="renovation-modal-close" onclick="this.closest('.renovation-modal-overlay').remove()">×</button>` +
+    `<h3>制御用Tr ${esc(item.spec)} の価格履歴</h3><table><thead><tr><th>改定日</th><th>容量</th><th>改定前</th><th>改定後</th><th>内容</th></tr></thead>` +
+    `<tbody>${rows}</tbody></table></div>`;
+  document.body.appendChild(overlay);
 }
 
 function resetMaster() {
@@ -365,6 +437,7 @@ function onGroupTotalChange(groupName, val) {
 // ============================================================
 
 let masterItems = loadMaster();
+migrateControlTransformerPrices();
 let cubicleItems = loadCubicle();
 loadGroupTotals();
 let sr1Comments = loadSr1Comments();
@@ -2474,7 +2547,10 @@ function renderNameGroup(ng, matrixDefs, blockNum) {
     const selectedStyle = selectionStyle(cnt, isHL ? "rgba(66,153,225,0.15)" : "");
     h += `<tr class="mg-row${selectedClass}" data-item-id="${item.id}" ${selectedStyle} onclick="addFromMaster(event,'${item.id}')">`;
     if (!single) {
-      h += `<td class="mg-row-label">${esc(item.spec || "")}</td>`;
+      const itemHistoryButton = item.name === "制御用Tr"
+        ? `<button type="button" class="mg-row-history-button no-print" onclick="event.stopPropagation();showControlTransformerPriceHistory('${item.id}')">履歴</button>`
+        : "";
+      h += `<td class="mg-row-label">${esc(item.spec || "")}${itemHistoryButton}</td>`;
     }
     h += `<td class="mg-price"><input type="number" min="0" step="0.1" value="${item.basePrice}"
          oninput="onMasterPriceChange('${item.id}','basePrice',this.value)"

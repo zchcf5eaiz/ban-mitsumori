@@ -675,6 +675,8 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .mg-table thead th.mg-name {
   text-align: left; min-width: 40px; background: #dbeafe; font-size: 0.72rem;
 }
+.mg-row-history-button { float:right; margin:-1px 0 -1px 5px; padding:1px 5px; border:1px solid #9fb5ca; border-radius:3px; background:#f8fbff; color:#315879; font-size:8px; font-weight:700; line-height:1.35; cursor:pointer; }
+.mg-row-history-button:hover { background:#e5f1fc; }
 .mg-table tbody td {
   padding: 3px 6px; border: 1px solid #cbd5e0; vertical-align: middle;
 }

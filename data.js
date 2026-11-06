@@ -2134,7 +2134,7 @@ const DEFAULT_MASTER_ITEMS = [
   { id: "J06F", category: "J", name: "トンネル6", spec: "SH", unit: "個", basePrice: 41, note: "", _qty: "1", _memo: "" },
   { id: "J06G", category: "J", name: "トンネル6", spec: "サーモSW", unit: "個", basePrice: 28, note: "", _qty: "1", _memo: "" },
   { id: "J06H", category: "J", name: "トンネル6", spec: "M2P", unit: "個", basePrice: 31, note: "", _qty: "1", _memo: "" },
-  { id: "J06I", category: "J", name: "トンネル6", spec: "屋外BOX W100D700", unit: "面", basePrice: 5447, note: "", _qty: "1", _memo: "1513×1.2（屋根形状）×3（亜鉛溶射）" },
+  { id: "J06I", category: "J", name: "トンネル6", spec: "屋外BOX W1000D700", unit: "面", basePrice: 3632, note: "", _qty: "1", _memo: "1513×1.2（屋根形状）×2（亜鉛溶射）" },
   { id: "J06J", category: "J", name: "トンネル6", spec: "扉", unit: "枚", basePrice: 25, note: "", _qty: "2", _memo: "" }
 ];
 

@@ -813,11 +813,11 @@ function renderSpecialEstimateImageBlocks(nameGroups) {
       ? renderNameGroup(estimateGroup, MATRIX_GROUPS)
       : `<div class="special-estimate-pending-table">
           <div class="special-estimate-pending-table-title">${esc(block.name)}</div>
-          <div class="special-estimate-pending-table-body"><strong>未入力</strong><span>積算項目は次の指示で設定</span></div>
+          <div class="special-estimate-pending-table-body">積算項目は次の指示で設定</div>
         </div>`;
     return `
-    <section class="cat-subgroup special-estimate-priced-card tunnel-estimate-card${estimateGroup ? "" : " is-pending-estimate"}">
-      <div class="cat-sub-heading">${esc(block.name)}${estimateGroup ? "" : '<span class="special-estimate-pending-badge">積算項目 未入力</span>'}</div>
+    <section class="cat-subgroup special-estimate-priced-card tunnel-estimate-card">
+      <div class="cat-sub-heading">${esc(block.name)}</div>
       <div class="cat-subgroup-inner cat-sr1-row">
         <div class="cat-sr1-img">
           <button type="button" class="special-estimate-image-button"
@@ -828,7 +828,7 @@ function renderSpecialEstimateImageBlocks(nameGroups) {
           </button>
           <div class="special-estimate-pending-comment">
             <label>コメント:</label>
-            <div class="special-estimate-pending-field"><strong>未入力</strong> — コメントは次の指示で設定</div>
+            <div class="special-estimate-pending-field">コメントは次の指示で設定</div>
           </div>
         </div>
         <div class="cat-sr1-table">${estimateTable}</div>

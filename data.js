@@ -2114,7 +2114,7 @@ const DEFAULT_MASTER_ITEMS = [
   { id: "J03D", category: "J", name: "トンネル3", spec: "C", unit: "個", basePrice: 8, note: "", _qty: "1", _memo: "" },
   { id: "J03E", category: "J", name: "トンネル3", spec: "サーモSW", unit: "個", basePrice: 28, note: "", _qty: "1", _memo: "" },
   { id: "J03F", category: "J", name: "トンネル3", spec: "M2P", unit: "個", basePrice: 31, note: "", _qty: "1", _memo: "" },
-  { id: "J03G", category: "J", name: "トンネル3", spec: "屋外BOX W800D700", unit: "面", basePrice: 2726, note: "", _qty: "1", _memo: "1363×2（亜鉛溶射）" },
+  { id: "J03G", category: "J", name: "トンネル3", spec: "屋外BOX W800D700", unit: "面", basePrice: 2999, note: "", _qty: "1", _memo: "1363×1.1（屋外）×2（亜鉛溶射）" },
   { id: "J03H", category: "J", name: "トンネル3", spec: "窓", unit: "枚", basePrice: 25, note: "", _qty: "1", _memo: "" },
   { id: "J060", category: "J", name: "トンネル6", spec: "WH", unit: "個", basePrice: 60, note: "", _qty: "1", _memo: "" },
   { id: "J061", category: "J", name: "トンネル6", spec: "UVR", unit: "個", basePrice: 98, note: "", _qty: "1", _memo: "" },
@@ -2134,7 +2134,7 @@ const DEFAULT_MASTER_ITEMS = [
   { id: "J06F", category: "J", name: "トンネル6", spec: "SH", unit: "個", basePrice: 41, note: "", _qty: "1", _memo: "" },
   { id: "J06G", category: "J", name: "トンネル6", spec: "サーモSW", unit: "個", basePrice: 28, note: "", _qty: "1", _memo: "" },
   { id: "J06H", category: "J", name: "トンネル6", spec: "M2P", unit: "個", basePrice: 31, note: "", _qty: "1", _memo: "" },
-  { id: "J06I", category: "J", name: "トンネル6", spec: "屋外BOX W1000D700", unit: "面", basePrice: 3632, note: "", _qty: "1", _memo: "1513×1.2（屋根形状）×2（亜鉛溶射）" },
+  { id: "J06I", category: "J", name: "トンネル6", spec: "屋外BOX W1000D700", unit: "面", basePrice: 3999, note: "", _qty: "1", _memo: "1513×1.1（屋外）×1.2（屋根形状）×2（亜鉛溶射）" },
   { id: "J06J", category: "J", name: "トンネル6", spec: "扉", unit: "枚", basePrice: 25, note: "", _qty: "2", _memo: "" }
 ];
 

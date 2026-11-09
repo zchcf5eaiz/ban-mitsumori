@@ -638,6 +638,27 @@ tr[draggable="true"]:active { cursor: grabbing; }
   height: auto;
 }
 .tunnel-estimate-card { grid-column: 1 / -1; }
+.tunnel-estimate-card.is-pending-estimate {
+  border: 2px solid #d69e2e;
+  box-shadow: 0 0 0 3px rgba(214, 158, 46, 0.16), 0 3px 10px rgba(30, 64, 104, 0.1);
+}
+.tunnel-estimate-card.is-pending-estimate > .cat-sub-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #744210;
+  color: #fff;
+}
+.special-estimate-pending-badge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #744210;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
 .special-estimate-image-button {
   position: relative;
   display: block;
@@ -666,35 +687,38 @@ tr[draggable="true"]:active { cursor: grabbing; }
   min-height: 36px;
   padding: 8px;
   box-sizing: border-box;
-  border: 1px dashed #aebdcb;
+  border: 2px dashed #d69e2e;
   border-radius: 3px;
-  background: #f8fafc;
-  color: #718096;
+  background: #fffaf0;
+  color: #744210;
   font-size: 0.8rem;
 }
 .special-estimate-pending-table {
   min-height: 150px;
-  border: 1px dashed #aebdcb;
-  background: #fff;
+  border: 2px dashed #d69e2e;
+  background: #fffaf0;
 }
 .special-estimate-pending-table-title {
   padding: 7px 9px;
   border-bottom: 1px solid #cbd5e0;
-  background: #dce9f5;
-  color: #1e4068;
+  background: #fef3c7;
+  color: #744210;
   font-weight: 700;
 }
 .special-estimate-pending-table-body {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 5px;
   min-height: 110px;
   padding: 12px;
   box-sizing: border-box;
-  color: #718096;
+  color: #744210;
   font-size: 0.82rem;
   text-align: center;
 }
+.special-estimate-pending-table-body strong { font-size: 1rem; }
 .special-estimate-zoom-label {
   position: absolute;
   right: 18px;

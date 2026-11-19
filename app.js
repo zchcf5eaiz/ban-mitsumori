@@ -315,9 +315,9 @@ function loadSr1Comments() {
     const d = localStorage.getItem(STORAGE_SR1_COMMENTS);
     if (d) {
       const saved = JSON.parse(d);
-      // 保存値が空文字ならデフォルト値で補完
+      // 保存値が空文字または旧デフォルトのままなら、統合済みの最新注記へ移行
       for (const key of Object.keys(DEFAULT_SR1_COMMENTS)) {
-        if (!saved[key] && DEFAULT_SR1_COMMENTS[key]) {
+        if (!saved[key] || saved[key] === LEGACY_SR1_COMMENTS[key]) {
           saved[key] = DEFAULT_SR1_COMMENTS[key];
         }
       }
@@ -365,10 +365,9 @@ function sr1ComparisonItemKey(item) {
   return `current-${item.id || spec}`;
 }
 
-function sr1OpeningAmount(count, smallCount = 0) {
-  const n = Math.max(0, Number(count) || 0);
-  const small = Math.min(n, Math.max(0, Number(smallCount) || 0));
-  return 300 + n * 25 - small * 25;
+function sr1OpeningAmount(upperCount, hasMiddle = true, hasLower = true) {
+  const upper = Math.max(0, Number(upperCount) || 0);
+  return 300 + upper * 25 + (hasMiddle ? 50 : 0) + (hasLower ? 50 : 0);
 }
 
 function sr1AdjustedItemQty(estimateCase, rowKey, item) {
@@ -382,7 +381,11 @@ function sr1AdjustedItemQty(estimateCase, rowKey, item) {
 
 function sr1AdjustedItemAmount(estimateCase, rowKey, item) {
   if (rowKey === "opening50") {
-    return sr1OpeningAmount(estimateCase.openingCount, estimateCase.openingSmallCount);
+    return sr1OpeningAmount(
+      estimateCase.openingUpperCount,
+      estimateCase.openingMiddle,
+      estimateCase.openingLower
+    );
   }
   const adjustedUnitPrice = rowKey === "box"
     ? 547
@@ -390,11 +393,12 @@ function sr1AdjustedItemAmount(estimateCase, rowKey, item) {
   return adjustedUnitPrice * sr1AdjustedItemQty(estimateCase, rowKey, item);
 }
 
-function addSr1ComparisonUnitPrice(event, groupName, itemLabel, amount) {
+function addSr1ComparisonUnitPrice(event, groupName, itemLabel, amount, itemQty = 1) {
   const unitPrice = Number(amount) || 0;
   if (unitPrice <= 0) return;
   const label = `${groupName} ${itemLabel}`;
-  const qty = 1;
+  const qty = Math.max(0, Number(itemQty) || 0);
+  if (qty <= 0) return;
 
   activeUnit().lines.push({
     type: "item",
@@ -442,15 +446,19 @@ function buildCurrentSr1ComparisonCase(groupName, nameGroup) {
   const smallOpening = items.find(item => item.key === "opening25");
   const originalTotal = items.reduce((sum, item) => sum + item.unitPrice * item.qty, 0);
   const listRate = typeof DEFAULT_RATES !== "undefined" ? Number(DEFAULT_RATES.listRate) || 1.5 : 1.5;
+  const remoteCount = groupName === "空調盤SR-1(コインタイマー)" ? 7 : 4;
   return {
     name: "現在の積算例",
     estimateDate: "—",
     controllerType: "通常",
-    remoteCount: groupName === "空調盤SR-1(コインタイマー)" ? 7 : 4,
+    remoteCount,
     companyDrawingImage: groupName === "空調盤SR-1(コインタイマー)" ? "img/SR-1-coin.png" : "img/SR-1.png",
     boxWidth: groupName === "空調盤SR-1(コインタイマー)" ? 600 : 700,
     openingCount: (opening ? opening.qty : 0) + (smallOpening ? smallOpening.qty : 0),
     openingSmallCount: smallOpening ? smallOpening.qty : 0,
+    openingUpperCount: remoteCount,
+    openingMiddle: true,
+    openingLower: true,
     originalTotal,
     listRate,
     listPrice: Math.ceil(originalTotal * listRate),
@@ -506,7 +514,7 @@ function renderSr1ComparisonTable(groupName, nameGroup) {
 
   let html = `<details class="sr1-comparison" open>`;
   html += `<summary>件名別 積算比較</summary>`;
-  html += `<div class="sr1-comparison-note">単位：千円　／　抜き加工：12個＝600、12個未満は1個につき－25　／　小開口はさらに1個につき－25　／　TB（単価6）：リモコン数＋1　／　TB（単価20）・Br（単価31）：各1　／　扉・窓（単価25）：各2　／　不明（単価30）・通気孔（エコシルフィ）：各0　／　BOX：補正後は一律547</div>`;
+  html += `<div class="sr1-comparison-note">単位：千円　／　抜き加工：基本300＋上段機器数×25＋中段50＋下段50　／　TB（単価6）：リモコン数＋1　／　TB（単価20）・Br（単価31）：各1　／　扉・窓（単価25）：各2　／　不明（単価30）・通気孔（エコシルフィ）：各0　／　BOX：補正後は一律547</div>`;
   html += `<div class="sr1-comparison-scroll"><table class="sr1-comparison-table"><thead>`;
   html += `<tr><th class="sr1-sticky-item" rowspan="3">条件・積算項目</th><th class="sr1-sticky-price" rowspan="3">単価</th>`;
   for (const estimateCase of cases) {
@@ -541,17 +549,15 @@ function renderSr1ComparisonTable(groupName, nameGroup) {
   html += `<tr class="sr1-condition-row"><th class="sr1-sticky-item">箱のW</th><td class="sr1-sticky-price">—</td>`;
   for (const estimateCase of cases) html += `<td colspan="4">W${fmtNum(estimateCase.boxWidth)}</td>`;
   html += `</tr>`;
-  html += `<tr class="sr1-condition-row"><th class="sr1-sticky-item">抜きの数</th><td class="sr1-sticky-price">—</td>`;
-  for (const estimateCase of cases) html += `<td colspan="4">${fmtNum(estimateCase.openingCount)}</td>`;
+  html += `<tr class="sr1-condition-row"><th class="sr1-sticky-item">上段機器数</th><td class="sr1-sticky-price">×25</td>`;
+  for (const estimateCase of cases) html += `<td colspan="4">${fmtNum(estimateCase.openingUpperCount)}</td>`;
   html += `</tr>`;
-  if (cases.some(estimateCase => Number(estimateCase.openingSmallCount) > 0)) {
-    html += `<tr class="sr1-condition-row"><th class="sr1-sticky-item">うち小開口</th><td class="sr1-sticky-price">—</td>`;
-    for (const estimateCase of cases) {
-      const count = Number(estimateCase.openingSmallCount) || 0;
-      html += `<td colspan="4">${count > 0 ? fmtNum(count) : "—"}</td>`;
-    }
-    html += `</tr>`;
-  }
+  html += `<tr class="sr1-condition-row"><th class="sr1-sticky-item">中段の抜き</th><td class="sr1-sticky-price">50</td>`;
+  for (const estimateCase of cases) html += `<td colspan="4">${estimateCase.openingMiddle ? "あり" : "なし"}</td>`;
+  html += `</tr>`;
+  html += `<tr class="sr1-condition-row"><th class="sr1-sticky-item">下段の抜き</th><td class="sr1-sticky-price">50</td>`;
+  for (const estimateCase of cases) html += `<td colspan="4">${estimateCase.openingLower ? "あり" : "なし"}</td>`;
+  html += `</tr>`;
   html += `<tr class="sr1-condition-row"><th class="sr1-sticky-item">リモコンの数</th><td class="sr1-sticky-price">—</td>`;
   for (const estimateCase of cases) html += `<td colspan="4">${fmtNum(estimateCase.remoteCount)}</td>`;
   html += `</tr>`;
@@ -578,14 +584,73 @@ function renderSr1ComparisonTable(groupName, nameGroup) {
     html += `<td colspan="2">${originalListPrice == null ? "—" : fmtNum(originalListPrice)}</td><td colspan="2" class="sr1-adjusted-cell">${adjustedListPrice == null ? "—" : fmtNum(adjustedListPrice)}</td>`;
   });
   html += `</tr>`;
-  html += `<tr class="sr1-section-row"><th class="sr1-sticky-item" colspan="${2 + cases.length * 4}">積算項目</th></tr>`;
+  html += `<tr class="sr1-section-row"><th class="sr1-sticky-item">積算項目</th><td class="sr1-sticky-price"></td><td colspan="${cases.length * 4}"></td></tr>`;
+
+  const boxRow = rows.find(row => row.key === "box");
+  if (boxRow) {
+    html += `<tr class="sr1-box-row"><th class="sr1-sticky-item">BOX</th>`;
+    html += `<td class="sr1-sticky-price"><button type="button" class="sr1-unit-price-select" title="この単価を見積に追加" onclick="addSr1ComparisonUnitPrice(event,'${escAttr(groupName)}','BOX',547)">547</button></td>`;
+    cases.forEach((estimateCase, caseIndex) => {
+      const item = caseItemMaps[caseIndex].get("box");
+      if (!item || item.qty === 0) {
+        html += `<td class="sr1-empty">—</td><td class="sr1-empty">—</td><td class="sr1-empty sr1-adjusted-cell">—</td><td class="sr1-empty sr1-adjusted-cell">—</td>`;
+        return;
+      }
+      const originalAmount = item.unitPrice * item.qty;
+      const adjustedAmount = 547 * item.qty;
+      const changedClass = adjustedAmount !== originalAmount ? " sr1-adjusted-changed" : "";
+      html += `<td>${fmtNum(item.qty)}</td><td class="sr1-amount">${fmtNum(originalAmount)}</td><td class="sr1-adjusted-cell">${fmtNum(item.qty)}</td><td class="sr1-amount sr1-adjusted-cell${changedClass}">${fmtNum(adjustedAmount)}</td>`;
+    });
+    html += `</tr>`;
+  }
+
+  const openingBreakdownRows = [
+    {
+      key: "openingBase",
+      label: "抜き加工（基本）",
+      unitPrice: 300,
+      qty: () => 1,
+    },
+    {
+      key: "openingUpper",
+      label: "抜き加工（上段）",
+      unitPrice: 25,
+      qty: estimateCase => Math.max(0, Number(estimateCase.openingUpperCount) || 0),
+    },
+    {
+      key: "openingMiddle",
+      label: "抜き加工（中段）",
+      unitPrice: 50,
+      qty: estimateCase => estimateCase.openingMiddle ? 1 : 0,
+    },
+    {
+      key: "openingLower",
+      label: "抜き加工（下段）",
+      unitPrice: 50,
+      qty: estimateCase => estimateCase.openingLower ? 1 : 0,
+    },
+  ];
+  for (const openingRow of openingBreakdownRows) {
+    html += `<tr class="sr1-opening-breakdown-row"><th class="sr1-sticky-item">${esc(openingRow.label)}</th>`;
+    html += `<td class="sr1-sticky-price"><button type="button" class="sr1-unit-price-select" title="この単価を見積に追加" onclick="addSr1ComparisonUnitPrice(event,'${escAttr(groupName)}','${escAttr(openingRow.label)}',${openingRow.unitPrice})">${fmtNum(openingRow.unitPrice)}</button></td>`;
+    for (const estimateCase of cases) {
+      const qty = openingRow.qty(estimateCase);
+      const amount = openingRow.unitPrice * qty;
+      const amountContent = qty > 0
+        ? `<button type="button" class="sr1-unit-price-select sr1-opening-price-select" title="この件名の数量で見積に追加" onclick="addSr1ComparisonUnitPrice(event,'${escAttr(groupName)}','${escAttr(openingRow.label)}',${openingRow.unitPrice},${qty})">${fmtNum(amount)}</button>`
+        : "—";
+      html += `<td class="sr1-empty">—</td><td class="sr1-empty">—</td><td class="sr1-adjusted-cell">${qty > 0 ? fmtNum(qty) : "—"}</td><td class="sr1-amount sr1-adjusted-cell">${amountContent}</td>`;
+    }
+    html += `</tr>`;
+  }
 
   for (const row of rows) {
+    if (row.key === "box") continue;
     const prices = Array.from(row.unitPrices).filter(price => price > 0);
     const rowLabel = row.key === "opening50"
-      ? "抜き（50）"
+      ? "当時の抜き（50）"
       : row.key === "opening25"
-        ? "抜き（25）"
+        ? "当時の抜き（25）"
         : row.key === "tb6"
           ? "TB（単価6）"
           : row.key === "tb20"
@@ -593,7 +658,10 @@ function renderSr1ComparisonTable(groupName, nameGroup) {
         : row.key === "vent"
           ? "通気孔（エコシルフィ）"
           : row.label;
-    const priceChoices = prices.length === 0
+    const isOpeningRow = row.key === "opening50" || row.key === "opening25";
+    const priceChoices = isOpeningRow
+      ? "当時のみ"
+      : prices.length === 0
       ? "—"
       : prices.map(price => `<button type="button" class="sr1-unit-price-select" title="この単価を見積に追加" onclick="addSr1ComparisonUnitPrice(event,'${escAttr(groupName)}','${escAttr(rowLabel)}',${price})">${fmtNum(price)}</button>`).join("");
     html += `<tr><th class="sr1-sticky-item">${esc(rowLabel)}</th><td class="sr1-sticky-price"><div class="sr1-unit-price-choices">${priceChoices}</div></td>`;
@@ -614,11 +682,13 @@ function renderSr1ComparisonTable(groupName, nameGroup) {
         html += `<td>${fmtNum(item.qty)}</td><td class="sr1-amount">${fmtNum(originalAmount)}</td><td class="sr1-empty sr1-adjusted-cell">—</td><td class="sr1-empty sr1-adjusted-cell">—</td>`;
         return;
       }
+      if (row.key === "opening50") {
+        html += `<td>${fmtNum(item.qty)}</td><td class="sr1-amount">${fmtNum(originalAmount)}</td><td class="sr1-empty sr1-adjusted-cell">—</td><td class="sr1-empty sr1-adjusted-cell">—</td>`;
+        return;
+      }
       const adjustedAmount = sr1AdjustedItemAmount(estimateCase, row.key, item);
       const originalQtyLabel = fmtNum(item.qty);
-      const adjustedQtyLabel = row.key === "opening50"
-        ? "1式"
-        : fmtNum(sr1AdjustedItemQty(estimateCase, row.key, item));
+      const adjustedQtyLabel = fmtNum(sr1AdjustedItemQty(estimateCase, row.key, item));
       const changedClass = adjustedAmount !== originalAmount ? " sr1-adjusted-changed" : "";
       html += `<td>${originalQtyLabel}</td><td class="sr1-amount">${fmtNum(originalAmount)}</td><td class="sr1-adjusted-cell">${adjustedQtyLabel}</td><td class="sr1-amount sr1-adjusted-cell${changedClass}">${fmtNum(adjustedAmount)}</td>`;
     });
@@ -629,11 +699,6 @@ function renderSr1ComparisonTable(groupName, nameGroup) {
   cases.forEach((estimateCase, caseIndex) => {
     html += `<td colspan="2">${fmtNum(estimateCase.originalTotal)}</td><td colspan="2" class="sr1-adjusted-total">${fmtNum(unifiedTotals[caseIndex])}</td>`;
   });
-  html += `</tr>`;
-  html += `<tr class="sr1-registered-row"><th class="sr1-sticky-item" colspan="2">登録されている積算合計</th>`;
-  for (const estimateCase of cases) {
-    html += `<td colspan="4">${estimateCase.registeredTotal == null ? "—" : fmtNum(estimateCase.registeredTotal)}</td>`;
-  }
   html += `</tr>`;
   html += `</tbody></table></div></details>`;
   return html;
@@ -1390,19 +1455,13 @@ function renderMasterTable() {
         if (footerNames.has(ng.name)) continue;
         if (mergedNames.has(ng.name)) continue;
         if (allSingleNames.has(ng.name)) continue;
-        // 空調盤SR-1: 画像と積算表を横並び
+        // 空調盤SR-1: 旧来の大判画像・積算例を省き、件名別比較を中心に表示
         if ((ng.name === "空調盤SR-1" || ng.name === "空調盤SR-1(コインタイマー)") && cg.id === "J") {
-          const imgFile = ng.name === "空調盤SR-1" ? "SR-1.png" : "SR-1-coin.png";
           const cmtVal = sr1Comments[ng.name] || "";
-          html += `<div class="cat-subgroup special-estimate-priced-card"><div class="cat-sub-heading">${esc(ng.name)}</div><div class="cat-subgroup-inner cat-sr1-row">`;
-          html += `<div class="cat-sr1-img"><img src="img/${imgFile}" alt="${esc(ng.name)} 図面">`;
-          html += `<div style="margin-top:8px;"><label style="font-weight:bold;font-size:13px;">コメント:</label>`;
+          html += `<div class="cat-subgroup special-estimate-priced-card"><div class="cat-sub-heading">${esc(ng.name)}</div>`;
+          html += `<div style="padding:8px 10px 0;"><label style="font-weight:bold;font-size:13px;">コメント:</label>`;
           const cmtRows = Math.max(2, (cmtVal.match(/\n/g) || []).length + 1);
           html += `<textarea rows="${cmtRows}" style="width:100%;margin-top:4px;resize:vertical;box-sizing:border-box;" onchange="onSr1Comment('${esc(ng.name)}', this.value)">${esc(cmtVal)}</textarea>`;
-          html += `</div></div>`;
-          html += `<div class="cat-sr1-table">`;
-          html += renderNameGroup(ng, MATRIX_GROUPS);
-          html += `</div>`;
           html += `</div>`;
           html += renderSr1ComparisonTable(ng.name, ng);
           html += `</div>`;

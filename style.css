@@ -641,7 +641,8 @@ tr[draggable="true"]:active { cursor: grabbing; }
   margin: 14px;
   border: 1px solid #b8c8d8;
   border-radius: 5px;
-  overflow: hidden;
+  /* Safariで内側の横スクロールより外側がstickyの基準になるのを防ぐ */
+  overflow: visible;
   background: #fff;
 }
 .sr1-comparison > summary {
@@ -740,6 +741,8 @@ tr[draggable="true"]:active { cursor: grabbing; }
   position: sticky;
   left: 0;
   z-index: 4;
+  box-sizing: border-box;
+  width: 150px;
   min-width: 150px;
   max-width: 150px;
   text-align: left;
@@ -755,6 +758,8 @@ tr[draggable="true"]:active { cursor: grabbing; }
   position: sticky;
   left: 150px;
   z-index: 4;
+  box-sizing: border-box;
+  width: 64px;
   min-width: 58px;
   color: #536274;
   background: #f8fafc;
@@ -784,7 +789,8 @@ tr[draggable="true"]:active { cursor: grabbing; }
 .sr1-comparison-table .sr1-pricing-row .sr1-sticky-price {
   background: #fff2c9;
 }
-.sr1-comparison-table .sr1-section-row th {
+.sr1-comparison-table .sr1-section-row th,
+.sr1-comparison-table .sr1-section-row td {
   color: #173b63;
   background: #edf3f8;
   font-weight: 800;

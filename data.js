@@ -2140,9 +2140,16 @@ const DEFAULT_MASTER_ITEMS = [
 ];
 
 // 空調盤SR-1 グループコメントのデフォルト定義
-const DEFAULT_SR1_COMMENTS = {
+// 2026年の各件名（竹鼻中・羽島中・各務原・大藪小・本田小・生津小・中小）の
+// 見積書に記載された注記を統合している。
+const LEGACY_SR1_COMMENTS = {
   "空調盤SR-1": "※空調運転ﾘﾓｺﾝ,ｽｹｼﾞｭｰﾙﾀｲﾏｰ,ON/OFFｺﾝﾄﾛｰﾗｰ,自立運転切替ｽｲｯﾁは含んでおりません。",
   "空調盤SR-1(コインタイマー)": "※ｺｲﾝﾀｲﾏｰのｺｲﾝは付属しません。\n※ﾄｰﾀﾙｶｳﾝﾀｰとﾀｲﾑｶｳﾝﾀｰの一体型時間計は廃盤になりました。\n※ﾄｰﾀﾙｶｳﾝﾀｰとﾀｲﾑｶｳﾝﾀｰの電源はﾘﾁｳﾑ電池となります。\n※試運転調整は対応致しかねます。\n※「使用等に関する注意事項」「ﾘﾓｺﾝ室内機対応図」は含んでおりません。",
+};
+
+const DEFAULT_SR1_COMMENTS = {
+  "空調盤SR-1": "※空調運転ﾘﾓｺﾝ,ｲﾝﾃﾘｼﾞｪﾝﾄｺﾝﾄﾛｰﾗｰ,ｽｹｼﾞｭｰﾙﾀｲﾏｰ,ON/OFFｺﾝﾄﾛｰﾗｰ,自立運転ｽｲｯﾁ盤,自立運転切替ｽｲｯﾁは含んでおりません。",
+  "空調盤SR-1(コインタイマー)": "※「空調機付属品」および「ｺｲﾝﾀｲﾏｰのｺｲﾝ」は付属しません。\n※ﾄｰﾀﾙｶｳﾝﾀｰとﾀｲﾑｶｳﾝﾀｰの一体型時間計は廃盤のため、それぞれ個別に設置いたします。\n※ﾄｰﾀﾙｶｳﾝﾀｰとﾀｲﾑｶｳﾝﾀｰの電源はﾘﾁｳﾑ電池となります。\n※試運転調整は対応致しかねます。\n※「使用等に関する注意事項」「ﾘﾓｺﾝ室内機対応図」は含んでおりません。",
 };
 
 // SR-1 過去案件比較（数量・当時積算合計）
@@ -2150,7 +2157,7 @@ const DEFAULT_SR1_COMMENTS = {
 const SR1_ESTIMATE_HISTORY = {
   "空調盤SR-1": [
     {
-      name: "竹鼻中 体育館", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 7, drawingImage: "img/sr1-history/takehana-gym.jpg", companyDrawingImage: "img/sr1-history/company-takehana-gym.jpg", boxWidth: 700, openingCount: 12, originalTotal: 1539, listRate: 1.6, listPrice: 2463,
+      name: "竹鼻中 体育館", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 7, drawingImage: "img/sr1-history/takehana-gym.jpg", companyDrawingImage: "img/sr1-history/company-takehana-gym.jpg", boxWidth: 700, openingCount: 12, openingUpperCount: 7, openingMiddle: true, openingLower: true, originalTotal: 1539, listRate: 1.6, listPrice: 2463,
       items: [
         { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
         { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 12 },
@@ -2166,7 +2173,7 @@ const SR1_ESTIMATE_HISTORY = {
       ],
     },
     {
-      name: "竹鼻中 武道場", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 3, drawingImage: "img/sr1-history/takehana-budo.jpg", companyDrawingImage: "img/sr1-history/company-takehana-budo.jpg", boxWidth: 700, openingCount: 8, originalTotal: 1339, listRate: 1.6, listPrice: 2143,
+      name: "竹鼻中 武道場", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 3, drawingImage: "img/sr1-history/takehana-budo.jpg", companyDrawingImage: "img/sr1-history/company-takehana-budo.jpg", boxWidth: 700, openingCount: 8, openingUpperCount: 3, openingMiddle: true, openingLower: true, originalTotal: 1339, listRate: 1.6, listPrice: 2143,
       items: [
         { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
         { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 8 },
@@ -2182,7 +2189,7 @@ const SR1_ESTIMATE_HISTORY = {
       ],
     },
     {
-      name: "羽島中 体育館", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 8, drawingImage: "img/sr1-history/hashima-gym.jpg", companyDrawingImage: "img/sr1-history/company-hashima-gym.jpg", boxWidth: 700, openingCount: 13, originalTotal: 1589, listRate: 1.6, listPrice: 2543,
+      name: "羽島中 体育館", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 8, drawingImage: "img/sr1-history/hashima-gym.jpg", companyDrawingImage: "img/sr1-history/company-hashima-gym.jpg", boxWidth: 700, openingCount: 13, openingUpperCount: 8, openingMiddle: true, openingLower: true, originalTotal: 1589, listRate: 1.6, listPrice: 2543,
       items: [
         { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
         { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 13 },
@@ -2198,7 +2205,7 @@ const SR1_ESTIMATE_HISTORY = {
       ],
     },
     {
-      name: "羽島中 武道場", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 3, drawingImage: "img/sr1-history/hashima-budo.jpg", companyDrawingImage: "img/sr1-history/company-hashima-budo.jpg", boxWidth: 700, openingCount: 8, originalTotal: 1339, listRate: 1.6, listPrice: 2143,
+      name: "羽島中 武道場", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 3, drawingImage: "img/sr1-history/hashima-budo.jpg", companyDrawingImage: "img/sr1-history/company-hashima-budo.jpg", boxWidth: 700, openingCount: 8, openingUpperCount: 3, openingMiddle: true, openingLower: true, originalTotal: 1339, listRate: 1.6, listPrice: 2143,
       items: [
         { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
         { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 8 },
@@ -2214,7 +2221,7 @@ const SR1_ESTIMATE_HISTORY = {
       ],
     },
     {
-      name: "各務原", estimateDate: "2026/03/26", controllerType: "通常", remoteCount: 5, drawingImage: "img/sr1-history/kakamigahara.jpg", companyDrawingImage: "img/sr1-history/company-kakamigahara.jpg", boxWidth: 700, openingCount: 9, originalTotal: 1270, listRate: 1.5, listPrice: 1905,
+      name: "各務原", estimateDate: "2026/03/26", controllerType: "通常", remoteCount: 5, drawingImage: "img/sr1-history/kakamigahara.jpg", companyDrawingImage: "img/sr1-history/company-kakamigahara.jpg", boxWidth: 700, openingCount: 9, openingUpperCount: 6, openingMiddle: true, openingLower: true, originalTotal: 1270, listRate: 1.5, listPrice: 1905,
       items: [
         { key: "box", label: "BOX", unitPrice: 547, qty: 1 },
         { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 9 },
@@ -2229,7 +2236,7 @@ const SR1_ESTIMATE_HISTORY = {
       ],
     },
     {
-      name: "大藪小 SR-1", estimateDate: "2026/10/19", controllerType: "通常", remoteCount: 3, drawingImage: "img/sr1-history/oyabu-sr1.jpg", boxWidth: 600, openingCount: 8, originalTotal: 1064, listRate: 1.6, listPrice: 1703,
+      name: "大藪小 SR-1", estimateDate: "2026/10/19", controllerType: "通常", remoteCount: 3, drawingImage: "img/sr1-history/oyabu-sr1.jpg", boxWidth: 600, openingCount: 8, openingUpperCount: 3, openingMiddle: true, openingLower: true, originalTotal: 1064, listRate: 1.6, listPrice: 1703,
       items: [
         { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
         { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 8 },
@@ -2242,7 +2249,7 @@ const SR1_ESTIMATE_HISTORY = {
       ],
     },
     {
-      name: "大藪小 SR-2", estimateDate: "2026/10/19", controllerType: "通常", remoteCount: 1, drawingImage: "img/sr1-history/oyabu-sr2.jpg", boxWidth: 600, openingCount: 8, openingSmallCount: 4, originalTotal: 964, listRate: 1.6, listPrice: 1543,
+      name: "大藪小 SR-2", estimateDate: "2026/10/19", controllerType: "通常", remoteCount: 1, drawingImage: "img/sr1-history/oyabu-sr2.jpg", boxWidth: 600, openingCount: 8, openingSmallCount: 4, openingUpperCount: 1, openingMiddle: false, openingLower: false, originalTotal: 964, listRate: 1.6, listPrice: 1543,
       items: [
         { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
         { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 4 },
@@ -2262,7 +2269,7 @@ const SR1_ESTIMATE_HISTORY = {
       { name: "生津小", estimateDate: "2026/07/15", drawingImage: "img/sr1-history/namazu.jpg", companyDrawingImage: "img/sr1-history/company-namazu.jpg" },
       { name: "中小", estimateDate: "2026/07/15", drawingImage: "img/sr1-history/naka.jpg" },
     ].map(({ name, estimateDate, drawingImage, companyDrawingImage }) => ({
-      name, estimateDate, controllerType: "通常", remoteCount: 4, drawingImage, companyDrawingImage, boxWidth: 600, openingCount: 8, originalTotal: 1574, listRate: 1.6, listPrice: 2519,
+      name, estimateDate, controllerType: "通常", remoteCount: 4, drawingImage, companyDrawingImage, boxWidth: 600, openingCount: 8, openingUpperCount: 4, openingMiddle: true, openingLower: true, originalTotal: 1574, listRate: 1.6, listPrice: 2519,
       items: [
         { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
         { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 8 },

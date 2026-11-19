@@ -753,7 +753,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
 }
 .sr1-comparison-table .sr1-sticky-price {
   position: sticky;
-  left: 164px;
+  left: 150px;
   z-index: 4;
   min-width: 58px;
   color: #536274;
@@ -815,32 +815,31 @@ tr[draggable="true"]:active { cursor: grabbing; }
   background: #dff2e7;
   font-weight: 900;
 }
-.sr1-total-select {
-  min-width: 76px;
-  padding: 4px 10px;
-  border: 1px solid #9fb1c3;
+.sr1-unit-price-choices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+}
+.sr1-unit-price-select {
+  min-width: 42px;
+  padding: 2px 5px;
+  border: 1px solid #a7b7c7;
   border-radius: 4px;
-  color: #173b63;
+  color: #254b70;
   background: #fff;
   font: inherit;
-  font-weight: 900;
+  font-weight: 800;
   cursor: pointer;
 }
-.sr1-total-select:hover,
-.sr1-total-select:focus-visible {
+.sr1-unit-price-select:hover,
+.sr1-unit-price-select:focus-visible {
   border-color: #2f6ea6;
   background: #e8f2fb;
   box-shadow: 0 0 0 2px rgba(47, 110, 166, 0.16);
   outline: none;
 }
-.sr1-total-select-adjusted {
-  border-color: #72a88e;
-  color: #155b39;
-  background: #f7fcf9;
-}
-.sr1-total-select-adjusted:hover,
-.sr1-total-select-adjusted:focus-visible,
-.sr1-total-select.sr1-total-selected {
+.sr1-unit-price-select.sr1-unit-price-selected {
   border-color: #25805a;
   color: #0f5136;
   background: #ccebd9;

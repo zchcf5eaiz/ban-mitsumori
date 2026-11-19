@@ -2078,6 +2078,7 @@ const DEFAULT_MASTER_ITEMS = [
   { id: "J017", category: "J", name: "空調盤SR-1", spec: "鍵", unit: "個", basePrice: 25, note: "", _qty: "1", _memo: "-"},
   { id: "J018", category: "J", name: "空調盤SR-1", spec: "隙間カバー", unit: "式", basePrice: 25, note: "", _qty: "1", _memo: "-"},
   { id: "J019", category: "J", name: "空調盤SR-1", spec: "不明", unit: "式", basePrice: 30, note: "", _qty: "1", _memo: "いつからか積算している"},
+  { id: "J01A", category: "J", name: "空調盤SR-1", spec: "通気孔（エコシルフィ）", unit: "個", basePrice: 20, note: "", _qty: "1", _memo: "エコシルフィの場合のみ"},
   { id: "J020", category: "J", name: "空調盤SR-1(コインタイマー)", spec: "BOX", unit: "面", basePrice: 527, note: "", _qty: "1", _memo: "総合盤より"},
   { id: "J021", category: "J", name: "空調盤SR-1(コインタイマー)", spec: "抜き", unit: "式", basePrice: 50, note: "", _qty: "10", _memo: "支給品数量による"},
   { id: "J022", category: "J", name: "空調盤SR-1(コインタイマー)", spec: "TB", unit: "式", basePrice: 20, note: "", _qty: "1"},
@@ -2142,6 +2143,145 @@ const DEFAULT_MASTER_ITEMS = [
 const DEFAULT_SR1_COMMENTS = {
   "空調盤SR-1": "※空調運転ﾘﾓｺﾝ,ｽｹｼﾞｭｰﾙﾀｲﾏｰ,ON/OFFｺﾝﾄﾛｰﾗｰ,自立運転切替ｽｲｯﾁは含んでおりません。",
   "空調盤SR-1(コインタイマー)": "※ｺｲﾝﾀｲﾏｰのｺｲﾝは付属しません。\n※ﾄｰﾀﾙｶｳﾝﾀｰとﾀｲﾑｶｳﾝﾀｰの一体型時間計は廃盤になりました。\n※ﾄｰﾀﾙｶｳﾝﾀｰとﾀｲﾑｶｳﾝﾀｰの電源はﾘﾁｳﾑ電池となります。\n※試運転調整は対応致しかねます。\n※「使用等に関する注意事項」「ﾘﾓｺﾝ室内機対応図」は含んでおりません。",
+};
+
+// SR-1 過去案件比較（数量・当時積算合計）
+// 現在の積算例はマスタから動的に読み込み、ここには過去案件だけを保持する。
+const SR1_ESTIMATE_HISTORY = {
+  "空調盤SR-1": [
+    {
+      name: "竹鼻中 体育館", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 7, drawingImage: "img/sr1-history/takehana-gym.jpg", companyDrawingImage: "img/sr1-history/company-takehana-gym.jpg", boxWidth: 700, openingCount: 12, originalTotal: 1539, listRate: 1.6, listPrice: 2463,
+      items: [
+        { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
+        { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 12 },
+        { key: "tb20", label: "TB", unitPrice: 20, qty: 2 },
+        { key: "br31", label: "Br", unitPrice: 31, qty: 2 },
+        { key: "tb6", label: "TB", unitPrice: 6, qty: 10 },
+        { key: "door", label: "扉", unitPrice: 25, qty: 3 },
+        { key: "window", label: "窓", unitPrice: 25, qty: 3 },
+        { key: "key", label: "鍵", unitPrice: 25, qty: 1 },
+        { key: "gapCover", label: "隙間カバー", unitPrice: 25, qty: 1 },
+        { key: "unknown", label: "不明", unitPrice: 30, qty: 1 },
+        { key: "vent", label: "換気孔", unitPrice: 20, qty: 1 },
+      ],
+    },
+    {
+      name: "竹鼻中 武道場", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 3, drawingImage: "img/sr1-history/takehana-budo.jpg", companyDrawingImage: "img/sr1-history/company-takehana-budo.jpg", boxWidth: 700, openingCount: 8, originalTotal: 1339, listRate: 1.6, listPrice: 2143,
+      items: [
+        { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
+        { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 8 },
+        { key: "tb20", label: "TB", unitPrice: 20, qty: 2 },
+        { key: "br31", label: "Br", unitPrice: 31, qty: 2 },
+        { key: "tb6", label: "TB", unitPrice: 6, qty: 10 },
+        { key: "door", label: "扉", unitPrice: 25, qty: 3 },
+        { key: "window", label: "窓", unitPrice: 25, qty: 3 },
+        { key: "key", label: "鍵", unitPrice: 25, qty: 1 },
+        { key: "gapCover", label: "隙間カバー", unitPrice: 25, qty: 1 },
+        { key: "unknown", label: "不明", unitPrice: 30, qty: 1 },
+        { key: "vent", label: "換気孔", unitPrice: 20, qty: 1 },
+      ],
+    },
+    {
+      name: "羽島中 体育館", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 8, drawingImage: "img/sr1-history/hashima-gym.jpg", companyDrawingImage: "img/sr1-history/company-hashima-gym.jpg", boxWidth: 700, openingCount: 13, originalTotal: 1589, listRate: 1.6, listPrice: 2543,
+      items: [
+        { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
+        { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 13 },
+        { key: "tb20", label: "TB", unitPrice: 20, qty: 2 },
+        { key: "br31", label: "Br", unitPrice: 31, qty: 2 },
+        { key: "tb6", label: "TB", unitPrice: 6, qty: 10 },
+        { key: "door", label: "扉", unitPrice: 25, qty: 3 },
+        { key: "window", label: "窓", unitPrice: 25, qty: 3 },
+        { key: "key", label: "鍵", unitPrice: 25, qty: 1 },
+        { key: "gapCover", label: "隙間カバー", unitPrice: 25, qty: 1 },
+        { key: "unknown", label: "不明", unitPrice: 30, qty: 1 },
+        { key: "vent", label: "換気孔", unitPrice: 20, qty: 1 },
+      ],
+    },
+    {
+      name: "羽島中 武道場", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 3, drawingImage: "img/sr1-history/hashima-budo.jpg", companyDrawingImage: "img/sr1-history/company-hashima-budo.jpg", boxWidth: 700, openingCount: 8, originalTotal: 1339, listRate: 1.6, listPrice: 2143,
+      items: [
+        { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
+        { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 8 },
+        { key: "tb20", label: "TB", unitPrice: 20, qty: 2 },
+        { key: "br31", label: "Br", unitPrice: 31, qty: 2 },
+        { key: "tb6", label: "TB", unitPrice: 6, qty: 10 },
+        { key: "door", label: "扉", unitPrice: 25, qty: 3 },
+        { key: "window", label: "窓", unitPrice: 25, qty: 3 },
+        { key: "key", label: "鍵", unitPrice: 25, qty: 1 },
+        { key: "gapCover", label: "隙間カバー", unitPrice: 25, qty: 1 },
+        { key: "unknown", label: "不明", unitPrice: 30, qty: 1 },
+        { key: "vent", label: "換気孔", unitPrice: 20, qty: 1 },
+      ],
+    },
+    {
+      name: "各務原", estimateDate: "2026/03/26", controllerType: "通常", remoteCount: 5, drawingImage: "img/sr1-history/kakamigahara.jpg", companyDrawingImage: "img/sr1-history/company-kakamigahara.jpg", boxWidth: 700, openingCount: 9, originalTotal: 1270, listRate: 1.5, listPrice: 1905,
+      items: [
+        { key: "box", label: "BOX", unitPrice: 547, qty: 1 },
+        { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 9 },
+        { key: "tb20", label: "TB", unitPrice: 20, qty: 1 },
+        { key: "br31", label: "Br", unitPrice: 31, qty: 1 },
+        { key: "tb6", label: "TB", unitPrice: 6, qty: 7 },
+        { key: "door", label: "扉", unitPrice: 25, qty: 2 },
+        { key: "window", label: "窓", unitPrice: 25, qty: 2 },
+        { key: "key", label: "鍵", unitPrice: 25, qty: 1 },
+        { key: "gapCover", label: "隙間カバー", unitPrice: 25, qty: 1 },
+        { key: "unknown", label: "不明", unitPrice: 30, qty: 1 },
+      ],
+    },
+    {
+      name: "大藪小 SR-1", estimateDate: "2026/10/19", controllerType: "通常", remoteCount: 3, drawingImage: "img/sr1-history/oyabu-sr1.jpg", boxWidth: 600, openingCount: 8, originalTotal: 1064, listRate: 1.6, listPrice: 1703,
+      items: [
+        { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
+        { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 8 },
+        { key: "tb20", label: "TB", unitPrice: 20, qty: 1 },
+        { key: "br31", label: "Br", unitPrice: 31, qty: 1 },
+        { key: "tb6", label: "TB", unitPrice: 6, qty: 1 },
+        { key: "door", label: "扉", unitPrice: 25, qty: 1 },
+        { key: "gapCover", label: "隙間カバー", unitPrice: 25, qty: 1 },
+        { key: "unknown", label: "不明", unitPrice: 30, qty: 1 },
+      ],
+    },
+    {
+      name: "大藪小 SR-2", estimateDate: "2026/10/19", controllerType: "通常", remoteCount: 1, drawingImage: "img/sr1-history/oyabu-sr2.jpg", boxWidth: 600, openingCount: 8, openingSmallCount: 4, originalTotal: 964, listRate: 1.6, listPrice: 1543,
+      items: [
+        { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
+        { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 4 },
+        { key: "opening25", label: "抜き加工", unitPrice: 25, qty: 4 },
+        { key: "tb20", label: "TB", unitPrice: 20, qty: 1 },
+        { key: "br31", label: "Br", unitPrice: 31, qty: 1 },
+        { key: "tb6", label: "TB", unitPrice: 6, qty: 1 },
+        { key: "door", label: "扉", unitPrice: 25, qty: 1 },
+        { key: "gapCover", label: "隙間カバー", unitPrice: 25, qty: 1 },
+        { key: "unknown", label: "不明", unitPrice: 30, qty: 1 },
+      ],
+    },
+  ],
+  "空調盤SR-1(コインタイマー)": [
+    ...[
+      { name: "本田小", estimateDate: "2026/07/15", drawingImage: "img/sr1-history/honda.jpg", companyDrawingImage: "img/sr1-history/company-honda.jpg" },
+      { name: "生津小", estimateDate: "2026/07/15", drawingImage: "img/sr1-history/namazu.jpg", companyDrawingImage: "img/sr1-history/company-namazu.jpg" },
+      { name: "中小", estimateDate: "2026/07/15", drawingImage: "img/sr1-history/naka.jpg" },
+    ].map(({ name, estimateDate, drawingImage, companyDrawingImage }) => ({
+      name, estimateDate, controllerType: "通常", remoteCount: 4, drawingImage, companyDrawingImage, boxWidth: 600, openingCount: 8, originalTotal: 1574, listRate: 1.6, listPrice: 2519,
+      items: [
+        { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
+        { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 8 },
+        { key: "tb20", label: "TB", unitPrice: 20, qty: 1 },
+        { key: "wl", label: "WL", unitPrice: 14, qty: 1 },
+        { key: "br31", label: "Br", unitPrice: 31, qty: 1 },
+        { key: "ry", label: "Ry", unitPrice: 15, qty: 2 },
+        { key: "outlet", label: "コンセント", unitPrice: 20, qty: 1 },
+        { key: "ps", label: "PS", unitPrice: 35, qty: 1 },
+        { key: "keySwitch", label: "キーSW", unitPrice: 42, qty: 1 },
+        { key: "coinTimer", label: "コインTM", unitPrice: 300, qty: 1 },
+        { key: "totalCounter", label: "トータルカウンター", unitPrice: 40, qty: 1 },
+        { key: "timeCounter", label: "タイムカウンター", unitPrice: 40, qty: 1 },
+        { key: "door", label: "扉", unitPrice: 25, qty: 1 },
+        { key: "window", label: "窓", unitPrice: 25, qty: 1 },
+        { key: "key", label: "鍵", unitPrice: 25, qty: 1 },
+      ],
+    })),
+  ],
 };
 
 // デフォルト グループ合計（K2太陽光等）

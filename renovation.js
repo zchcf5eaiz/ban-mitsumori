@@ -145,9 +145,10 @@ const RENOVATION_TR_CATEGORIES = [
   { id: "cat-9-1ph", label: "Tr1φ", sourceLabel: "日立" },
   { id: "cat-9-3ph", label: "Tr3φ", sourceLabel: "日立" },
   { id: "cat-9-3ph-400", label: "Tr3φ(400V級)", sourceLabel: "日立" },
+  { id: "cat-9-3ph-550-318", label: "Tr3φ(550-318V)", sourceLabel: "岐阜愛知電機・ダイヘン" },
   { id: "cat-9-options", label: "Trオプション", sourceLabel: "個別登録" },
 ];
-const RENOVATION_TR_COMPARISON_CATEGORY_IDS = new Set(["cat-9-1ph", "cat-9-3ph", "cat-9-3ph-400", "cat-9-options"]);
+const RENOVATION_TR_COMPARISON_CATEGORY_IDS = new Set(["cat-9-1ph", "cat-9-3ph", "cat-9-3ph-550-318", "cat-9-3ph-400", "cat-9-options"]);
 
 function migrateRenovationTrCategories(master) {
   const legacyIndex = master.categories.findIndex(category => category.id === "cat-9");
@@ -157,13 +158,104 @@ function migrateRenovationTrCategories(master) {
   if (legacyIndex >= 0) {
     master.categories.splice(legacyIndex, 1, ...missing.map(category => ({ ...category })));
   } else {
-    const trIndexes = RENOVATION_TR_CATEGORIES
-      .map(category => master.categories.findIndex(saved => saved.id === category.id))
-      .filter(index => index >= 0);
-    const insertAt = trIndexes.length ? Math.max(...trIndexes) + 1 : master.categories.length;
-    master.categories.splice(insertAt, 0, ...missing.map(category => ({ ...category })));
+    missing.forEach(category => {
+      const targetIndex = RENOVATION_TR_CATEGORIES.findIndex(row => row.id === category.id);
+      const nextExisting = RENOVATION_TR_CATEGORIES.slice(targetIndex + 1)
+        .map(row => master.categories.findIndex(saved => saved.id === row.id))
+        .find(index => index >= 0);
+      if (nextExisting != null) {
+        master.categories.splice(nextExisting, 0, { ...category });
+        return;
+      }
+      const previousIndexes = RENOVATION_TR_CATEGORIES.slice(0, targetIndex)
+        .map(row => master.categories.findIndex(saved => saved.id === row.id))
+        .filter(index => index >= 0);
+      const insertAt = previousIndexes.length ? Math.max(...previousIndexes) + 1 : master.categories.length;
+      master.categories.splice(insertAt, 0, { ...category });
+    });
   }
   return true;
+}
+
+const RENOVATION_550_318_ITEM_IDS = new Set([
+  "REN-TR-550-318-300",
+  "REN-TR-550-318-500",
+  "REN-TR-550-318-750",
+]);
+
+function migrateRenovation550TrDefaults(master) {
+  let changed = false;
+  const category = master.categories.find(row => row.id === "cat-9-3ph-550-318");
+  if (category && category.sourceLabel !== "岐阜愛知電機・ダイヘン") {
+    category.sourceLabel = "岐阜愛知電機・ダイヘン";
+    changed = true;
+  }
+  const categoryIndex = master.categories.findIndex(row => row.id === "cat-9-3ph-550-318");
+  const category400Index = master.categories.findIndex(row => row.id === "cat-9-3ph-400");
+  if (categoryIndex >= 0 && category400Index >= 0 && categoryIndex !== category400Index + 1) {
+    const [movedCategory] = master.categories.splice(categoryIndex, 1);
+    const updated400Index = master.categories.findIndex(row => row.id === "cat-9-3ph-400");
+    master.categories.splice(updated400Index + 1, 0, movedCategory);
+    changed = true;
+  }
+  if ((Number(master.version) || 1) < 2) {
+    const existingIds = new Set(master.items.map(item => item.id));
+    RENOVATION_ITEMS
+      .filter(item => RENOVATION_550_318_ITEM_IDS.has(item.id) && !existingIds.has(item.id))
+      .forEach(item => master.items.push(cloneRenovationMasterRows(item)));
+    master.version = 2;
+    changed = true;
+  }
+  if ((Number(master.version) || 1) < 3) {
+    const defaultItems = new Map(RENOVATION_ITEMS
+      .filter(item => RENOVATION_550_318_ITEM_IDS.has(item.id))
+      .map(item => [item.id, item]));
+    master.items.forEach(item => {
+      const defaultItem = defaultItems.get(item.id);
+      if (!defaultItem) return;
+      item.manufacturerPrices ||= {};
+      item.manufacturerPrices.daihen ||= { listPrice: null, costPrice: null };
+      if (item.manufacturerPrices.daihen.costPrice == null) {
+        item.manufacturerPrices.daihen.costPrice = defaultItem.manufacturerPrices.daihen.costPrice;
+      }
+    });
+    master.version = 3;
+    changed = true;
+  }
+  if ((Number(master.version) || 1) < 4) {
+    const item750 = master.items.find(item => item.id === "REN-TR-550-318-750");
+    if (item750) {
+      item750.manufacturerPrices ||= {};
+      delete item750.manufacturerPrices.gifuAichi;
+      item750.manufacturerPrices.aichi = {
+        listPrice: null,
+        costPrice: 9000000,
+      };
+    }
+    master.version = 4;
+    changed = true;
+  }
+  if ((Number(master.version) || 1) < 5) {
+    const item300 = master.items.find(item => item.id === "REN-TR-550-318-300");
+    if (item300) {
+      item300.manufacturerPrices ||= {};
+      item300.manufacturerPrices.gifuAichi ||= { listPrice: null, costPrice: null };
+      item300.manufacturerPrices.gifuAichi.costPrice = 2150000;
+    }
+    master.version = 5;
+    changed = true;
+  }
+  if ((Number(master.version) || 1) < 6) {
+    const item500 = master.items.find(item => item.id === "REN-TR-550-318-500");
+    if (item500) {
+      item500.manufacturerPrices ||= {};
+      item500.manufacturerPrices.gifuAichi ||= { listPrice: null, costPrice: null };
+      item500.manufacturerPrices.gifuAichi.costPrice = 3500000;
+    }
+    master.version = 6;
+    changed = true;
+  }
+  return changed;
 }
 
 function loadRenovationEquipmentMaster() {
@@ -172,8 +264,9 @@ function loadRenovationEquipmentMaster() {
     const saved = JSON.parse(localStorage.getItem(STORAGE_RENOVATION_EQUIPMENT_MASTER) || "null");
     if (saved && Array.isArray(saved.categories) && saved.categories.length && Array.isArray(saved.items)) {
       const migratedCategories = migrateRenovationTrCategories(saved);
+      const migrated550TrDefaults = migrateRenovation550TrDefaults(saved);
       const removedManufacturerNet = removeRenovationTrManufacturerNetPrices(saved.items);
-      if (migratedCategories || removedManufacturerNet) {
+      if (migratedCategories || migrated550TrDefaults || removedManufacturerNet) {
         localStorage.setItem(STORAGE_RENOVATION_EQUIPMENT_MASTER, JSON.stringify(saved));
       }
       renovationEquipmentMasterCache = saved;
@@ -181,7 +274,7 @@ function loadRenovationEquipmentMaster() {
     }
   } catch {}
   renovationEquipmentMasterCache = {
-    version: 1,
+    version: 6,
     categories: cloneRenovationMasterRows(RENOVATION_CATEGORIES),
     items: cloneRenovationMasterRows(RENOVATION_ITEMS),
   };
@@ -189,7 +282,7 @@ function loadRenovationEquipmentMaster() {
 }
 
 function saveRenovationEquipmentMaster(master) {
-  master.version = 1;
+  master.version = 6;
   master.updatedAt = new Date().toISOString();
   renovationEquipmentMasterCache = master;
   localStorage.setItem(STORAGE_RENOVATION_EQUIPMENT_MASTER, JSON.stringify(master));
@@ -433,9 +526,28 @@ const RENOVATION_TR_COMPARISON_MAKERS = [
   { key: "daihen", label: "ダイヘン価格" },
 ];
 
+const RENOVATION_550_318_TR_COMPARISON_MAKERS = [
+  { key: "gifuAichi", label: "岐阜愛知電機価格" },
+  { key: "daihen", label: "ダイヘン価格" },
+];
+
+const RENOVATION_550_318_750_TR_COMPARISON_MAKERS = [
+  { key: "aichi", label: "愛知電機価格" },
+  { key: "daihen", label: "ダイヘン価格" },
+];
+
+function renovationTrComparisonMakers(item) {
+  if (item?.id === "REN-TR-550-318-750" || item?.itemId === "REN-TR-550-318-750") {
+    return RENOVATION_550_318_750_TR_COMPARISON_MAKERS;
+  }
+  return item?.categoryId === "cat-9-3ph-550-318"
+    ? RENOVATION_550_318_TR_COMPARISON_MAKERS
+    : RENOVATION_TR_COMPARISON_MAKERS;
+}
+
 function renovationTrComparisonPrices(item) {
   const stored = item?.manufacturerPrices || {};
-  return Object.fromEntries(RENOVATION_TR_COMPARISON_MAKERS.map(maker => {
+  return Object.fromEntries(renovationTrComparisonMakers(item).map(maker => {
     const price = stored[maker.key] || {};
     return [maker.key, {
       listPrice: nullableRenovationPrice(price.listPrice),
@@ -449,6 +561,7 @@ function renovationPriceText(value) {
 }
 
 function renovationTrComparisonEditorHtml(item) {
+  const makers = renovationTrComparisonMakers(item);
   const prices = renovationTrComparisonPrices(item);
   const input = (maker, field, label) => {
     const value = prices[maker]?.[field];
@@ -456,18 +569,19 @@ function renovationTrComparisonEditorHtml(item) {
   };
   return `<fieldset class="renovation-tr-price-editor wide"><legend>メーカー別価格（比較表示専用）</legend>` +
     `<p>見積への選定には使用しません。上の「見積価格」だけが反映されます。</p>` +
-    RENOVATION_TR_COMPARISON_MAKERS.map(maker =>
+    makers.map(maker =>
       `<div class="renovation-tr-price-editor-row"><strong>${maker.label}</strong>${input(maker.key, "listPrice", "定価")}${input(maker.key, "costPrice", "仕入")}</div>`
     ).join("") + `</fieldset>`;
 }
 
 function renovationTrPriceTableHtml(item) {
+  const makers = renovationTrComparisonMakers(item);
   const prices = renovationTrComparisonPrices(item);
   const row = (label, price) =>
     `<div class="renovation-tr-price-row"><strong>${label}</strong>` +
     `<span>定価 ${renovationPriceText(price.listPrice)}</span><span>仕入 ${renovationPriceText(price.costPrice)}</span></div>`;
   return `<div class="renovation-catalog-prices renovation-tr-estimate-price"><span>定価 ${renovationPriceText(item.listPrice)}</span><span>NET ${renovationPriceText(item.netPrice)}</span><span>仕入 ${renovationPriceText(item.costPrice)}</span></div>` +
-    `<div class="renovation-tr-price-table">${RENOVATION_TR_COMPARISON_MAKERS.map(maker => row(maker.label, prices[maker.key])).join("")}</div>`;
+    `<div class="renovation-tr-price-table">${makers.map(maker => row(maker.label, prices[maker.key])).join("")}</div>`;
 }
 
 function renovationTrComparisonSource(item) {
@@ -482,18 +596,20 @@ function renovationExcludesTrComparison(item) {
 
 function renovationIsTrEquipment(item) {
   const source = renovationTrComparisonSource(item);
-  return renovationIsTrCategoryId(source?.categoryId) || source?.category === "TR" || /^Tr[13]φ(?:\(400V級\))?$/.test(source?.category || "");
+  return renovationIsTrCategoryId(source?.categoryId) || source?.category === "TR" || /^Tr[13]φ(?:\((?:400V級|550-318V)\))?$/.test(source?.category || "");
 }
 
 function renovationUsesTrComparison(item) {
   const source = renovationTrComparisonSource(item);
   if (renovationExcludesTrComparison(source)) return false;
-  return renovationUsesTrComparisonCategoryId(source?.categoryId) || source?.category === "TR" || /^Tr[13]φ(?:\(400V級\))?$/.test(source?.category || "");
+  return renovationUsesTrComparisonCategoryId(source?.categoryId) || source?.category === "TR" || /^Tr[13]φ(?:\((?:400V級|550-318V)\))?$/.test(source?.category || "");
 }
 
 function renovationInternalTrComparisonRow(item) {
   if (!renovationUsesTrComparison(item)) return "";
-  const prices = renovationTrComparisonPrices(renovationTrComparisonSource(item));
+  const source = renovationTrComparisonSource(item);
+  const makers = renovationTrComparisonMakers(source);
+  const prices = renovationTrComparisonPrices(source);
   const priceCells = price => `<span>${renovationPriceText(price.listPrice)}</span><span>${renovationPriceText(price.costPrice)}</span>`;
   return `<tr class="renovation-internal-tr-comparison-row"><td colspan="5">` +
     `<div class="renovation-internal-tr-comparison">` +
@@ -503,7 +619,7 @@ function renovationInternalTrComparisonRow(item) {
     `<span>仕入 ${renovationPriceText(item.costPrice)}</span></div>` +
     `<div class="renovation-internal-tr-comparison-grid">` +
     `<b>価格区分</b><b>定価</b><b>仕入</b>` +
-    RENOVATION_TR_COMPARISON_MAKERS.map(maker => `<strong>${maker.label}</strong>${priceCells(prices[maker.key])}`).join("") +
+    makers.map(maker => `<strong>${maker.label}</strong>${priceCells(prices[maker.key])}`).join("") +
     `</div></div></td></tr>`;
 }
 
@@ -1589,7 +1705,7 @@ function showRenovationEquipmentEditor(id = "") {
     `<label>${isTr ? "見積価格 " : ""}NET<input name="netPrice" inputmode="numeric" value="${current?.netPrice == null ? "" : escAttr(String(current.netPrice))}" placeholder="未登録は空欄"></label>` +
     `<label>${isTr ? "見積価格 " : ""}仕入<input name="costPrice" inputmode="numeric" value="${current?.costPrice == null ? "" : escAttr(String(current.costPrice))}" placeholder="未登録は空欄"></label>` +
     `<label>追加時数量<input name="defaultQty" type="number" min="1" step="1" value="${escAttr(String(current?.defaultQty || 1))}"></label>` +
-    `${isTr ? renovationTrComparisonEditorHtml(current) : ""}` +
+    `${isTr ? renovationTrComparisonEditorHtml(current || { categoryId: selectedCategory }) : ""}` +
     `<fieldset class="renovation-highlight-picker wide"><legend>一覧のハイライト</legend>${Object.entries(RENOVATION_EQUIPMENT_HIGHLIGHTS).map(([value, option]) =>
       `<label class="renovation-highlight-option highlight-${value}"><input type="radio" name="highlight" value="${value}"${value === selectedHighlight ? " checked" : ""}><span>${esc(option.label)}</span></label>`
     ).join("")}</fieldset>` +
@@ -1625,7 +1741,7 @@ function saveRenovationEquipmentEditor(event) {
     effectiveDate: renovationToday(),
   };
   if (renovationUsesTrComparison(next)) {
-    next.manufacturerPrices = Object.fromEntries(RENOVATION_TR_COMPARISON_MAKERS.map(maker => [maker.key, {
+    next.manufacturerPrices = Object.fromEntries(renovationTrComparisonMakers(next).map(maker => [maker.key, {
       listPrice: nullableRenovationPrice(data.get(`tr_${maker.key}_listPrice`)),
       costPrice: nullableRenovationPrice(data.get(`tr_${maker.key}_costPrice`)),
     }]));

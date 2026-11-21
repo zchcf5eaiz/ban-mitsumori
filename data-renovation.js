@@ -77,6 +77,11 @@ const RENOVATION_CATEGORIES = [
     "sourceLabel": "日立"
   },
   {
+    "id": "cat-9-3ph-550-318",
+    "label": "Tr3φ(550-318V)",
+    "sourceLabel": "岐阜愛知電機・ダイヘン"
+  },
+  {
     "id": "cat-9-options",
     "label": "Trオプション",
     "sourceLabel": "個別登録"
@@ -18036,6 +18041,60 @@ const RENOVATION_ITEMS = [
     "costPrice": 13890,
     "priceLabel": "個別記録",
     "effectiveDate": null,
+    "history": []
+  },
+  {
+    "id": "REN-TR-550-318-300",
+    "categoryId": "cat-9-3ph-550-318",
+    "category": "Tr3φ(550-318V)",
+    "name": "Tr3Φ 300kVA 6600/550-318V 60Hz 油入形 混触防止板付 DTM付 防振ゴム付",
+    "spec": "",
+    "defaultQty": 1,
+    "listPrice": null,
+    "netPrice": null,
+    "costPrice": null,
+    "priceLabel": "未登録",
+    "effectiveDate": null,
+    "manufacturerPrices": {
+      "gifuAichi": { "listPrice": null, "costPrice": 2150000 },
+      "daihen": { "listPrice": null, "costPrice": 3561180 }
+    },
+    "history": []
+  },
+  {
+    "id": "REN-TR-550-318-500",
+    "categoryId": "cat-9-3ph-550-318",
+    "category": "Tr3φ(550-318V)",
+    "name": "Tr3Φ 500kVA 6600/550-318V 60Hz 油入形 混触防止板付 DTM付 防振ゴム付",
+    "spec": "",
+    "defaultQty": 1,
+    "listPrice": null,
+    "netPrice": null,
+    "costPrice": null,
+    "priceLabel": "未登録",
+    "effectiveDate": null,
+    "manufacturerPrices": {
+      "gifuAichi": { "listPrice": null, "costPrice": 3500000 },
+      "daihen": { "listPrice": null, "costPrice": 5507060 }
+    },
+    "history": []
+  },
+  {
+    "id": "REN-TR-550-318-750",
+    "categoryId": "cat-9-3ph-550-318",
+    "category": "Tr3φ(550-318V)",
+    "name": "Tr3Φ 750kVA 6600/550-318V 60Hz 油入形 混触防止板付 DTM付 防振ゴム付",
+    "spec": "",
+    "defaultQty": 1,
+    "listPrice": null,
+    "netPrice": null,
+    "costPrice": null,
+    "priceLabel": "未登録",
+    "effectiveDate": null,
+    "manufacturerPrices": {
+      "aichi": { "listPrice": null, "costPrice": 9000000 },
+      "daihen": { "listPrice": null, "costPrice": 6532940 }
+    },
     "history": []
   }
 ];

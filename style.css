@@ -637,6 +637,7 @@ tr[draggable="true"]:active { cursor: grabbing; }
   max-width: none;
   height: auto;
 }
+
 .sr1-comparison {
   margin: 14px;
   border: 1px solid #b8c8d8;
@@ -753,6 +754,14 @@ tr[draggable="true"]:active { cursor: grabbing; }
   z-index: 6;
   color: #fff;
   background: #1f3f60;
+}
+.sr1-item-count-rule {
+  display: block;
+  margin-top: 2px;
+  color: #4f6478;
+  font-size: 0.67rem;
+  font-weight: 700;
+  line-height: 1.2;
 }
 .sr1-comparison-table .sr1-sticky-price {
   position: sticky;

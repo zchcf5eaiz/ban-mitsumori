@@ -2144,11 +2144,13 @@ const DEFAULT_MASTER_ITEMS = [
 // 見積書に記載された注記を統合している。
 const LEGACY_SR1_COMMENTS = {
   "空調盤SR-1": "※空調運転ﾘﾓｺﾝ,ｽｹｼﾞｭｰﾙﾀｲﾏｰ,ON/OFFｺﾝﾄﾛｰﾗｰ,自立運転切替ｽｲｯﾁは含んでおりません。",
+  "空調盤SR-1(壁掛型)": "※空調運転ﾘﾓｺﾝ,ｽｹｼﾞｭｰﾙﾀｲﾏｰ,ON/OFFｺﾝﾄﾛｰﾗｰ,自立運転切替ｽｲｯﾁは含んでおりません。",
   "空調盤SR-1(コインタイマー)": "※ｺｲﾝﾀｲﾏｰのｺｲﾝは付属しません。\n※ﾄｰﾀﾙｶｳﾝﾀｰとﾀｲﾑｶｳﾝﾀｰの一体型時間計は廃盤になりました。\n※ﾄｰﾀﾙｶｳﾝﾀｰとﾀｲﾑｶｳﾝﾀｰの電源はﾘﾁｳﾑ電池となります。\n※試運転調整は対応致しかねます。\n※「使用等に関する注意事項」「ﾘﾓｺﾝ室内機対応図」は含んでおりません。",
 };
 
 const DEFAULT_SR1_COMMENTS = {
   "空調盤SR-1": "※空調運転ﾘﾓｺﾝ,ｲﾝﾃﾘｼﾞｪﾝﾄｺﾝﾄﾛｰﾗｰ,ｽｹｼﾞｭｰﾙﾀｲﾏｰ,ON/OFFｺﾝﾄﾛｰﾗｰ,自立運転ｽｲｯﾁ盤,自立運転切替ｽｲｯﾁは含んでおりません。",
+  "空調盤SR-1(壁掛型)": "※空調運転ﾘﾓｺﾝ,ｲﾝﾃﾘｼﾞｪﾝﾄｺﾝﾄﾛｰﾗｰ,ｽｹｼﾞｭｰﾙﾀｲﾏｰ,ON/OFFｺﾝﾄﾛｰﾗｰ,自立運転ｽｲｯﾁ盤,自立運転切替ｽｲｯﾁは含んでおりません。",
   "空調盤SR-1(コインタイマー)": "※「空調機付属品」および「ｺｲﾝﾀｲﾏｰのｺｲﾝ」は付属しません。\n※ﾄｰﾀﾙｶｳﾝﾀｰとﾀｲﾑｶｳﾝﾀｰの一体型時間計は廃盤のため、それぞれ個別に設置いたします。\n※ﾄｰﾀﾙｶｳﾝﾀｰとﾀｲﾑｶｳﾝﾀｰの電源はﾘﾁｳﾑ電池となります。\n※試運転調整は対応致しかねます。\n※「使用等に関する注意事項」「ﾘﾓｺﾝ室内機対応図」は含んでおりません。",
 };
 
@@ -2157,7 +2159,7 @@ const DEFAULT_SR1_COMMENTS = {
 const SR1_ESTIMATE_HISTORY = {
   "空調盤SR-1": [
     {
-      name: "竹鼻中 体育館", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 7, drawingImage: "img/sr1-history/takehana-gym.jpg", companyDrawingImage: "img/sr1-history/company-takehana-gym.jpg", boxWidth: 700, openingCount: 12, openingUpperCount: 7, openingMiddle: true, openingLower: true, originalTotal: 1539, listRate: 1.6, listPrice: 2463,
+      name: "竹鼻中 体育館", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 7, drawingImage: "img/sr1-history/takehana-gym.jpg", companyDrawingImage: "img/sr1-history/company-takehana-gym.jpg", companyBoxDimensions: "W700×H1700×D250", companyBoxWidth: 700, boxWidth: 700, openingCount: 12, openingUpperCount: 7, openingMiddle: true, openingLower: true, originalTotal: 1539, listRate: 1.6, listPrice: 2463,
       items: [
         { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
         { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 12 },
@@ -2173,7 +2175,7 @@ const SR1_ESTIMATE_HISTORY = {
       ],
     },
     {
-      name: "竹鼻中 武道場", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 3, drawingImage: "img/sr1-history/takehana-budo.jpg", companyDrawingImage: "img/sr1-history/company-takehana-budo.jpg", boxWidth: 700, openingCount: 8, openingUpperCount: 3, openingMiddle: true, openingLower: true, originalTotal: 1339, listRate: 1.6, listPrice: 2143,
+      name: "竹鼻中 武道場", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 3, drawingImage: "img/sr1-history/takehana-budo.jpg", companyDrawingImage: "img/sr1-history/company-takehana-budo.jpg", companyBoxDimensions: "W700×H1400×D250", companyBoxWidth: 700, boxWidth: 700, openingCount: 8, openingUpperCount: 3, openingMiddle: true, openingLower: true, originalTotal: 1339, listRate: 1.6, listPrice: 2143,
       items: [
         { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
         { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 8 },
@@ -2189,7 +2191,7 @@ const SR1_ESTIMATE_HISTORY = {
       ],
     },
     {
-      name: "羽島中 体育館", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 8, drawingImage: "img/sr1-history/hashima-gym.jpg", companyDrawingImage: "img/sr1-history/company-hashima-gym.jpg", boxWidth: 700, openingCount: 13, openingUpperCount: 8, openingMiddle: true, openingLower: true, originalTotal: 1589, listRate: 1.6, listPrice: 2543,
+      name: "羽島中 体育館", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 8, drawingImage: "img/sr1-history/hashima-gym.jpg", companyDrawingImage: "img/sr1-history/company-hashima-gym.jpg", companyBoxDimensions: "W700×H1700×D250", companyBoxWidth: 700, boxWidth: 700, openingCount: 13, openingUpperCount: 8, openingMiddle: true, openingLower: true, originalTotal: 1589, listRate: 1.6, listPrice: 2543,
       items: [
         { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
         { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 13 },
@@ -2205,7 +2207,7 @@ const SR1_ESTIMATE_HISTORY = {
       ],
     },
     {
-      name: "羽島中 武道場", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 3, drawingImage: "img/sr1-history/hashima-budo.jpg", companyDrawingImage: "img/sr1-history/company-hashima-budo.jpg", boxWidth: 700, openingCount: 8, openingUpperCount: 3, openingMiddle: true, openingLower: true, originalTotal: 1339, listRate: 1.6, listPrice: 2143,
+      name: "羽島中 武道場", estimateDate: "2026/08/26", controllerType: "インテリジェントコントローラー", remoteCount: 3, drawingImage: "img/sr1-history/hashima-budo.jpg", companyDrawingImage: "img/sr1-history/company-hashima-budo.jpg", companyBoxDimensions: "W700×H1400×D250", companyBoxWidth: 700, boxWidth: 700, openingCount: 8, openingUpperCount: 3, openingMiddle: true, openingLower: true, originalTotal: 1339, listRate: 1.6, listPrice: 2143,
       items: [
         { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
         { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 8 },
@@ -2221,7 +2223,7 @@ const SR1_ESTIMATE_HISTORY = {
       ],
     },
     {
-      name: "各務原", estimateDate: "2026/03/26", controllerType: "通常", remoteCount: 5, drawingImage: "img/sr1-history/kakamigahara.jpg", companyDrawingImage: "img/sr1-history/company-kakamigahara.jpg", boxWidth: 700, openingCount: 9, openingUpperCount: 6, openingMiddle: true, openingLower: true, originalTotal: 1270, listRate: 1.5, listPrice: 1905,
+      name: "各務原", estimateDate: "2026/03/26", controllerType: "通常", remoteCount: 5, drawingImage: "img/sr1-history/kakamigahara.jpg", companyDrawingImage: "img/sr1-history/company-kakamigahara.jpg", companyBoxDimensions: "W700×H1700×D250", companyBoxWidth: 700, boxWidth: 700, openingCount: 9, openingUpperCount: 6, openingMiddle: true, openingLower: true, originalTotal: 1270, listRate: 1.5, listPrice: 1905,
       items: [
         { key: "box", label: "BOX", unitPrice: 547, qty: 1 },
         { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 9 },
@@ -2263,13 +2265,77 @@ const SR1_ESTIMATE_HISTORY = {
       ],
     },
   ],
+  "空調盤SR-1(壁掛型)": [
+    {
+      name: "東中学校 SR-1", estimateDate: "2026/11/19", controllerType: "通常", mountingType: "壁埋込型", subtotalRate: 1.05, subtotalLabel: "埋込型補正", remoteCount: 8,
+      drawingImage: "img/sr1-history/east-design-1.jpg", companyDrawingImage: "img/sr1-history/east-company-1.jpg",
+      boxWidth: 800, boxDimensions: "W800×H1450×D200", openingCount: 12, openingUpperCount: 8, openingMiddle: true, openingLower: true,
+      originalSubtotal: 1204, originalTotal: 1265, listRate: 1.5, listPrice: 1898, preserveBoxPrice: true, preserveWallQuantities: true,
+      items: [
+        { key: "box", label: "総合盤（前半）", unitPrice: 574, qty: 1 },
+        { key: "openingBase", label: "抜き加工（基本）", unitPrice: 300, qty: 1 },
+        { key: "openingUpper", label: "抜き加工（上段）", unitPrice: 25, qty: 8 },
+        { key: "openingMiddle", label: "抜き加工（中段）", unitPrice: 50, qty: 1 },
+        { key: "openingLower", label: "抜き加工（下段）", unitPrice: 50, qty: 1 },
+        { key: "tb20", label: "TB", unitPrice: 20, qty: 1 },
+        { key: "br31", label: "Br", unitPrice: 31, qty: 1 },
+        { key: "tb6", label: "TB", unitPrice: 6, qty: 9 },
+        { key: "door", label: "扉", unitPrice: 25, qty: 2 },
+        { key: "window", label: "窓", unitPrice: 25, qty: 2 },
+        { key: "key", label: "鍵", unitPrice: 25, qty: 1 },
+        { key: "gapCover", label: "隙間カバー", unitPrice: 25, qty: 1 },
+        { key: "wallDeduction", label: "壁掛型 ▲自立分", unitPrice: -225, qty: 1 },
+      ],
+    },
+    {
+      name: "東中学校 SR-2", estimateDate: "2026/11/19", controllerType: "通常", mountingType: "壁掛型", remoteCount: 3,
+      drawingImage: "img/sr1-history/east-design-1.jpg", companyDrawingImage: "img/sr1-history/east-company-1.jpg",
+      boxWidth: 500, boxDimensions: "W500×H900×D150", openingCount: 5, openingUpperCount: 3, openingMiddle: true, openingLower: false,
+      originalTotal: 854, listRate: 1.5, listPrice: 1281, preserveBoxPrice: true, preserveWallQuantities: true,
+      items: [
+        { key: "box", label: "総合盤（前半）", unitPrice: 508, qty: 1 },
+        { key: "openingBase", label: "抜き加工（基本）", unitPrice: 300, qty: 1 },
+        { key: "openingUpper", label: "抜き加工（上段）", unitPrice: 25, qty: 3 },
+        { key: "openingMiddle", label: "抜き加工（中段）", unitPrice: 50, qty: 1 },
+        { key: "tb20", label: "TB", unitPrice: 20, qty: 1 },
+        { key: "br31", label: "Br", unitPrice: 31, qty: 1 },
+        { key: "tb6", label: "TB", unitPrice: 6, qty: 4 },
+        { key: "door", label: "扉", unitPrice: 25, qty: 1 },
+        { key: "window", label: "窓", unitPrice: 25, qty: 1 },
+        { key: "key", label: "鍵", unitPrice: 25, qty: 1 },
+        { key: "gapCover", label: "隙間カバー", unitPrice: 25, qty: 1 },
+        { key: "wallHalfBoxDeduction", label: "壁掛型 BOXの半分", unitPrice: -254, qty: 1 },
+      ],
+    },
+    {
+      name: "東中学校 SR-3", estimateDate: "2026/11/19", controllerType: "通常", mountingType: "壁掛型", remoteCount: 4,
+      drawingImage: "img/sr1-history/east-design-2.jpg", companyDrawingImage: "img/sr1-history/east-company-2.jpg",
+      boxWidth: 700, boxDimensions: "W700×H1200×D200", openingCount: 7, openingUpperCount: 4, openingMiddle: true, openingLower: true,
+      originalSubtotal: 1053, originalTotal: 1106, subtotalRate: 1.05, subtotalLabel: "埋込型補正", listRate: 1.5, listPrice: 1659, preserveBoxPrice: true, preserveWallQuantities: true,
+      items: [
+        { key: "box", label: "BOX", unitPrice: 547, qty: 1 },
+        { key: "openingBase", label: "抜き加工（基本）", unitPrice: 300, qty: 1 },
+        { key: "openingUpper", label: "抜き加工（上段）", unitPrice: 25, qty: 4 },
+        { key: "openingMiddle", label: "抜き加工（中段）", unitPrice: 50, qty: 1 },
+        { key: "openingLower", label: "抜き加工（下段）", unitPrice: 50, qty: 1 },
+        { key: "tb20", label: "TB", unitPrice: 20, qty: 1 },
+        { key: "br31", label: "Br", unitPrice: 31, qty: 1 },
+        { key: "tb6", label: "TB", unitPrice: 6, qty: 5 },
+        { key: "door", label: "扉", unitPrice: 25, qty: 2 },
+        { key: "window", label: "窓", unitPrice: 25, qty: 2 },
+        { key: "key", label: "鍵", unitPrice: 25, qty: 1 },
+        { key: "gapCover", label: "隙間カバー", unitPrice: 25, qty: 1 },
+        { key: "wallDeduction", label: "壁掛型 ▲自立分", unitPrice: -225, qty: 1 },
+      ],
+    },
+  ],
   "空調盤SR-1(コインタイマー)": [
     ...[
-      { name: "本田小", estimateDate: "2026/07/15", drawingImage: "img/sr1-history/honda.jpg", companyDrawingImage: "img/sr1-history/company-honda.jpg" },
-      { name: "生津小", estimateDate: "2026/07/15", drawingImage: "img/sr1-history/namazu.jpg", companyDrawingImage: "img/sr1-history/company-namazu.jpg" },
+      { name: "本田小", estimateDate: "2026/07/15", drawingImage: "img/sr1-history/honda.jpg", companyDrawingImage: "img/sr1-history/company-honda.jpg", companyBoxDimensions: "W600×H1800×D250", companyBoxWidth: 600 },
+      { name: "生津小", estimateDate: "2026/07/15", drawingImage: "img/sr1-history/namazu.jpg", companyDrawingImage: "img/sr1-history/company-namazu.jpg", companyBoxDimensions: "W600×H1800×D250", companyBoxWidth: 600 },
       { name: "中小", estimateDate: "2026/07/15", drawingImage: "img/sr1-history/naka.jpg" },
-    ].map(({ name, estimateDate, drawingImage, companyDrawingImage }) => ({
-      name, estimateDate, controllerType: "通常", remoteCount: 4, drawingImage, companyDrawingImage, boxWidth: 600, openingCount: 8, openingUpperCount: 4, openingMiddle: true, openingLower: true, originalTotal: 1574, listRate: 1.6, listPrice: 2519,
+    ].map(({ name, estimateDate, drawingImage, companyDrawingImage, companyBoxDimensions, companyBoxWidth }) => ({
+      name, estimateDate, controllerType: "通常", remoteCount: 4, drawingImage, companyDrawingImage, companyBoxDimensions, companyBoxWidth, boxWidth: 600, openingCount: 8, openingUpperCount: 4, openingMiddle: true, openingLower: true, originalTotal: 1574, listRate: 1.6, listPrice: 2519,
       items: [
         { key: "box", label: "BOX", unitPrice: 527, qty: 1 },
         { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 8 },

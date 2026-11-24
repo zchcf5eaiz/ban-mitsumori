@@ -2264,6 +2264,27 @@ const SR1_ESTIMATE_HISTORY = {
         { key: "unknown", label: "不明", unitPrice: 30, qty: 1 },
       ],
     },
+    {
+      name: "伊自良南小", estimateDate: "2026/04/02", controllerType: "エコシルフィ", remoteCount: 4,
+      drawingImage: "img/sr1-history/ijira-minami-design.jpg", companyDrawingImage: "img/sr1-history/ijira-minami-company.jpg",
+      companyBoxDimensions: "W650×H1800×D250", companyBoxWidth: 650, boxWidth: 700,
+      openingCount: 12, openingUpperCount: 4, openingMiddle: true, openingLower: true,
+      originalTotal: 1489, listRate: 1.4, listPrice: 2085,
+      items: [
+        { key: "box", label: "総合盤（前半）", unitPrice: 547, qty: 1 },
+        { key: "opening50", label: "抜き加工", unitPrice: 50, qty: 12 },
+        { key: "openingAdjustment", label: "抜き（差）", unitPrice: -20, qty: 4 },
+        { key: "tb20", label: "TB", unitPrice: 20, qty: 2 },
+        { key: "br31", label: "Br", unitPrice: 31, qty: 2 },
+        { key: "tb6", label: "TB", unitPrice: 6, qty: 10 },
+        { key: "door", label: "扉", unitPrice: 25, qty: 3 },
+        { key: "window", label: "窓", unitPrice: 25, qty: 3 },
+        { key: "key", label: "鍵", unitPrice: 25, qty: 1 },
+        { key: "gapCover", label: "隙間カバー", unitPrice: 25, qty: 1 },
+        { key: "unknown", label: "不明", unitPrice: 30, qty: 1 },
+        { key: "vent", label: "通気孔（エコシルフィ）", unitPrice: 30, qty: 1 },
+      ],
+    },
   ],
   "空調盤SR-1(壁掛型)": [
     {

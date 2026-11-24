@@ -35,3 +35,10 @@ test('SR-1の抜き加工は基本300・上段25・中下段50をそのまま合
   assert.equal(run('sr1OpeningAmount(6, true, true)'), 550);
   assert.equal(run('sr1OpeningAmount(1, false, false)'), 325);
 });
+
+test('SR-1の実績不足補正はエコシルフィとインテリジェントコントローラーだけに適用する', () => {
+  const run = createApp();
+  assert.equal(run('sr1NeedsNoTrackRecordAdjustment({ controllerType: "エコシルフィ" })'), true);
+  assert.equal(run('sr1NeedsNoTrackRecordAdjustment({ controllerType: "インテリジェントコントローラー" })'), true);
+  assert.equal(run('sr1NeedsNoTrackRecordAdjustment({ controllerType: "通常" })'), false);
+});

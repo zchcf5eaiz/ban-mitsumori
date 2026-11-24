@@ -371,6 +371,22 @@ function sr1OpeningAmount(upperCount, hasMiddle = true, hasLower = true) {
   return 300 + upper * 25 + (hasMiddle ? 50 : 0) + (hasLower ? 50 : 0);
 }
 
+function sr1IsEcoSilphyCase(estimateCase) {
+  return estimateCase?.controllerType === "エコシルフィ";
+}
+
+function sr1NeedsNoTrackRecordAdjustment(estimateCase) {
+  const controllerType = String(estimateCase?.controllerType || "");
+  return sr1IsEcoSilphyCase(estimateCase)
+    || controllerType.includes("インテリジェント")
+    || controllerType.includes("インジェント");
+}
+
+function sr1AdjustedMiddleOpeningQty(estimateCase) {
+  if (!estimateCase?.openingMiddle) return 0;
+  return sr1IsEcoSilphyCase(estimateCase) ? 2 : 1;
+}
+
 function sr1AdjustedItemQty(estimateCase, rowKey, item) {
   if (estimateCase.preserveWallQuantities && (rowKey === "door" || rowKey === "window")) {
     return Number(item.qty) || 0;
@@ -379,21 +395,24 @@ function sr1AdjustedItemQty(estimateCase, rowKey, item) {
   if (rowKey === "openingWall") return 1;
   if (rowKey === "tb6") return Math.max(0, Number(estimateCase.remoteCount) || 0) + 1;
   if (rowKey === "tb20" || rowKey === "br31") return 1;
-  if (rowKey === "door" || rowKey === "window") return 2;
-  if (rowKey === "unknown" || rowKey === "vent") return 0;
+  if (rowKey === "door") return 2;
+  if (rowKey === "window") return sr1IsEcoSilphyCase(estimateCase) ? 3 : 2;
+  if (rowKey === "vent") return sr1IsEcoSilphyCase(estimateCase) ? 1 : 0;
+  if (rowKey === "unknown" || rowKey === "openingAdjustment") return 0;
   return Number(item.qty) || 0;
 }
 
 function sr1AdjustedItemAmount(estimateCase, rowKey, item) {
   if (rowKey === "opening50" || rowKey === "openingWall") {
-    return sr1OpeningAmount(
-      estimateCase.openingUpperCount,
-      estimateCase.openingMiddle,
-      estimateCase.openingLower
-    );
+    const upper = Math.max(0, Number(estimateCase.openingUpperCount) || 0);
+    const middle = sr1AdjustedMiddleOpeningQty(estimateCase);
+    const lower = estimateCase.openingLower ? 1 : 0;
+    return 300 + upper * 25 + middle * 50 + lower * 50;
   }
   const adjustedUnitPrice = rowKey === "box"
     ? (estimateCase.preserveBoxPrice ? Number(item.unitPrice) || 0 : 547)
+    : rowKey === "vent" && sr1IsEcoSilphyCase(estimateCase)
+      ? 20
     : Number(item.unitPrice) || 0;
   return adjustedUnitPrice * sr1AdjustedItemQty(estimateCase, rowKey, item);
 }
@@ -492,6 +511,15 @@ function renderSr1ComparisonTable(groupName, nameGroup, includeCurrent = true) {
       rowMap.get(item.key).unitPrices.add(Number(item.unitPrice) || 0);
     }
   }
+  // エコシルフィ／インテリジェントコントローラーは実績不足分を
+  // 補正後だけに加算し、当時の積算は変更しない。
+  if (cases.some(sr1NeedsNoTrackRecordAdjustment)) {
+    rowMap.set("noTrackRecord", {
+      key: "noTrackRecord",
+      label: "実績がないため",
+      unitPrices: new Set([100]),
+    });
+  }
   // コインタイマー型は当時の積算にBr（単価31）やTB（単価6）がなくても、
   // 補正後には標準項目として必ず比較・加算する。
   if (groupName === "空調盤SR-1(コインタイマー)") {
@@ -506,6 +534,14 @@ function renderSr1ComparisonTable(groupName, nameGroup, includeCurrent = true) {
     const insertAfter = rows.findIndex(row => row.key === "opening50");
     rows.splice(insertAfter + 1, 0, smallOpeningRow);
   }
+  const openingAdjustmentIndex = rows.findIndex(row => row.key === "openingAdjustment");
+  if (openingAdjustmentIndex >= 0) {
+    const [openingAdjustmentRow] = rows.splice(openingAdjustmentIndex, 1);
+    const openingRows = ["opening50", "opening25"]
+      .map(key => rows.findIndex(row => row.key === key))
+      .filter(index => index >= 0);
+    rows.splice((openingRows.length ? Math.max(...openingRows) : -1) + 1, 0, openingAdjustmentRow);
+  }
   const terminalBlockKeys = ["tb20", "br31", "tb6"];
   const terminalBlockRows = terminalBlockKeys.map(key => rows.find(row => row.key === key)).filter(Boolean);
   if (terminalBlockRows.length > 0) {
@@ -515,6 +551,15 @@ function renderSr1ComparisonTable(groupName, nameGroup, includeCurrent = true) {
   }
   const caseItemMaps = cases.map(estimateCase => {
     const itemMap = new Map(estimateCase.items.map(item => [item.key, item]));
+    if (sr1NeedsNoTrackRecordAdjustment(estimateCase)) {
+      itemMap.set("noTrackRecord", {
+        key: "noTrackRecord",
+        label: "実績がないため",
+        unitPrice: 100,
+        qty: 1,
+        adjustedOnly: true,
+      });
+    }
     if (groupName === "空調盤SR-1(コインタイマー)") {
       if (!itemMap.has("br31")) itemMap.set("br31", { key: "br31", label: "Br", unitPrice: 31, qty: 0, adjustedOnly: true });
       if (!itemMap.has("tb6")) itemMap.set("tb6", { key: "tb6", label: "TB", unitPrice: 6, qty: 0, adjustedOnly: true });
@@ -592,7 +637,10 @@ function renderSr1ComparisonTable(groupName, nameGroup, includeCurrent = true) {
   for (const estimateCase of cases) html += `<td colspan="${caseColumnCount}">${fmtNum(estimateCase.openingUpperCount)}</td>`;
   html += `</tr>`;
   html += `<tr class="sr1-condition-row"><th class="sr1-sticky-item">中段の抜き</th><td class="sr1-sticky-price">50</td>`;
-  for (const estimateCase of cases) html += `<td colspan="${caseColumnCount}">${estimateCase.openingMiddle ? "あり" : "なし"}</td>`;
+  for (const estimateCase of cases) {
+    const middleQty = sr1AdjustedMiddleOpeningQty(estimateCase);
+    html += `<td colspan="${caseColumnCount}">${middleQty === 0 ? "なし" : middleQty === 1 ? "あり" : `${fmtNum(middleQty)}箇所`}</td>`;
+  }
   html += `</tr>`;
   html += `<tr class="sr1-condition-row"><th class="sr1-sticky-item">下段の抜き</th><td class="sr1-sticky-price">50</td>`;
   for (const estimateCase of cases) html += `<td colspan="${caseColumnCount}">${estimateCase.openingLower ? "あり" : "なし"}</td>`;
@@ -672,7 +720,7 @@ function renderSr1ComparisonTable(groupName, nameGroup, includeCurrent = true) {
       key: "openingMiddle",
       label: "抜き加工（中段）",
       unitPrice: 50,
-      qty: estimateCase => estimateCase.openingMiddle ? 1 : 0,
+      qty: estimateCase => sr1AdjustedMiddleOpeningQty(estimateCase),
     },
     {
       key: "openingLower",
@@ -697,11 +745,17 @@ function renderSr1ComparisonTable(groupName, nameGroup, includeCurrent = true) {
 
   for (const row of rows) {
     if (row.key === "box") continue;
-    const prices = Array.from(row.unitPrices).filter(price => originalOnly ? price !== 0 : price > 0);
+    // 通気孔（エコシルフィ）は当時単価30の履歴を残しつつ、
+    // 新規見積へ追加できる単価は現行の20だけに統一する。
+    const prices = row.key === "vent" && !originalOnly
+      ? [20]
+      : Array.from(row.unitPrices).filter(price => originalOnly ? price !== 0 : price > 0);
     const rowLabel = row.key === "opening50"
       ? "当時の抜き（50）"
       : row.key === "opening25"
         ? "当時の抜き（25）"
+        : row.key === "openingAdjustment"
+          ? "当時の抜き調整（-20）"
         : row.key === "openingWall"
           ? "抜き加工"
         : row.key === "tb6"
@@ -716,7 +770,7 @@ function renderSr1ComparisonTable(groupName, nameGroup, includeCurrent = true) {
     const rowLabelContent = row.key === "tb6"
       ? `${esc(rowLabel)}<small class="sr1-item-count-rule">数量：リモコン数＋1</small>`
       : esc(rowLabel);
-    const isOpeningRow = row.key === "opening50" || row.key === "opening25" || (row.key === "openingWall" && !originalOnly);
+    const isOpeningRow = row.key === "opening50" || row.key === "opening25" || row.key === "openingAdjustment" || (row.key === "openingWall" && !originalOnly);
     const priceChoices = isOpeningRow
       ? "当時のみ"
       : prices.length === 0

@@ -116,3 +116,25 @@ test('従来の別商品ID移行も引き続き適用される', () => {
   const run = createApp();
   assert.equal(run("migrateEstimateLines([{type:'item',masterItemId:'B060',unitPrice:35}])[0].masterItemId"), 'B06u');
 });
+
+test('分岐と主幹の共通オプションは保存済みの明細でも共通名で表示する', () => {
+  const run = createApp();
+  const cases = [
+    ['A203', '分岐オプション', '50AF スペース'],
+    ['A303', '分岐オプション', '50AF スペース'],
+    ['A203a', '分岐オプション', '50AF AL/AX'],
+    ['A203b', '分岐オプション', '50AF SHT'],
+    ['A003a', '主幹オプション', '50AF AL/AX'],
+    ['A003b', '主幹オプション', '50AF SHT'],
+    ['A001', '主幹MCCB', '50AF 2P'],
+  ];
+  for (const [id, name, spec] of cases) {
+    const expression = `getMasterItem(${JSON.stringify(id)})`;
+    assert.deepEqual(run(`getMasterEstimateDisplay(${expression})`), { name, spec });
+    assert.deepEqual(run(`(() => {
+      const master = ${expression};
+      return getEstimateLineDisplay({masterItemId: master.id, sourceName: master.name, sourceSpec: master.spec});
+    })()`), { name, spec, isCubicle: false });
+  }
+  assert.equal(run("getEstimateLineDisplay({masterItemId:'A203',sourceName:'客先指定の名称',sourceSpec:'50AF スペース'}).name"), '客先指定の名称');
+});

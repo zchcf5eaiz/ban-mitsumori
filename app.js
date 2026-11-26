@@ -1093,9 +1093,18 @@ function createNewEstimate() {
   };
 }
 
-/** MC単品の内部行キーではなく、管理表に表示している容量を見積へ渡す。 */
+/** 管理表の品目名・仕様を見積向けの表記にする。 */
 function getMasterEstimateDisplay(master) {
   const display = { name: master.name, spec: master.spec || "" };
+  if (master.category === "A") {
+    if (/^分岐(?:MCCB|ELCB)$/.test(master.name) && /^\d+AF (?:スペース|AL\/AX|SHT)$/.test(display.spec)) {
+      display.name = "分岐オプション";
+    }
+    if (/^主幹(?:MCCB|ELCB)$/.test(master.name) && /^\d+AF (?:AL\/AX|SHT)$/.test(display.spec)) {
+      display.name = "主幹オプション";
+    }
+    return display;
+  }
   if (master.category !== "C" || master.name !== "MCなど(単品)") return display;
   const match = display.spec.match(/^(\S+kW) (88(?:\(正逆\))?|Y-△(?:2C|3C|M\+2C|CLOS)|SC(?:220|440)V)$/);
   if (!match) return display;
@@ -1199,8 +1208,10 @@ function getEstimateLineDisplay(line) {
   const legacyMCSpec = master?.category === "C" && master.name === "MCなど(単品)" &&
     (typeof line.sourceName !== "string" || line.sourceName === master.name) &&
     line.sourceSpec === master.spec;
+  const legacyOptionName = master?.category === "A" && display.name !== master.name &&
+    line.sourceName === master.name && (line.sourceSpec == null || line.sourceSpec === master.spec);
   return {
-    name: typeof line.sourceName === "string" ? line.sourceName : display.name,
+    name: typeof line.sourceName === "string" && !legacyOptionName ? line.sourceName : display.name,
     spec: typeof line.sourceSpec === "string" && !legacyMCSpec ? line.sourceSpec : display.spec,
     isCubicle: line.sourceCatalog === "cubicle" ||
       (line.sourceCatalog == null && isCubicleItem(line.masterItemId)),
@@ -4265,12 +4276,12 @@ function _buildLineRows(lines) {
             <button class="btn-cmt" onclick="insertComment('${line.lineId}')" title="下にコメント行を挿入">💬</button>
           </div>
         </td>
-        <td colspan="7" class="ec-comment-cell">
+        <td colspan="6" class="ec-comment-cell">
           <input type="text" class="comment-input" value="${escAttr(line.text || '')}"
             onchange="onCommentText('${line.lineId}',this.value)"
             placeholder="コメントを入力...">
-          <button class="btn btn-danger btn-sm no-print" onclick="removeLine('${line.lineId}')">&times;</button>
         </td>
+        <td class="ec-del no-print"><button type="button" class="btn btn-danger btn-sm" onclick="removeLine('${line.lineId}')" title="コメントを削除" aria-label="コメントを削除">&times;</button></td>
       </tr>`;
     }
     itemNo++;
@@ -5105,7 +5116,7 @@ function buildSubtotalRows(line, subtotal, actions, dragAttrs = "") {
     return `<span class="subtotal-rate-input">&times;<input type="text" inputmode="decimal" data-numeric-input aria-label="${label}" value="${rate}"
       onchange="onSubtotalRate('${line.lineId}',this.value,'${field}')"></span><span class="subtotal-rate-text" style="display:none">&times; ${rate}</span>`;
   };
-  const addButton = hasSecond ? "" : `<button type="button" class="btn-insert-subtotal subtotal-more" onclick="addSubtotalMultiplier('${line.lineId}')" aria-label="さらに×" title="さらに×：小計の計算結果に倍率を掛ける">×</button>`;
+  const addButton = hasSecond ? "" : `<button type="button" class="btn-insert-subtotal subtotal-more" onclick="addSubtotalMultiplier('${line.lineId}')" aria-label="再計算を追加" title="小計の計算結果に倍率を掛ける">Σ</button>`;
   let html = `<tr class="subtotal-row" data-subtotal-id="${esc(line.lineId)}" data-subtotal-stage="first" ${dragAttrs}>
     <td class="ec-sep no-print">${addButton}</td><td class="subtotal-label">小計</td>
     ${baseCell(subtotal, 'rateReason', '小計の倍率を掛けた理由')}

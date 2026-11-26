@@ -137,7 +137,7 @@ test('見積・管理表・印刷の共通行に中間金額と最終金額を�
   }
   assert.equal(run(`estimatePrintRowWeight(${JSON.stringify(estimateRows[1])})`), 2);
   const oldRows = run(`_buildLineRows(${JSON.stringify([item(100),subtotal(1.2)])})`);
-  assert.match(oldRows[1], /さらに×/);
+  assert.match(oldRows[1], /aria-label="再計算を追加"[^>]*>Σ<\/button>/);
   assert.doesNotMatch(oldRows[1], /subtotal-second-row/);
   assert.equal(run(`estimatePrintRowWeight(${JSON.stringify(oldRows[1])})`), 1);
 });

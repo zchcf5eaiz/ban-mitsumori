@@ -5105,10 +5105,12 @@ function buildSubtotalRows(line, subtotal, actions, dragAttrs = "") {
   const baseCell = (amount, field, label) => {
     const reason = String(line[field] || "");
     return `<td class="subtotal-base-cell" colspan="2">
-      <input type="text" class="subtotal-reason-input no-print" aria-label="${label}" placeholder="掛けた理由（任意）" value="${escAttr(reason)}"
-        oninput="onSubtotalReason('${line.lineId}',this.value,'${field}')">
-      <span class="subtotal-reason-text${reason.trim() ? ' has-reason' : ''}">${esc(reason)}</span>
-      <span class="subtotal-sum">${fmtNum(amount)}</span>
+      <div class="subtotal-base-content">
+        <input type="text" class="subtotal-reason-input no-print" aria-label="${label}" placeholder="理由（任意）" value="${escAttr(reason)}"
+          oninput="onSubtotalReason('${line.lineId}',this.value,'${field}')">
+        <span class="subtotal-reason-text${reason.trim() ? ' has-reason' : ''}">${esc(reason)}</span>
+        <span class="subtotal-sum">${fmtNum(amount)}</span>
+      </div>
     </td>`;
   };
   const rateCell = (field, label) => {
